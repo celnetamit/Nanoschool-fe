@@ -71,6 +71,11 @@ export async function submitContactForm(prevState: any, formData: FormData) {
         // Ensure referer is correct as WP often checks this
         payload.set('_wp_http_referer', '/contact-us/');
 
+        // Restore hardcoded fields that might be required but not found as hidden inputs (or missed)
+        if (!payload.has('item_meta[9122]')) payload.append('item_meta[9122]', 'Open');
+        if (!payload.has('item_meta[7883]')) payload.append('item_meta[7883]', 'Contact us_17242');
+        if (!payload.has('item_key')) payload.append('item_key', '');
+
         // 4. Submit to WordPress
         const submitResponse = await fetch(CONTACT_URL, {
             method: 'POST',
@@ -94,10 +99,21 @@ export async function submitContactForm(prevState: any, formData: FormData) {
         } else {
             // Log failure details for debugging
             console.error('Submission seemed to fail. HTML preview:', responseHtml.substring(0, 500));
+
+            let debugMessage = 'Submission failed. ';
             if (responseHtml.includes('frm_error_style')) {
-                console.error('Formidable Validation Errors detected.');
+                // Try to extract the error message
+                const errorMatch = responseHtml.match(/<div class="frm_error_style"[^>]*>([^<]+)<\/div>/);
+                if (errorMatch) {
+                    debugMessage += `Server Error: ${errorMatch[1]}`;
+                } else {
+                    debugMessage += 'Server rejected the form (Validation Error).';
+                }
+            } else {
+                debugMessage += 'Remote server response: ' + responseHtml.substring(0, 200).replace(/<[^>]*>/g, '');
             }
-            return { success: false, message: 'Submission failed. Please try contacting us directly via email.' };
+
+            return { success: false, message: debugMessage };
         }
 
     } catch (error) {
