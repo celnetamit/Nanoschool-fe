@@ -20,19 +20,34 @@ export async function submitContactForm(prevState: any, formData: FormData) {
         const cookies = initialResponse.headers.get('set-cookie') || '';
 
         // 2. Extract hidden fields and tokens using Regex
-        const extractField = (name: string) => {
-            const regex = new RegExp(`name="${name}" value="([^"]*)"`);
-            const match = html.match(regex);
-            return match ? match[1] : '';
+        // We use a more robust regex that allows for other attributes (like type="hidden") between name and value
+        const extractValue = (fieldName: string) => {
+            // Matches name="fieldName" ... value="value"  OR  value="value" ... name="fieldName"
+            const regexes = [
+                new RegExp(`name="${fieldName}"[^>]*value="([^"]*)"`),
+                new RegExp(`value="([^"]*)"[^>]*name="${fieldName}"`),
+                new RegExp(`name='${fieldName}'[^>]*value='([^']*)'`),
+                new RegExp(`value='([^']*)'[^>]*name='${fieldName}'`)
+            ];
+
+            for (const regex of regexes) {
+                const match = html.match(regex);
+                if (match && match[1]) return match[1];
+            }
+            return '';
         };
 
-        // Specific mapping for dynamic fields
-        const frmSubmitEntry = html.match(/name="frm_submit_entry_401" value="([^"]*)"/)?.[1] || '';
-        const frmState = html.match(/name="frm_state" value="([^"]*)"/)?.[1] || '';
+        const frmSubmitEntry = extractValue('frm_submit_entry_401');
+        const frmState = extractValue('frm_state');
 
         if (!frmSubmitEntry || !frmState) {
-            // Fallback: try different quote style or spacing if primary regex fails
-            console.error('Failed to extract anti-CSRF tokens');
+            console.error('Failed to extract anti-CSRF tokens. Dump of relevant HTML parts:');
+            // Log likely locations of the fields for debugging
+            const entryIndex = html.indexOf('frm_submit_entry_401');
+            const stateIndex = html.indexOf('frm_state');
+            if (entryIndex !== -1) console.error('Entry Context:', html.substring(entryIndex - 50, entryIndex + 150));
+            if (stateIndex !== -1) console.error('State Context:', html.substring(stateIndex - 50, stateIndex + 150));
+
             return { success: false, message: 'Security token extraction failed. Please try again or contact support directly.' };
         }
 
