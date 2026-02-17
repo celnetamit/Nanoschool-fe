@@ -19,55 +19,57 @@ export async function submitContactForm(prevState: any, formData: FormData) {
         const html = await initialResponse.text();
         const cookies = initialResponse.headers.get('set-cookie') || '';
 
-        // 2. Extract hidden fields and tokens using Regex
-        // We use a more robust regex that allows for other attributes (like type="hidden") between name and value
-        const extractValue = (fieldName: string) => {
-            // Matches name="fieldName" ... value="value"  OR  value="value" ... name="fieldName"
-            const regexes = [
-                new RegExp(`name="${fieldName}"[^>]*value="([^"]*)"`),
-                new RegExp(`value="([^"]*)"[^>]*name="${fieldName}"`),
-                new RegExp(`name='${fieldName}'[^>]*value='([^']*)'`),
-                new RegExp(`value='([^']*)'[^>]*name='${fieldName}'`)
-            ];
+        // 2. Extract ALL hidden fields and tokens
+        // We will extract ALL hidden inputs to ensure we don't miss any dynamic security tokens or nonce fields
+        const hiddenFields = new Map<string, string>();
 
-            for (const regex of regexes) {
-                const match = html.match(regex);
-                if (match && match[1]) return match[1];
+        // Regex to capture the name and value of any input type="hidden"
+        // Handling various attribute orders and quoting styles
+        // We'll iterate over all input tags
+        const inputTagRegex = /<input[^>]+>/gi;
+        let match;
+
+        while ((match = inputTagRegex.exec(html)) !== null) {
+            const tag = match[0];
+            // Check if it's a hidden input
+            if (/\stype=["']?hidden["']?/i.test(tag)) {
+                const nameMatch = tag.match(/name=["']([^"']+)["']/);
+                const valueMatch = tag.match(/value=["']([^"']*)["']/);
+
+                if (nameMatch && valueMatch) {
+                    hiddenFields.set(nameMatch[1], valueMatch[1]);
+                }
             }
-            return '';
-        };
+        }
 
-        const frmSubmitEntry = extractValue('frm_submit_entry_401');
-        const frmState = extractValue('frm_state');
+        // Specific checks for key fields to ensure we actually got the form
+        const frmSubmitEntry = hiddenFields.get('frm_submit_entry_401');
+        const frmState = hiddenFields.get('frm_state');
 
         if (!frmSubmitEntry || !frmState) {
-            console.error('Failed to extract anti-CSRF tokens. Dump of relevant HTML parts:');
-            // Log likely locations of the fields for debugging
-            const entryIndex = html.indexOf('frm_submit_entry_401');
-            const stateIndex = html.indexOf('frm_state');
-            if (entryIndex !== -1) console.error('Entry Context:', html.substring(entryIndex - 50, entryIndex + 150));
-            if (stateIndex !== -1) console.error('State Context:', html.substring(stateIndex - 50, stateIndex + 150));
-
-            return { success: false, message: 'Security token extraction failed. Please try again or contact support directly.' };
+            console.error('Failed to extract anti-CSRF tokens. Hidden fields found:', Object.fromEntries(hiddenFields));
+            return { success: false, message: 'Security token extraction failed. Please try again later.' };
         }
 
         // 3. Prepare payload
         const payload = new URLSearchParams();
-        payload.append('frm_action', 'create');
-        payload.append('form_id', '401');
-        payload.append('form_key', '5b4kk'); // Static key observed
-        payload.append('item_meta[5996]', formData.get('name') as string); // Name
-        payload.append('item_meta[5997]', formData.get('email') as string); // Email
-        payload.append('item_meta[5998]', formData.get('phone') as string); // WhatsApp
-        payload.append('item_meta[5999]', formData.get('message') as string); // Message
 
-        // Hidden/Default fields
-        payload.append('item_meta[9122]', 'Open');
-        payload.append('item_meta[7883]', 'Contact us_17242');
-        payload.append('item_key', '');
-        payload.append('frm_submit_entry_401', frmSubmitEntry);
-        payload.append('frm_state', frmState);
-        payload.append('_wp_http_referer', '/contact-us/');
+        // Add all extracted hidden fields first (covers form_id, form_key, tokens, nonces, etc.)
+        hiddenFields.forEach((value, key) => {
+            payload.append(key, value);
+        });
+
+        // Overwrite/Add specific fields for the user input
+        // Ensure action is set (sometimes it's hidden, sometimes not)
+        if (!payload.has('frm_action')) payload.set('frm_action', 'create');
+
+        payload.set('item_meta[5996]', formData.get('name') as string); // Name
+        payload.set('item_meta[5997]', formData.get('email') as string); // Email
+        payload.set('item_meta[5998]', formData.get('phone') as string); // WhatsApp
+        payload.set('item_meta[5999]', formData.get('message') as string); // Message
+
+        // Ensure referer is correct as WP often checks this
+        payload.set('_wp_http_referer', '/contact-us/');
 
         // 4. Submit to WordPress
         const submitResponse = await fetch(CONTACT_URL, {
@@ -85,16 +87,16 @@ export async function submitContactForm(prevState: any, formData: FormData) {
         const responseHtml = await submitResponse.text();
 
         // 5. Verify success
-        // Formidable usually redirects or shows a success message.
-        // We check for success message "Your message was successfully sent" or similar, 
-        // OR if the response URL has changed (if using fetch in browser, but here likely 200 OK with content).
-        // Or check for "frm_message" div.
+        console.log('Submission Response Status:', submitResponse.status);
 
         if (responseHtml.includes('frm_message') || responseHtml.includes('successfully sent') || responseHtml.includes('Thank you')) {
             return { success: true, message: 'Thank you! Your message has been sent successfully.' };
         } else {
-            // Log failure details for debugging (in production, log to monitoring service)
+            // Log failure details for debugging
             console.error('Submission seemed to fail. HTML preview:', responseHtml.substring(0, 500));
+            if (responseHtml.includes('frm_error_style')) {
+                console.error('Formidable Validation Errors detected.');
+            }
             return { success: false, message: 'Submission failed. Please try contacting us directly via email.' };
         }
 
