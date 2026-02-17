@@ -1,5 +1,5 @@
-import DetailView from '@/components/DetailView';
-import { getPostBySlug } from '@/lib/wordpress';
+import CourseTemplate from '@/components/templates/CourseTemplate';
+import { getPostBySlug, getStoreProduct } from '@/lib/wordpress';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import JsonLd from '@/components/JsonLd';
@@ -46,7 +46,10 @@ export default async function CourseDetail({
     params: Promise<{ slug: string }>;
 }) {
     const { slug } = await params;
-    const post = await getPostBySlug('courses', slug);
+    const [post, storeProduct] = await Promise.all([
+        getPostBySlug('courses', slug),
+        getStoreProduct(slug)
+    ]);
 
     if (!post) {
         notFound();
@@ -64,13 +67,21 @@ export default async function CourseDetail({
         },
         image: post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         datePublished: post.date,
-        occupationalCredentialAwarded: 'NanoSchool Certification'
+        occupationalCredentialAwarded: 'NanoSchool Certification',
+        offers: storeProduct ? {
+            '@type': 'Offer',
+            category: 'Paid',
+            priceCurrency: storeProduct.prices.currency_code,
+            price: parseFloat(storeProduct.prices.price) / 100,
+            availability: 'https://schema.org/InStock',
+            url: storeProduct.add_to_cart.url
+        } : undefined
     };
 
     return (
         <>
             <JsonLd data={jsonLd} />
-            <DetailView params={params} type="courses" />
+            <CourseTemplate post={post} storeProduct={storeProduct} />
         </>
     );
 }

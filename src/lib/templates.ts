@@ -1,5 +1,5 @@
 // Template mapping for different page types
-export const TEMPLATE_MAP: Record<string, 'home' | 'domain' | 'about' | 'mentors' | 'contact' | 'faqs' | 'default'> = {
+export const TEMPLATE_MAP: Record<string, 'home' | 'domain' | 'about' | 'mentors' | 'contact' | 'faqs' | 'careers' | 'internship' | 'default'> = {
     // Home
     'nanoschool-home-v2': 'home',
 
@@ -31,8 +31,15 @@ export const TEMPLATE_MAP: Record<string, 'home' | 'domain' | 'about' | 'mentors
 
     // FAQs
     'faqs': 'faqs',
+
+    // Careers
+    'careers': 'careers',
+
+    // Internship
+    'biotech-internship': 'internship',
 };
 
-export function getTemplateForSlug(slug: string): 'home' | 'domain' | 'about' | 'mentors' | 'contact' | 'faqs' | 'default' {
+
+export function getTemplateForSlug(slug: string): 'home' | 'domain' | 'about' | 'mentors' | 'contact' | 'faqs' | 'careers' | 'internship' | 'default' {
     return TEMPLATE_MAP[slug] || 'default';
 }

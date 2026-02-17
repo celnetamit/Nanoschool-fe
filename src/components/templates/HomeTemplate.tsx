@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import TestimonialSlider from '../TestimonialSlider';
 // import { WordPressPost } from '@/lib/wordpress'; // Unused
 
 export default function HomeTemplate() {
@@ -45,7 +46,7 @@ export default function HomeTemplate() {
                             </svg>
                         </Link>
                         <Link
-                            href="/courses"
+                            href="/course"
                             className="px-10 py-5 bg-white/10 backdrop-blur-sm border-2 border-white text-white font-bold rounded-full hover:bg-white/20 transition-all inline-flex items-center justify-center gap-2"
                         >
                             View Courses
@@ -183,58 +184,9 @@ export default function HomeTemplate() {
                 </div>
             </section>
 
-            {/* Why Choose Us - Feature Grid */}
-            <section className="py-24 lg:py-32 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-20">
-                        <span className="inline-block px-4 py-2 bg-purple-100 rounded-full text-purple-600 text-sm font-bold mb-4">
-                            WHY NANOSCHOOL
-                        </span>
-                        <h2 className="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight">
-                            Learn from the Best
-                        </h2>
-                        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                            17 years of excellence in providing world-class technical education
-                        </p>
-                    </div>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {[
-                            {
-                                icon: '👨‍🏫',
-                                title: 'Expert Mentors',
-                                description: 'Learn from PhDs and industry veterans with 10+ years of experience',
-                            },
-                            {
-                                icon: '🎯',
-                                title: 'Hands-on Projects',
-                                description: 'Build real-world projects with industry-standard tools and technologies',
-                            },
-                            {
-                                icon: '🏆',
-                                title: 'Industry Recognition',
-                                description: 'Certificates valued by top tech companies and research institutions worldwide',
-                            },
-                            {
-                                icon: '🚀',
-                                title: '95% Placement',
-                                description: 'Dedicated career support with interview prep and job placement assistance',
-                            },
-                        ].map((feature, index) => (
-                            <div
-                                key={index}
-                                className="group text-center p-8 rounded-2xl hover:bg-gradient-to-br hover:from-blue-50 hover:to-purple-50 transition-all duration-300 hover:shadow-lg"
-                            >
-                                <div className="text-6xl mb-6 transform group-hover:scale-110 transition-transform duration-300">
-                                    {feature.icon}
-                                </div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+            {/* Testimonials Section - Real Student Feedback */}
+            <TestimonialSlider />
 
             {/* Final CTA - Conversion Focused */}
             <section className="relative py-24 lg:py-32 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden">

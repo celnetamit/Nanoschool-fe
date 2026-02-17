@@ -4,6 +4,9 @@ import HomeTemplate from '@/components/templates/HomeTemplate';
 import DomainTemplate from '@/components/templates/DomainTemplate';
 import AboutTemplate from '@/components/templates/AboutTemplate';
 import CorporateTemplate from '@/components/templates/CorporateTemplate';
+import CareersTemplate from '@/components/templates/CareersTemplate';
+import ContactTemplate from '@/components/templates/ContactTemplate';
+import InternshipTemplate from '@/components/templates/InternshipTemplate';
 import { notFound } from 'next/navigation';
 
 export default async function SlugPage({
@@ -14,7 +17,25 @@ export default async function SlugPage({
     const { slug } = await params;
 
     // Fetch the page from WordPress
-    const post = await getPostBySlug('pages', slug);
+    let post = await getPostBySlug('pages', slug);
+
+    // If about-us doesn't exist, try 'about' as fallback
+    if (!post && slug === 'about-us') {
+        post = await getPostBySlug('pages', 'about');
+    }
+
+    // For about-us specifically, provide fallback content if still no post
+    if (!post && slug === 'about-us') {
+        post = {
+            id: 0,
+            slug: 'about-us',
+            title: { rendered: 'About Us' },
+            excerpt: { rendered: 'Empowering the next generation through cutting-edge education in nanoscience and technology.' },
+            content: { rendered: '' },
+            featured_media: 0,
+            date: new Date().toISOString()
+        };
+    }
 
     if (!post) {
         notFound();
@@ -36,8 +57,17 @@ export default async function SlugPage({
         case 'domain':
             return <DomainTemplate slug={slug} />;
 
-        case 'about':
+        case 'careers':
+            return <CareersTemplate post={post} />;
+
         case 'contact':
+            return <ContactTemplate post={post} />;
+
+        case 'internship':
+            return <InternshipTemplate post={post} />;
+
+
+        case 'about':
         case 'faqs':
         default:
             return <AboutTemplate post={post} />;

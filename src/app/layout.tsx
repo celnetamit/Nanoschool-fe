@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NanoSchool Stateless - AI & Tech Learning",
-  description: "Headless WordPress frontend for NanoSchool",
+  title: {
+    default: "NanoSchool - Advanced AI, Biotech & Nanotech Education",
+    template: "%s | NanoSchool",
+  },
+  description: "India's leading platform for hands-on training in Artificial Intelligence, Biotechnology, and Nanotechnology. Expert-led workshops and certification programs.",
+  keywords: ["AI", "Biotechnology", "Nanotechnology", "Education", "Workshops", "Courses", "Certification", "India"],
+  authors: [{ name: "NanoSchool" }],
+  creator: "NanoSchool",
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://nanoschool.in",
+    siteName: "NanoSchool",
+    images: [
+      {
+        url: "/og-image.jpg", // Ensure this exists or use a default
+        width: 1200,
+        height: 630,
+        alt: "NanoSchool",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@nanoschool",
+    creator: "@nanoschool",
+  },
 };
 
 export default function RootLayout({
@@ -32,11 +58,7 @@ export default function RootLayout({
         <main className="flex-grow">
           {children}
         </main>
-        <footer className="bg-white border-t border-gray-200 py-8">
-          <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-            © {new Date().getFullYear()} NanoSchool Stateless. Powered by Headless WordPress.
-          </div>
-        </footer>
+        <Footer />
       </body>
     </html>
   );

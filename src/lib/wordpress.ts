@@ -25,10 +25,25 @@ export interface Category {
   count: number;
 }
 
+// Helper function for consistent fetching
+async function fetchWP(url: string): Promise<Response> {
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: 3600 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+    return response;
+  } catch (error) {
+    console.error(`Fetch error for ${url}:`, error);
+    // Return a dummy error response to be handled by caller
+    return new Response(null, { status: 500, statusText: 'Fetch Network Error' });
+  }
+}
+
 export async function getCategories(): Promise<Category[]> {
-  const response = await fetch(`${BASE_URL}/categories?per_page=100&hide_empty=true`, {
-    next: { revalidate: 3600 },
-  });
+  const response = await fetchWP(`${BASE_URL}/categories?per_page=100&hide_empty=true`);
   if (!response.ok) return [];
   return response.json();
 }
@@ -38,8 +53,12 @@ async function fetchAllItems<T>(endpoint: string): Promise<T[]> {
   const perPage = 100;
   const initialUrl = `${BASE_URL}/${endpoint}?per_page=${perPage}&_embed`; // Always embed for consistency
 
-  const response = await fetch(initialUrl, { next: { revalidate: 3600 } });
-  if (!response.ok) return [];
+  const response = await fetchWP(initialUrl);
+
+  if (!response.ok) {
+    console.error(`Failed to fetch ${endpoint}: ${response.status} ${response.statusText}`);
+    return [];
+  }
 
   const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '1', 10);
   let allItems = await response.json();
@@ -48,9 +67,7 @@ async function fetchAllItems<T>(endpoint: string): Promise<T[]> {
     const promises = [];
     for (let page = 2; page <= totalPages; page++) {
       promises.push(
-        fetch(`${BASE_URL}/${endpoint}?per_page=${perPage}&page=${page}&_embed`, {
-          next: { revalidate: 3600 },
-        }).then((res) => (res.ok ? res.json() : []))
+        fetchWP(`${BASE_URL}/${endpoint}?per_page=${perPage}&page=${page}&_embed`).then((res) => (res.ok ? res.json() : []))
       );
     }
     const results = await Promise.all(promises);
@@ -77,11 +94,12 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
     url += `&categories=${category}`;
   }
 
-  const response = await fetch(url, {
-    next: { revalidate: 3600 },
-  });
+  const response = await fetchWP(url);
 
-  if (!response.ok) return { posts: [], totalPages: 0 };
+  if (!response.ok) {
+    console.error(`Failed to fetch workshops: ${response.status} ${response.statusText}`);
+    return { posts: [], totalPages: 0 };
+  }
 
   const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
   const posts = await response.json();
@@ -91,23 +109,30 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
 
 export async function getMedia(id: number) {
   if (!id) return null;
-  const response = await fetch(`${BASE_URL}/media/${id}`, {
-    next: { revalidate: 3600 },
-  });
+  const response = await fetchWP(`${BASE_URL}/media/${id}`);
   if (!response.ok) return null;
   return response.json();
 }
 
 export async function getLandingPages(): Promise<WordPressPost[]> {
-  const response = await fetch(`${BASE_URL}/pages?per_page=100`, {
-    next: { revalidate: 3600 },
-  });
+  const response = await fetchWP(`${BASE_URL}/pages?per_page=100`);
   if (!response.ok) return [];
   return response.json();
 }
 
-export async function getProducts(): Promise<WordPressPost[]> {
+export async function getProducts(perPage: number = 100, page: number = 1): Promise<WordPressPost[]> {
+  // If perPage is 100 (default), we might still want all, but let's allow fetching just a few.
+  // Actually, standard behavior of fetchAllItems was to get ALL.
+  // Let's keep getProducts as is for compatibility if used elsewhere,
+  // and add getFeaturedProducts or simply use a new function with pagination.
+  // To avoid breaking changes, let's add a new function for paged products.
   return fetchAllItems<WordPressPost>('product');
+}
+
+export async function getPagedProducts(perPage: number = 6, page: number = 1): Promise<WordPressPost[]> {
+  const response = await fetchWP(`${BASE_URL}/product?per_page=${perPage}&page=${page}&_embed`);
+  if (!response.ok) return [];
+  return response.json();
 }
 
 export async function getPostBySlug(type: string, slug: string): Promise<WordPressPost | null> {
@@ -122,9 +147,7 @@ export async function getPostBySlug(type: string, slug: string): Promise<WordPre
   }
 
   // Use _embed to get featured media in the same request
-  const response = await fetch(`${BASE_URL}/${restBase}?slug=${slug}&_embed`, {
-    next: { revalidate: 3600 },
-  });
+  const response = await fetchWP(`${BASE_URL}/${restBase}?slug=${slug}&_embed`);
   if (!response.ok) return null;
   const posts = await response.json();
   return posts.length > 0 ? posts[0] : null;
@@ -173,11 +196,99 @@ function stripHtml(html: string) {
   return html.replace(/<[^>]*>?/gm, '');
 }
 
+
+export interface BlogPost extends WordPressPost {
+  title: {
+    rendered: string;
+  };
+  content: {
+    rendered: string;
+  };
+  excerpt: {
+    rendered: string;
+  };
+  date: string;
+  slug: string;
+  featured_media: number;
+}
+
+// Helper to parse the full HTML content from NSTC blogs
+export function parseBlogContent(html: string) {
+  if (!html) return { title: '', content: '' };
+
+  // 1. Extract Title
+  // Try <title> tag first
+  let titleMatch = html.match(/<title>(.*?)<\/title>/i);
+  let title = titleMatch ? titleMatch[1] : '';
+
+  // If no title tag, try <h1>
+  if (!title) {
+    titleMatch = html.match(/<h1[^>]*>(.*?)<\/h1>/i);
+    title = titleMatch ? stripHtml(titleMatch[1]) : 'Untitled Blog Post';
+  }
+
+  // Clean up title (remove | NanoSchool etc if present)
+  title = title.split('|')[0].trim();
+
+  // 2. Extract Body Content
+  // We want everything inside <body>...</body>
+  // If no body tag, we assume the whole thing is content (fallback)
+  let contentMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  let content = contentMatch ? contentMatch[1] : html;
+
+  // 3. Sanitization & Cleanup
+  // Remove the header/footer from the blog content if it mimics the main site
+  // This is specific to NSTC blogs which seem to be full pages
+  // We'll remove specific known containers if possible, or just rely on the fact that
+  // we might want to render it somewhat raw but controlled.
+
+  // Remove <header>...</header>
+  content = content.replace(/<header[\s\S]*?<\/header>/gi, '');
+
+  // Remove <footer>...</footer>
+  content = content.replace(/<footer[\s\S]*?<\/footer>/gi, '');
+
+  // Remove <nav>...</nav>
+  content = content.replace(/<nav[\s\S]*?<\/nav>/gi, '');
+
+  // Remove scripts
+  content = content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+  return { title, content };
+}
+
+export async function getBlogs(): Promise<BlogPost[]> {
+  const response = await fetchWP(`${BASE_URL}/nstc_blog?per_page=100&_embed`);
+  if (!response.ok) return [];
+  const posts = await response.json();
+
+  // Parse titles for listing
+  return posts.map((post: BlogPost) => {
+    const { title } = parseBlogContent(post.content.rendered);
+    return {
+      ...post,
+      title: { rendered: title || post.title.rendered || 'Untitled' } // Fallback to parsed title
+    };
+  });
+}
+
+export async function getBlogBySlug(slug: string): Promise<BlogPost | null> {
+  const response = await fetchWP(`${BASE_URL}/nstc_blog?slug=${slug}&_embed`);
+  if (!response.ok) return null;
+  const posts = await response.json();
+  return posts.length > 0 ? posts[0] : null;
+}
+
 export function structureWPContent(html: string) {
   if (!html) return { overview: '', modules: [] };
 
   // 1. Sanitize first to remove scripts/styles
-  const cleanHtml = sanitizeWPContent(html);
+  let cleanHtml = sanitizeWPContent(html);
+
+  // 1.5 Strip unwanted legacy sections (Need Help, Feedback, etc.)
+  // Remove sections starting with headers containing these keywords until the next header or end
+  const unwantedRegex = /<(h[1-6])[^>]*>.*?(Need Help|Feedback|Reviews|Related Products).*?<\/\1>[\s\S]*?(?=(<h[1-6])|$)/gi;
+  cleanHtml = cleanHtml.replace(unwantedRegex, '');
 
   // 2. Simple heuristic extraction
   // We'll treat the first part of the content as "Overview" until we hit a heading that suggests "Modules", "Curriculum", "Structure", etc.
@@ -211,4 +322,77 @@ export function structureWPContent(html: string) {
     overview: stripHtml(overview).length < 50 && modules.length > 0 ? modules[0].content : overview, // Fallback if overview is empty
     modules: modules.length > 0 ? modules : []
   };
+}
+
+export interface StoreProduct {
+  id: number;
+  name: string;
+  slug: string;
+  permalink: string;
+  prices: {
+    price: string;
+    regular_price: string;
+    sale_price: string;
+    currency_code: string;
+    currency_symbol: string;
+  };
+  description: string;
+  short_description: string;
+  images: {
+    id: number;
+    src: string;
+    name: string;
+    alt: string;
+  }[];
+  variations: number[];
+  add_to_cart: {
+    url: string;
+    text: string;
+    minimum: number;
+    maximum: number;
+  };
+}
+
+export async function getStoreProduct(slug: string): Promise<StoreProduct | null> {
+  try {
+    // Fetch by slug from the Store API
+    // Strategy: Search for the product.
+    // We replace /wp/v2 with /wc/store to switch APIs
+    const storeApiUrl = BASE_URL.replace('/wp/v2', '/wc/store');
+
+    const res = await fetch(`${storeApiUrl}/products?slug=${slug}&_embed`, {
+      next: { revalidate: 3600 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    if (!res.ok) {
+      console.error('Store API Error:', res.status, res.statusText);
+      return null;
+    }
+
+    const products: StoreProduct[] = await res.json();
+
+    if (products.length > 0) {
+      return products[0];
+    }
+
+    // Fallback: Try fetching a larger list and finding by slug if the direct param doesn't work
+    const resList = await fetch(`${storeApiUrl}/products?per_page=20`, {
+      next: { revalidate: 3600 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    if (!resList.ok) return null;
+
+    const allProducts: StoreProduct[] = await resList.json();
+    return allProducts.find(p => p.slug === slug) || null;
+
+  } catch (error) {
+    console.error('Error fetching store product:', error);
+    return null;
+  }
 }

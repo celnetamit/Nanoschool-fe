@@ -1,5 +1,5 @@
 import Link from 'next/link';
-// import { WordPressPost } from '@/lib/wordpress'; // Unused
+import CategoryWorkshops from '../CategoryWorkshops';
 
 interface DomainTemplateProps {
     slug: string;
@@ -86,9 +86,24 @@ const DOMAIN_CONFIG: Record<string, {
 export default function DomainTemplate({ slug }: DomainTemplateProps) {
     const config = DOMAIN_CONFIG[slug] || DOMAIN_CONFIG['ai'];
 
+    // Career opportunities section...
+
+    // Map slugs to workshop category IDs
+    const workshopCategoryMap: Record<string, number> = {
+        'ai': 5088,
+        'artificial-intelligence': 5088,
+        'biotech': 5059,
+        'nano-technology': 5085,
+        'nanotech-4': 5085,
+    };
+
+    const workshopCategoryId = workshopCategoryMap[slug];
+
     return (
         <div className="bg-white">
             {/* Hero Section */}
+            {/* ... (existing hero content) ... */}
+
             <section className={`relative min-h-[80vh] flex items-center overflow-hidden bg-gradient-to-br ${config.gradient}`}>
                 {/* Background Animation */}
                 <div className="absolute inset-0 opacity-20">
@@ -130,7 +145,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                                 </svg>
                             </Link>
                             <Link
-                                href="/courses"
+                                href="/course"
                                 className="px-10 py-4 bg-white/10 backdrop-blur-sm border-2 border-white text-white font-bold rounded-full hover:bg-white/20 transition-all"
                             >
                                 View Courses
@@ -181,6 +196,14 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                     </div>
                 </div>
             </section>
+
+            {/* UPCOMING WORKSHOPS SECTION (NEW) */}
+            {workshopCategoryId && (
+                <CategoryWorkshops
+                    categoryId={workshopCategoryId}
+                    title="Upcoming Workshops"
+                />
+            )}
 
             {/* Skills You'll Learn */}
             <section className="py-24 bg-white">

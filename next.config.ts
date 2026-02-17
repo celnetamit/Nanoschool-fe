@@ -19,8 +19,17 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+      },
+      {
+        protocol: 'https',
+        hostname: 'commons.wikimedia.org',
+      },
     ],
   },
+  staticPageGenerationTimeout: 120, // Increase timeout for slow WP API calls
 };
 
 export default nextConfig;
