@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { WordPressPost, structureWPContent, sanitizeWPContent, StoreProduct } from '@/lib/wordpress';
 import { BookOpen, Award, Users, CheckCircle, Clock, Calendar, ChevronDown, ChevronUp, Star, ShieldCheck, PlayCircle, Globe } from 'lucide-react';
 import FAQ from '@/components/FAQ';
+import { FAQ_DATA } from '@/data/faqs';
 
 interface CourseTemplateProps {
     post: WordPressPost;
@@ -265,7 +266,7 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                         {/* FAQ SECTION */}
                         <section id="faq" className="scroll-mt-32">
                             <h2 className="text-3xl font-black text-slate-900 mb-8">Frequently Asked Questions</h2>
-                            <FAQ />
+                            <FAQ categories={FAQ_DATA} />
                         </section>
 
                     </div>

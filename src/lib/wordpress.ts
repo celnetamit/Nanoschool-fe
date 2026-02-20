@@ -126,7 +126,14 @@ export async function getProducts(perPage: number = 100, page: number = 1): Prom
   // Let's keep getProducts as is for compatibility if used elsewhere,
   // and add getFeaturedProducts or simply use a new function with pagination.
   // To avoid breaking changes, let's add a new function for paged products.
-  return fetchAllItems<WordPressPost>('product');
+
+  // FIXME: Fetching all 425+ products at once causes timeouts/504 errors.
+  // For now, limiting to 100 items to ensure the page loads.
+  // return fetchAllItems<WordPressPost>('product');
+
+  const response = await fetchWP(`${BASE_URL}/product?per_page=100&_embed`);
+  if (!response.ok) return [];
+  return response.json();
 }
 
 export async function getPagedProducts(perPage: number = 6, page: number = 1): Promise<WordPressPost[]> {

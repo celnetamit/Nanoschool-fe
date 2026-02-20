@@ -4,6 +4,7 @@ import ProductGrid from '@/components/ProductGrid';
 
 export default async function CoursesPage() {
     const courses = await getProducts();
+    console.log('Fetched courses count:', courses.length);
 
     return (
         <div className="min-h-screen bg-slate-50">

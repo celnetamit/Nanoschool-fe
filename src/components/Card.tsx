@@ -37,7 +37,7 @@ export default function Card({ post, type, listView = false }: CardProps) {
                                 {type === 'courses' ? 'COURSE' : type === 'course' ? 'COURSE' : type.endsWith('s') ? type.slice(0, -1) : type}
                             </span>
                             <span className="text-gray-400 text-xs font-medium">
-                                {new Date(post.date).toLocaleDateString()}
+                                {new Date(post.date).toLocaleDateString('en-GB')}
                             </span>
                         </div>
                         <Link href={`/${type}/${post.slug}`}>
@@ -119,7 +119,7 @@ export default function Card({ post, type, listView = false }: CardProps) {
                 </div>
                 <div className="mt-auto border-t border-gray-50 pt-4 flex items-center justify-between">
                     <span className="text-xs font-medium text-gray-400">
-                        {new Date(post.date).toLocaleDateString()}
+                        {new Date(post.date).toLocaleDateString('en-GB')}
                     </span>
                     <Link
                         href={`/${type}/${post.slug}`}

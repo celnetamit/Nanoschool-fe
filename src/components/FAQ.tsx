@@ -1,60 +1,89 @@
-
 'use client';
 
 import { useState } from 'react';
 
-const FAQS = [
-    {
-        question: 'Who are the courses designed for?',
-        answer: 'Our courses are designed for students, researchers, and professionals in STEM fields who want to specialize in deep-tech domains like AI, Biotech, and Nanotech. We cover everything from fundamentals to advanced industry applications.'
-    },
-    {
-        question: 'Are the certificates recognized by the industry?',
-        answer: 'Yes, NanoSchool certificates are recognized by leading companies and research institutions globally. Our curriculum is co-developed with industry partners to ensure relevance and job-readiness.'
-    },
-    {
-        question: 'How do the hands-on projects work remotely?',
-        answer: 'We provide access to virtual labs and cloud-based simulation tools. For coding-heavy courses like AI and Bioinformatics, you get access to configured Jupyter environments and massive datasets to work on.'
-    },
-    {
-        question: 'Do you provide placement assistance?',
-        answer: 'Absolutely. Our "Career Accelerator" module includes resume building, mock interviews with industry experts, and direct referrals to our hiring partners for top-performing students.'
-    },
-    {
-        question: 'Can I access the course content after completion?',
-        answer: 'Yes, you get lifetime access to all course materials, including recorded lectures, notes, and project repositories. You can revisit them anytime to brush up on concepts.'
-    }
-];
+export interface FAQItem {
+    question: string;
+    answer: string;
+}
 
-export default function FAQ() {
+export interface FAQCategory {
+    name: string;
+    items: FAQItem[];
+}
+
+interface FAQProps {
+    categories: FAQCategory[];
+}
+
+export default function FAQ({ categories }: FAQProps) {
+    const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
     const [openIndex, setOpenIndex] = useState<number | null>(0);
 
     const toggle = (index: number) => {
         setOpenIndex(openIndex === index ? null : index);
     };
 
+    // Reset open index when category changes
+    const handleCategoryChange = (index: number) => {
+        setActiveCategoryIndex(index);
+        setOpenIndex(0); // Optional: automatically open first item
+    };
+
+    const activeCategory = categories[activeCategoryIndex];
+
     return (
-        <div className="max-w-3xl mx-auto">
-            {FAQS.map((faq, index) => (
-                <div key={index} className="mb-4">
+        <div className="max-w-4xl mx-auto">
+            {/* Category Tabs */}
+            <div className="flex flex-wrap justify-center gap-3 mb-10">
+                {categories.map((cat, index) => (
                     <button
-                        onClick={() => toggle(index)}
-                        className={`w-full text-left p-6 rounded-2xl flex items-center justify-between transition-all duration-300 ${openIndex === index ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-800 hover:bg-slate-50 border border-slate-100'}`}
+                        key={index}
+                        onClick={() => handleCategoryChange(index)}
+                        className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 text-sm md:text-base ${activeCategoryIndex === index
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 transform scale-105'
+                                : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 hover:border-blue-300'
+                            }`}
                     >
-                        <span className="font-bold text-lg pr-8">{faq.question}</span>
-                        <span className={`transform transition-transform duration-300 ${openIndex === index ? 'rotate-180' : ''}`}>
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                        </span>
+                        {cat.name}
                     </button>
-                    <div
-                        className={`overflow-hidden transition-all duration-300 ease-in-out ${openIndex === index ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}
-                    >
-                        <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 text-slate-600 leading-relaxed">
-                            {faq.answer}
+                ))}
+            </div>
+
+            {/* Accordion List */}
+            <div className="space-y-4 min-h-[400px]">
+                {activeCategory?.items.map((faq, index) => (
+                    <div key={index} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
+                        <button
+                            onClick={() => toggle(index)}
+                            className={`w-full text-left p-6 rounded-2xl flex items-center justify-between transition-all duration-300 ${openIndex === index
+                                    ? 'bg-white border-l-4 border-blue-600 shadow-md'
+                                    : 'bg-white hover:bg-slate-50 border border-slate-100'
+                                }`}
+                        >
+                            <span className={`font-bold text-lg pr-8 transition-colors ${openIndex === index ? 'text-blue-700' : 'text-slate-800'}`}>
+                                {faq.question}
+                            </span>
+                            <span
+                                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${openIndex === index ? 'bg-blue-100 text-blue-600 rotate-180' : 'bg-slate-100 text-slate-400'
+                                    }`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </span>
+                        </button>
+                        <div
+                            className={`overflow-hidden transition-all duration-300 ease-in-out ${openIndex === index ? 'max-h-[500px] opacity-100 mt-2' : 'max-h-0 opacity-0'
+                                }`}
+                        >
+                            <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100/50 text-slate-600 leading-relaxed text-base md:text-lg">
+                                {faq.answer}
+                            </div>
                         </div>
                     </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 }

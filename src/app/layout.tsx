@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://nanoschool.in'),
   title: {
     default: "NanoSchool - Advanced AI, Biotech & Nanotech Education",
     template: "%s | NanoSchool",

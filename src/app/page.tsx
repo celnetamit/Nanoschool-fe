@@ -5,6 +5,7 @@ import Card from '@/components/Card';
 import LogoMarquee from '@/components/LogoMarquee';
 import TestimonialSlider from '@/components/TestimonialSlider';
 import FAQ from '@/components/FAQ';
+import { FAQ_DATA } from '@/data/faqs';
 
 export default async function Home() {
   // Fetch the specific Home Page
@@ -247,7 +248,7 @@ export default async function Home() {
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">Frequently Asked Questions</h2>
             <p className="text-lg text-slate-600">Everything you need to know about our programs</p>
           </div>
-          <FAQ />
+          <FAQ categories={FAQ_DATA} />
         </div>
       </section>
 

@@ -7,6 +7,7 @@ import CorporateTemplate from '@/components/templates/CorporateTemplate';
 import CareersTemplate from '@/components/templates/CareersTemplate';
 import ContactTemplate from '@/components/templates/ContactTemplate';
 import InternshipTemplate from '@/components/templates/InternshipTemplate';
+import FaqTemplate from '@/components/templates/FaqTemplate';
 import { notFound } from 'next/navigation';
 
 export default async function SlugPage({
@@ -66,9 +67,10 @@ export default async function SlugPage({
         case 'internship':
             return <InternshipTemplate post={post} />;
 
+        case 'faqs':
+            return <FaqTemplate />;
 
         case 'about':
-        case 'faqs':
         default:
             return <AboutTemplate post={post} />;
     }
