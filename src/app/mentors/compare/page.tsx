@@ -100,7 +100,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
               <tbody>
                 {/* Organization */}
                 <tr className={rowClass}>
-                  <td className={labelClass}><building className="w-4 h-4 inline mr-2 opacity-60" />Organization</td>
+                  <td className={labelClass}><Building className="w-4 h-4 inline mr-2 opacity-60" />Organization</td>
                   {mentors.map(m => (
                     <td key={m.id} className={cellClass}>{m.organization || <span className="text-slate-600 italic">—</span>}</td>
                   ))}
