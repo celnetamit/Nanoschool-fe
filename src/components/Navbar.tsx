@@ -41,6 +41,7 @@ const NAV_MENU: NavItem[] = [
             { label: 'Calendar View', href: '/workshop-calendar', icon: '📅', description: 'Schedule view' },
         ]
     },
+    { label: 'Mentors', href: '/mentors' },
     {
         label: 'Company',
         children: [
