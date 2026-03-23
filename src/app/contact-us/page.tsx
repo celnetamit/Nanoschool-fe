@@ -62,8 +62,6 @@ export default function ContactPage() {
                             </div>
                         </div>
                     </div>
-
-                    {/* Right Column: Dynamic Form */}
                     <ContactForm />
                 </div>
             </main>

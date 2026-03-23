@@ -33,15 +33,10 @@ export default function WorkshopList({
     // Only show these specific workshop categories
     const ALLOWED_CATEGORY_IDS = [5088, 5059, 5085]; // AI, Biotech, Nanotech
 
-    // Filter workshops by allowed categories
-    const categoryFilteredWorkshops = workshops.filter(workshop => {
-        // If a specific category is selected, show all workshops from that category
-        if (categoryId > 0) return true;
-
-        // For "All", only show workshops from allowed categories
-        const workshopCategories = workshop._embedded?.['wp:term']?.[0] || [];
-        return workshopCategories.some((cat: any) => ALLOWED_CATEGORY_IDS.includes(cat.id));
-    });
+    // The API now handles filtering by allowed categories (AI, Biotech, Nanotech)
+    // so we can just use the workshops as-is from the props, but we keep
+    // the search filter below.
+    const categoryFilteredWorkshops = workshops;
 
     // Filter workshops based on search query
     const filteredWorkshops = categoryFilteredWorkshops.filter(workshop =>

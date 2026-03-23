@@ -92,6 +92,10 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
   let url = `${BASE_URL}/posts?per_page=${perPage}&page=${page}&_embed`;
   if (category > 0) {
     url += `&categories=${category}`;
+  } else {
+    // If "All" workshops requested, filter by ALL allowed workshop categories
+    // 5088: AI, 5059: Biotech, 5085: Nanotech
+    url += `&categories=5088,5059,5085`;
   }
 
   const response = await fetchWP(url);
