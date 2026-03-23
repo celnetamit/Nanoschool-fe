@@ -1,22 +1,24 @@
 'use client';
 
 import React from "react";
-import { FormidableForm } from "@/components/FormidableForm";
+import { ContactForm } from "@/components/ContactForm";
+import { Toaster } from 'react-hot-toast';
 
 export default function ContactPage() {
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500/30">
 
             <main className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+                <Toaster position="top-center" reverseOrder={false} />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                     {/* Left Column: Contact Info */}
                     <div className="space-y-8">
                         <div>
-                            <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 mb-6">
-                                Get in Touch
+                            <h1 className="text-4xl md:text-5xl font-bold font-display tracking-tight text-white mb-6">
+                                Get in <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Touch</span>
                             </h1>
-                            <p className="text-lg text-slate-400 leading-relaxed">
-                                Have questions about our programs or need assistance?
+                            <p className="text-lg text-slate-400 leading-relaxed max-w-lg">
+                                Have questions about our programs or need assistance? 
                                 Fill out the form below and our team will get back to you shortly.
                             </p>
                         </div>
@@ -62,7 +64,7 @@ export default function ContactPage() {
                     </div>
 
                     {/* Right Column: Dynamic Form */}
-                    <FormidableForm formId="401" apiUrl="https://nanoschool.in" />
+                    <ContactForm />
                 </div>
             </main>
         </div>
