@@ -42,6 +42,8 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         notFound();
     }
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'EducationEvent',
@@ -53,16 +55,16 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         'eventAttendanceMode': 'https://schema.org/OnlineEventAttendanceMode',
         'location': {
             '@type': 'VirtualLocation',
-            'url': `https://nanoschool.in/workshops/${slug}`
+            'url': `${siteUrl}/workshops/${slug}`
         },
         'organizer': {
             '@type': 'Organization',
             'name': 'NanoSchool',
-            'url': 'https://nanoschool.in'
+            'url': siteUrl
         },
         'offers': {
           '@type': 'Offer',
-          'url': `https://nanoschool.in/workshops/${slug}`,
+          'url': `${siteUrl}/workshops/${slug}`,
           'availability': 'https://schema.org/InStock',
           'category': 'Professional Workshop'
         }

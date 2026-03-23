@@ -55,6 +55,8 @@ export default async function CourseDetail({
         notFound();
     }
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Course',
@@ -63,7 +65,7 @@ export default async function CourseDetail({
         provider: {
             '@type': 'Organization',
             name: 'NanoSchool',
-            sameAs: 'https://nanoschool.in'
+            sameAs: siteUrl
         },
         image: post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
         datePublished: post.date,

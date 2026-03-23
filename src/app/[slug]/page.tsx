@@ -35,6 +35,8 @@ const DOMAIN_METADATA: Record<string, { title: string, description: string, keyw
     }
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     const config = DOMAIN_METADATA[slug];
@@ -50,12 +52,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         description: config.description,
         keywords: config.keywords,
         alternates: {
-            canonical: `/${slug}`,
+            canonical: `/${slug}`, // Relative path is fine with metadataBase
         },
         openGraph: {
             title: `${config.title} | NanoSchool`,
             description: config.description,
-            url: `https://nanoschool.in/${slug}`,
+            url: `${siteUrl}/${slug}`,
         }
     };
 }
