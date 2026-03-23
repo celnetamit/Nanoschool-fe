@@ -9,7 +9,7 @@ export async function submitContactForm(prevState: any, formData: FormData) {
     const phone = formData.get('phone') as string;
     const queryFor = formData.get('queryFor') as string;
     const message = formData.get('message') as string;
-    const status = formData.get('status') as string || 'Open';
+    const page = formData.get('page') as string;
 
     // Simple server-side validation
     if (!name || !email || !message) {
@@ -44,7 +44,8 @@ export async function submitContactForm(prevState: any, formData: FormData) {
                     '5998': phone,    // Contact Number (7wwe1)
                     '8271': queryFor, // Query For (t8lp9)
                     '5999': message,   // Message (t5su1)
-                    '9122': status,    // Status (3dv68)
+                    '7883': page,      // Page URL (dynamic)
+                    '9122': 'Hold',    // Status (3dv68) - Default 'Hold'
                 },
             }),
         });

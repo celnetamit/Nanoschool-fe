@@ -15,7 +15,7 @@ import {
 
 /**
  * Custom Contact Form component with Pro UI/UX design.
- * Features: Responsive grid, Lucide icons, glassmorphism, and custom status chips.
+ * Features: Responsive grid, Lucide icons, glassmorphism, and automated page tracking.
  */
 export function ContactForm() {
     const [state, formAction, isPending] = useActionState(submitContactForm, {
@@ -23,7 +23,12 @@ export function ContactForm() {
         message: "",
     });
 
+    const [pageUrl, setPageUrl] = React.useState('');
+
     useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setPageUrl(window.location.href);
+        }
         if (state.message) {
             if (state.success) {
                 toast.success(state.message, {
@@ -56,12 +61,6 @@ export function ContactForm() {
         "Other"
     ];
 
-    const statusOptions = [
-        { label: "Open", value: "Open" },
-        { label: "Closed", value: "Closed" },
-        { label: "Hold", value: "Hold" },
-        { label: "In Process", value: "Process" }
-    ];
 
     return (
         <div className="relative group">
@@ -172,30 +171,8 @@ export function ContactForm() {
                             ></textarea>
                         </div>
 
-                        {/* Status Chip Selection - Full Width */}
-                        <div className="md:col-span-2 space-y-4">
-                            <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 ml-1">
-                                <Send className="w-3.5 h-3.5 text-cyan-500" />
-                                Submission Status
-                            </label>
-                            <div className="flex flex-wrap gap-2">
-                                {statusOptions.map((option) => (
-                                    <label key={option.value} className="relative cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="status"
-                                            value={option.value}
-                                            defaultChecked={option.value === "Open"}
-                                            className="peer sr-only"
-                                            required
-                                        />
-                                        <div className="px-5 py-2.5 text-sm font-semibold text-slate-400 bg-slate-950/40 border border-slate-800 rounded-full transition-all duration-300 peer-checked:bg-cyan-500/10 peer-checked:border-cyan-500/50 peer-checked:text-cyan-400 peer-checked:shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:border-slate-700">
-                                            {option.label}
-                                        </div>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
+                        {/* Hidden Page URL field */}
+                        <input type="hidden" name="page" id="7883" value={pageUrl} />
                     </div>
 
                     {/* Submit Button */}
