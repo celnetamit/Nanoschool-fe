@@ -8,7 +8,57 @@ import CareersTemplate from '@/components/templates/CareersTemplate';
 import ContactTemplate from '@/components/templates/ContactTemplate';
 import InternshipTemplate from '@/components/templates/InternshipTemplate';
 import FaqTemplate from '@/components/templates/FaqTemplate';
+import JsonLd from '@/components/JsonLd';
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
+
+const DOMAIN_METADATA: Record<string, { title: string, description: string, keywords: string[] }> = {
+    'ai': {
+        title: 'Master Artificial Intelligence & Machine Learning',
+        description: 'Industry-recognized AI certifications and workshops. Learn Machine Learning, Deep Learning, NLP, and Computer Vision from PhD experts.',
+        keywords: ['AI certification India', 'Machine Learning workshops', 'NLP training', 'Deep Learning courses']
+    },
+    'biotech': {
+        title: 'Innovate with Biotechnology & Life Sciences',
+        description: 'Excel in biotechnology with expert-led programs in genetic engineering, bioinformatics, and drug discovery. Hands-on virtual labs.',
+        keywords: ['Biotechnology workshops', 'Bioinformatics courses', 'Genetic engineering training', 'Life sciences certification']
+    },
+    'nano-technology': {
+        title: 'Engineer the Future with Nanotechnology',
+        description: 'Explore cutting-edge nanotechnology with research-focused curriculum in nanomaterials, quantum dots, and molecular engineering.',
+        keywords: ['Nanotechnology workshops', 'Nanomaterials courses', 'Molecular scaling training', 'Nanoscience certification']
+    },
+    'about-us': {
+        title: 'About NanoSchool - Empowering Next-Gen Scientists',
+        description: 'Learn about our mission to provide world-class education in AI, Biotech, and Nanotech through expert mentorship and hands-on learning.',
+        keywords: ['NanoSchool mission', 'Deep tech education', 'PhD mentorship', 'advanced technology school']
+    }
+};
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+    const { slug } = await params;
+    const config = DOMAIN_METADATA[slug];
+
+    if (!config) {
+        return {
+            title: slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' '),
+        };
+    }
+
+    return {
+        title: config.title,
+        description: config.description,
+        keywords: config.keywords,
+        alternates: {
+            canonical: `/${slug}`,
+        },
+        openGraph: {
+            title: `${config.title} | NanoSchool`,
+            description: config.description,
+            url: `https://nanoschool.in/${slug}`,
+        }
+    };
+}
 
 export default async function SlugPage({
     params,
@@ -50,28 +100,65 @@ export default async function SlugPage({
     // Determine which template to use
     const template = getTemplateForSlug(slug);
 
-    // Render the appropriate template
-    switch (template) {
-        case 'home':
-            return <HomeTemplate />;
-
-        case 'domain':
-            return <DomainTemplate slug={slug} />;
-
-        case 'careers':
-            return <CareersTemplate post={post} />;
-
-        case 'contact':
-            return <ContactTemplate post={post} />;
-
-        case 'internship':
-            return <InternshipTemplate post={post} />;
-
-        case 'faqs':
-            return <FaqTemplate />;
-
-        case 'about':
-        default:
-            return <AboutTemplate post={post} />;
+    // FAQ Schema for specific domains (AEO/GEO Optimization)
+    let faqSchema = null;
+    if (slug === 'ai' || slug === 'biotech' || slug === 'nano-technology') {
+        const domainName = slug === 'ai' ? 'Artificial Intelligence' : slug === 'biotech' ? 'Biotechnology' : 'Nanotechnology';
+        faqSchema = {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": `What will I learn in the ${domainName} program?`,
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": `Our ${domainName} program covers hands-on projects, expert mentorship from PhD researchers, and industry-recognized certifications in cutting-edge topics.`
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": `Is the ${domainName} certification recognized in the industry?`,
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": `Yes, NanoSchool certifications are highly regarded by industry leaders and research institutions, providing a significant boost to your professional credentials.`
+                    }
+                }
+            ]
+        };
     }
+
+    // Render the appropriate template
+    const content = (() => {
+        switch (template) {
+            case 'home':
+                return <HomeTemplate />;
+
+            case 'domain':
+                return <DomainTemplate slug={slug} />;
+
+            case 'careers':
+                return <CareersTemplate post={post} />;
+
+            case 'contact':
+                return <ContactTemplate post={post} />;
+
+            case 'internship':
+                return <InternshipTemplate post={post} />;
+
+            case 'faqs':
+                return <FaqTemplate />;
+
+            case 'about':
+            default:
+                return <AboutTemplate post={post} />;
+        }
+    })();
+
+    return (
+        <>
+            {faqSchema && <JsonLd data={faqSchema} />}
+            {content}
+        </>
+    );
 }

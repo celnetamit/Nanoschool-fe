@@ -45,20 +45,26 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'EducationEvent',
-        name: post.title.rendered,
-        description: post.excerpt.rendered.replace(/<[^>]*>?/gm, ''),
-        organizer: {
-            '@type': 'Organization',
-            name: 'NanoSchool',
-            url: 'https://nanoschool.in'
-        },
-        image: post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
-        startDate: post.date, // This should ideally be the event date, but using post date as fallback or need a custom field
-        eventStatus: 'https://schema.org/EventScheduled',
-        eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
-        location: {
+        'name': post.title.rendered,
+        'description': post.excerpt.rendered.replace(/<[^>]*>?/gm, ''),
+        'image': post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
+        'startDate': post.date, 
+        'eventStatus': 'https://schema.org/EventScheduled',
+        'eventAttendanceMode': 'https://schema.org/OnlineEventAttendanceMode',
+        'location': {
             '@type': 'VirtualLocation',
-            url: `https://nanoschool.in/workshops/${slug}`
+            'url': `https://nanoschool.in/workshops/${slug}`
+        },
+        'organizer': {
+            '@type': 'Organization',
+            'name': 'NanoSchool',
+            'url': 'https://nanoschool.in'
+        },
+        'offers': {
+          '@type': 'Offer',
+          'url': `https://nanoschool.in/workshops/${slug}`,
+          'availability': 'https://schema.org/InStock',
+          'category': 'Professional Workshop'
         }
     };
 

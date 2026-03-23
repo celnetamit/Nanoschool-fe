@@ -186,7 +186,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-                            Why Choose Our Program?
+                            What are the Key Benefits?
                         </h2>
                         <p className="text-xl text-gray-600">
                             Everything you need to succeed in your career
@@ -230,7 +230,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-                            Skills You&apos;ll Master
+                            What Skills Will You Master?
                         </h2>
                         <p className="text-xl text-gray-600">
                             Industry-relevant technical expertise
@@ -255,7 +255,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-                            Career Opportunities
+                            What are the Career Opportunities?
                         </h2>
                         <p className="text-xl text-gray-600">
                             Launch your career in high-demand roles
@@ -277,7 +277,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
             <section className={`py-24 bg-gradient-to-r ${config.gradient} text-white`}>
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h2 className="text-4xl md:text-5xl font-extrabold mb-6">
-                        Start Your Learning Journey
+                        Ready to Start Your Learning Journey?
                     </h2>
                     <p className="text-xl text-white/90 mb-10 leading-relaxed">
                         Join thousands of professionals who&apos;ve transformed their careers with NanoSchool
