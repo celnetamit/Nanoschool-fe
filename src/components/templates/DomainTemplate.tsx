@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import CategoryWorkshops from '../CategoryWorkshops';
+import CategoryCourses from '../CategoryCourses';
 
 interface DomainTemplateProps {
     slug: string;
@@ -98,6 +99,16 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
     };
 
     const workshopCategoryId = workshopCategoryMap[slug];
+
+    // Map slugs to course (product) category IDs
+    const courseCategoryMap: Record<string, number> = {
+        'ai': 4658,
+        'artificial-intelligence': 4658,
+        'biotech': 6253,
+        'nano-technology': 6260,
+    };
+
+    const courseCategoryId = courseCategoryMap[slug];
 
     return (
         <div className="bg-white">
@@ -202,6 +213,14 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                 <CategoryWorkshops
                     categoryId={workshopCategoryId}
                     title="Upcoming Workshops"
+                    limit={6}
+                />
+            )}
+
+            {courseCategoryId && (
+                <CategoryCourses
+                    categoryId={courseCategoryId}
+                    title="Featured Courses"
                     limit={6}
                 />
             )}

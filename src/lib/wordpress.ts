@@ -124,7 +124,7 @@ export async function getLandingPages(): Promise<WordPressPost[]> {
   return response.json();
 }
 
-export async function getProducts(perPage: number = 100, page: number = 1): Promise<WordPressPost[]> {
+export async function getProducts({ perPage = 100, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
   // If perPage is 100 (default), we might still want all, but let's allow fetching just a few.
   // Actually, standard behavior of fetchAllItems was to get ALL.
   // Let's keep getProducts as is for compatibility if used elsewhere,
@@ -135,7 +135,13 @@ export async function getProducts(perPage: number = 100, page: number = 1): Prom
   // For now, limiting to 100 items to ensure the page loads.
   // return fetchAllItems<WordPressPost>('product');
 
-  const response = await fetchWP(`${BASE_URL}/product?per_page=100&_embed`);
+  let url = `${BASE_URL}/product?per_page=${perPage}&page=${page}&_embed`;
+  
+  if (categoryId > 0) {
+    url += `&product_cat=${categoryId}`;
+  }
+
+  const response = await fetchWP(url);
   if (!response.ok) return [];
   return response.json();
 }
