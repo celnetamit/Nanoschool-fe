@@ -202,6 +202,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                 <CategoryWorkshops
                     categoryId={workshopCategoryId}
                     title="Upcoming Workshops"
+                    limit={6}
                 />
             )}
 

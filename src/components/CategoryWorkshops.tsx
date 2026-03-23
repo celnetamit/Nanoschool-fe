@@ -5,14 +5,16 @@ import Link from 'next/link';
 export default async function CategoryWorkshops({
     categoryId,
     title,
+    limit = 3,
     viewAllLink = '/workshops'
 }: {
     categoryId: number,
     title: string,
+    limit?: number,
     viewAllLink?: string
 }) {
-    // Fetch latest 3 workshops for this category
-    const { posts: workshops } = await getWorkshops({ category: categoryId, perPage: 3 });
+    // Fetch latest workshops for this category
+    const { posts: workshops } = await getWorkshops({ category: categoryId, perPage: limit });
 
     if (workshops.length === 0) return null;
 
