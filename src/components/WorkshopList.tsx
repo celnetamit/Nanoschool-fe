@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Card from '@/components/Card';
 import Link from 'next/link';
+import JsonLd from '@/components/JsonLd';
 
 interface Workshop {
     id: number;
@@ -20,15 +21,31 @@ export default function WorkshopList({
     categories,
     categoryId,
     currentPage,
-    totalPages
+    totalPages,
+    faqs = []
 }: {
     workshops: Workshop[],
     categories: any[],
     categoryId: number,
     currentPage: number,
-    totalPages: number
+    totalPages: number,
+    faqs?: { question: string; answer: string; }[]
 }) {
     const [searchQuery, setSearchQuery] = useState('');
+    const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+    const faqSchema = faqs && faqs.length > 0 ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        'mainEntity': faqs.map(faq => ({
+            '@type': 'Question',
+            'name': faq.question,
+            'acceptedAnswer': {
+                '@type': 'Answer',
+                'text': faq.answer
+            }
+        }))
+    } : null;
 
     // Only show these specific workshop categories
     const ALLOWED_CATEGORY_IDS = [5088, 5059, 5085]; // AI, Biotech, Nanotech
@@ -45,12 +62,13 @@ export default function WorkshopList({
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            {faqSchema && <JsonLd data={faqSchema} />}
             <div className="mb-12 text-center">
                 <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-4">
                     Hands-on Workshops
                 </h1>
-                <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-                    Intensive training sessions designed to give you practical, real-world experience.
+                <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
+                    Accelerate your career with our intensive, expert-led training sessions. Whether you are exploring <strong>Artificial Intelligence</strong>, diving into <strong>Biotechnology</strong>, or mastering <strong>Nanotechnology</strong>, our workshops are designed to give you practical, real-world experience. Join industry leaders and upskill with cutting-edge tools.
                 </p>
 
                 {/* Search Bar */}
@@ -146,6 +164,41 @@ export default function WorkshopList({
                         </div>
                     )}
                 </>
+            )}
+
+            {/* AEO Optimized FAQ Section */}
+            {faqs && faqs.length > 0 && (
+                <div className="mt-20 max-w-3xl mx-auto">
+                    <h2 className="text-3xl font-black text-gray-900 text-center mb-8">Frequently Asked Questions</h2>
+                    <div className="space-y-4">
+                        {faqs.map((faq, index) => (
+                            <div key={index} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:border-gray-300 transition-colors shadow-sm">
+                                <button
+                                    onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                                    className="w-full text-left px-6 py-5 focus:outline-none flex justify-between items-center"
+                                >
+                                    <h3 className="text-lg font-bold text-gray-900 pr-8">{faq.question}</h3>
+                                    <span className="text-gray-400 flex-shrink-0">
+                                        {openFaq === index ? (
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        )}
+                                    </span>
+                                </button>
+                                {openFaq === index && (
+                                    <div className="px-6 pb-5 text-gray-600 leading-relaxed border-t border-gray-100 pt-4">
+                                        {faq.answer}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
             )}
         </div>
     );

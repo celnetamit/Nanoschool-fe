@@ -22,15 +22,27 @@ export async function generateMetadata(
         ? [post._embedded['wp:featuredmedia'][0].source_url]
         : [];
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+
     return {
         title: `${title} | Live Workshop`,
         description: description,
+        alternates: {
+            canonical: `${siteUrl}/workshops/${slug}`
+        },
         openGraph: {
             title: title,
             description: description,
             images: images,
-            type: 'article',
+            type: 'website',
+            url: `${siteUrl}/workshops/${slug}`,
         },
+        twitter: {
+            card: 'summary_large_image',
+            title: title,
+            description: description,
+            images: images,
+        }
     };
 }
 
@@ -44,7 +56,10 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
 
-    const jsonLd = {
+    const isPastEvent = new Date(post.date).getTime() < Date.now();
+    const availability = isPastEvent ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock';
+
+    const eventSchema = {
         '@context': 'https://schema.org',
         '@type': 'EducationEvent',
         'name': post.title.rendered,
@@ -65,14 +80,39 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         'offers': {
           '@type': 'Offer',
           'url': `${siteUrl}/workshops/${slug}`,
-          'availability': 'https://schema.org/InStock',
+          'availability': availability,
           'category': 'Professional Workshop'
         }
     };
 
+    const workshopName = post.title.rendered.replace(/<[^>]*>?/gm, '');
+    const faqSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        'mainEntity': [
+            {
+                '@type': 'Question',
+                'name': `Will I get a certificate after completing the ${workshopName} workshop?`,
+                'acceptedAnswer': {
+                    '@type': 'Answer',
+                    'text': `Yes, all participants who successfully complete the ${workshopName} workshop will receive a verifiable digital certificate from NanoSchool.`
+                }
+            },
+            {
+                '@type': 'Question',
+                'name': `Are the sessions for ${workshopName} recorded?`,
+                'acceptedAnswer': {
+                    '@type': 'Answer',
+                    'text': `Yes, registered participants will get access to session recordings for review and future reference.`
+                }
+            }
+        ]
+    };
+
     return (
         <>
-            <JsonLd data={jsonLd} />
+            <JsonLd data={eventSchema} />
+            <JsonLd data={faqSchema} />
             <DetailView params={params} type="workshops" />
         </>
     );

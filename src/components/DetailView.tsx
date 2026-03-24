@@ -378,6 +378,45 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
                             );
                         })()}
 
+                        {/* 5. AEO Optimized FAQs (Only for Workshops) */}
+                        {type === 'workshops' && (
+                            <div className="bg-white rounded-[2rem] p-8 md:p-12 shadow-xl border border-gray-200 mt-10">
+                                <h2 className="text-3xl font-black text-gray-900 mb-8 flex items-center gap-3">
+                                    <span className={`w-10 h-1 bg-gradient-to-r ${branding.from} ${branding.to} rounded-full`}></span>
+                                    Frequently Asked Questions
+                                </h2>
+                                <div className="space-y-4">
+                                    {[
+                                        {
+                                            question: `Will I get a certificate after completing the ${post.title.rendered.replace(/<[^>]*>?/gm, '')} workshop?`,
+                                            answer: `Yes, all participants who successfully complete the workshop will receive a verifiable digital certificate from NanoSchool.`
+                                        },
+                                        {
+                                            question: `Are the sessions recorded?`,
+                                            answer: `Yes, registered participants will get access to session recordings for review and future reference.`
+                                        },
+                                        {
+                                            question: `What are the prerequisites?`,
+                                            answer: `Basic familiarity with the domain is helpful. We start from the fundamentals and progress to advanced hands-on applications.`
+                                        }
+                                    ].map((faq, i) => (
+                                        <details key={i} className="group bg-gray-50 rounded-2xl border border-gray-100 open:bg-white open:border-gray-200 open:shadow-md transition-all duration-300">
+                                            <summary className="flex cursor-pointer items-center justify-between p-6 text-lg font-bold text-gray-900 marker:content-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-2xl">
+                                                <span className="pr-4">{faq.question}</span>
+                                                <span className="relative flex h-5 w-5 shrink-0 items-center justify-center">
+                                                    <svg className="h-5 w-5 group-open:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                                                    <svg className="h-5 w-5 hidden group-open:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4"/></svg>
+                                                </span>
+                                            </summary>
+                                            <div className="px-6 pb-6 text-gray-600 leading-relaxed border-t border-gray-100 pt-4 prose prose-sm max-w-none">
+                                                {faq.answer}
+                                            </div>
+                                        </details>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                     </div>
 
 
