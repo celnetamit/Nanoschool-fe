@@ -56,7 +56,7 @@ export default async function WorkshopsPage({
 
     const { posts: workshops, totalPages } = workshopData;
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://courses.nanoschool.in';
 
     // Generate ItemList schema for SEO
     const itemListSchema = {

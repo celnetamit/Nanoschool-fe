@@ -22,7 +22,7 @@ export async function generateMetadata(
         ? [post._embedded['wp:featuredmedia'][0].source_url]
         : [];
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://courses.nanoschool.in';
 
     return {
         title: `${title} | Live Workshop`,
@@ -54,7 +54,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         notFound();
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://courses.nanoschool.in';
 
     const isPastEvent = new Date(post.date).getTime() < Date.now();
     const availability = isPastEvent ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock';

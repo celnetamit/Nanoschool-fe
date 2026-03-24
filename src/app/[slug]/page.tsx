@@ -35,7 +35,7 @@ const DOMAIN_METADATA: Record<string, { title: string, description: string, keyw
     }
 };
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://courses.nanoschool.in';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;

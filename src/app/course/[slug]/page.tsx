@@ -55,7 +55,7 @@ export default async function CourseDetail({
         notFound();
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nanoschool.in';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://courses.nanoschool.in';
 
     const jsonLd = {
         '@context': 'https://schema.org',
