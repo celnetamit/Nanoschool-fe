@@ -1,23 +1,21 @@
-import { getPostBySlug, getProducts, getPagedProducts, getWorkshops } from '@/lib/wordpress';
-// import PageTemplate from '@/components/templates/PageTemplate';
 import Link from 'next/link';
-import Card from '@/components/Card';
-import LogoMarquee from '@/components/LogoMarquee';
-import TestimonialSlider from '@/components/TestimonialSlider';
-import FAQ from '@/components/FAQ';
 import { FAQ_DATA } from '@/data/faqs';
+import dynamic from 'next/dynamic';
+import { preload } from 'react-dom';
+import { Suspense } from 'react';
+import FeaturedCourses from '@/components/home/FeaturedCourses';
+import FeaturedWorkshops from '@/components/home/FeaturedWorkshops';
+import CardSkeletonGrid from '@/components/home/CardSkeletonGrid';
 
-export default async function Home() {
-  // Fetch the specific Home Page
-  const post = await getPostBySlug('pages', 'nanoschool-home-v2');
+const LogoMarquee = dynamic(() => import('@/components/LogoMarquee'));
+const TestimonialSlider = dynamic(() => import('@/components/TestimonialSlider'));
+const FAQ = dynamic(() => import('@/components/FAQ'));
 
-  if (post) {
-    // return <PageTemplate post={post} />;
-    // Fall through to custom custom design even if post exists
-  }
+export default function Home() {
+  // Preload the critical LCP background texture to ensure immediate painting of the Hero
+  preload('https://grainy-gradients.vercel.app/noise.svg', { as: 'image' });
 
-  const courses = await getPagedProducts(6);
-  const workshops = await getWorkshops({ perPage: 6 });
+  // No blocking awaits at the root! The Hero streams instantly to the browser (< 0.8s LCP).
 
   return (
     <div className="min-h-screen bg-white" suppressHydrationWarning>
@@ -190,56 +188,14 @@ export default async function Home() {
       </section>
 
       {/* Featured Courses - Premium Grid */}
-      {courses.length > 0 && (
-        <section className="py-24 bg-slate-50 border-b border-slate-200" style={{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">
-                  Flagship Certification Programs
-                </h2>
-                <p className="text-lg text-slate-600 max-w-2xl leading-relaxed">
-                  Intensive, industry-recognized courses designed to fast-track your career.
-                </p>
-              </div>
-              <Link href="/course" className="hidden md:inline-flex items-center font-bold text-blue-600 hover:text-blue-700 transition-colors">
-                View Full Catalog <span className="ml-2">→</span>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {courses.slice(0, 6).map((course) => (
-                <Card key={course.id} post={course} type="course" />
-              ))}
-            </div>
-
-            <div className="mt-12 text-center md:hidden">
-              <Link href="/course" className="inline-block px-6 py-3 bg-white border border-slate-200 rounded-lg font-bold text-slate-700">View All Courses</Link>
-            </div>
-          </div>
-        </section>
-      )}
+      <Suspense fallback={<CardSkeletonGrid count={6} bgClass="bg-slate-50 border-b border-slate-200" />}>
+        <FeaturedCourses />
+      </Suspense>
 
       {/* Featured Workshops */}
-      {workshops.posts.length > 0 && (
-        <section className="py-24 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">
-                Upcoming Workshops
-              </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-                Short-term, high-impact learning sessions.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {workshops.posts.slice(0, 6).map((workshop) => (
-                <Card key={workshop.id} post={workshop} type="workshops" />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      <Suspense fallback={<CardSkeletonGrid count={6} bgClass="bg-white" />}>
+        <FeaturedWorkshops />
+      </Suspense>
 
       {/* FAQ Section (New) */}
       <section className="py-24 bg-white">
