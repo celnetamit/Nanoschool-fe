@@ -49,8 +49,8 @@ export async function POST(request: Request) {
       referralSource: '9814',
       payment_status: '9817', 
       razorpay_order_id: '9816', 
-      learningMode: '9796', // Reusing profession field for learning mode in courses
-      category: '9822', // NEW FIELD for Workshop vs Course
+      learningMode: '9824', // Reusing profession field for learning mode in courses
+      category: '9823', // NEW FIELD for Workshop vs Course
     };
 
     // Populate item_meta dynamically based on mapping
