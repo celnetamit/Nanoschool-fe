@@ -172,6 +172,7 @@ export default function WorkshopEnrollmentDialog({
       }
 
       const entryId = result.data?.id;
+      const itemMeta = result.itemMeta;
       
       // Step 2: Create Razorpay Order
       // Only proceed to payment if amount is > 0
@@ -221,7 +222,8 @@ export default function WorkshopEnrollmentDialog({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                entryId: entryId
+                entryId: entryId,
+                itemMeta: itemMeta
               }),
             });
 

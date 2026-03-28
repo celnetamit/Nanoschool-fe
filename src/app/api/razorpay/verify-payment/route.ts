@@ -7,7 +7,8 @@ export async function POST(request: Request) {
       razorpay_order_id, 
       razorpay_payment_id, 
       razorpay_signature,
-      entryId 
+      entryId,
+      itemMeta
     } = await request.json();
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -59,6 +60,26 @@ export async function POST(request: Request) {
       const errorData = await updateResponse.json();
       console.error('Failed to update Formidable entry:', errorData);
       return NextResponse.json({ error: 'Payment verified but failed to update entry' }, { status: 500 });
+    }
+
+    // Trigger Success Webhook
+    try {
+      const webhookPayload = {
+        ...(itemMeta || {}),
+        [PAYMENT_STATUS_FIELD]: 'SUCCESS',
+        [RZP_ORDER_ID_FIELD]: razorpay_order_id,
+        [RZP_PAYMENT_ID_FIELD]: razorpay_payment_id,
+        [RZP_SIGNATURE_FIELD]: razorpay_signature
+      };
+
+      await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload),
+      });
+    } catch (whError) {
+      console.error('Webhook failed:', whError);
+      // We don't fail the verification if the webhook fails, but we log the error
     }
 
     return NextResponse.json({ success: true });
