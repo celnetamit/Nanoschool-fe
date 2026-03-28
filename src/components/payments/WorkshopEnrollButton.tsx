@@ -27,14 +27,15 @@ export default function WorkshopEnrollButton({
   const [isOpen, setIsOpen] = useState(false);
 
   const handleClick = (e: React.MouseEvent) => {
-    // Only open dialog for workshops. Others continue to normal link.
-    if (itemType === 'workshops') {
+    // Open dialog for workshops and courses.
+    if (itemType === 'workshops' || itemType === 'courses') {
       e.preventDefault();
       setIsOpen(true);
     }
   };
 
-  if (itemType !== 'workshops' && href) {
+  // Only use <a> for non-dialog types
+  if (itemType !== 'workshops' && itemType !== 'courses' && href) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
         {children}
@@ -55,6 +56,7 @@ export default function WorkshopEnrollButton({
         workshopTitle={workshopTitle}
         courseFee={courseFee}
         professionFees={professionFees}
+        itemType={itemType}
       />
     </>
   );

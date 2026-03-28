@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       referralSource: '9814',
       payment_status: '9817', 
       razorpay_order_id: '9816', 
+      learningMode: '9796', // Reusing profession field for learning mode in courses
     };
 
     // Set initial payment status for lead capture

@@ -87,25 +87,43 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
             contentLower.includes('inr');
     });
 
-    // Build a profession → fee map from the fee modules for the enrollment dialog.
-    // The fee content format is like "₹2000 | $25" per module title (e.g. "Student Fee", "Professional Fee")
+    // Build a profession/mode → fee map from the fee modules for the enrollment dialog.
     const professionFeeMap: Record<string, string> = {};
     const professionKeywords: Record<string, string> = {
         student: 'Student',
         researcher: 'Researcher',
         academician: 'Academician',
-        faculty: 'Academician',   // map faculty → Academician
+        faculty: 'Academician',
         professional: 'Professional',
     };
+
+    const learningModeFeeMap: Record<string, string> = {};
+    const learningModeKeywords: Record<string, string> = {
+        'e-lms': 'e-LMS',
+        'video': 'Video + e-LMS',
+        'live lectures': 'Live Lectures + Video + e-LMS',
+    };
+
     feeModules.forEach(m => {
         const titleLower = m.title.toLowerCase();
         const rawText = m.content.replace(/<[^>]*>?/gm, '').trim();
-        // Take the first price token (INR or first value)
         const firstPrice = rawText.split('|')[0].trim();
+        
+        // Workshop fees
         for (const [keyword, profKey] of Object.entries(professionKeywords)) {
             if (titleLower.includes(keyword) && firstPrice) {
                 professionFeeMap[profKey] = firstPrice;
-                break;
+            }
+        }
+        
+        // Course learning mode fees (Prioritized matching)
+        if (firstPrice) {
+            if (titleLower.includes('live lectures')) {
+                learningModeFeeMap['Live Lectures + Video + e-LMS'] = firstPrice;
+            } else if (titleLower.includes('video')) {
+                learningModeFeeMap['Video + e-LMS'] = firstPrice;
+            } else if (titleLower.includes('e-lms')) {
+                learningModeFeeMap['e-LMS'] = firstPrice;
             }
         }
     });
@@ -493,7 +511,7 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
                                             itemType={type}
                                             href={`https://nanoschool.in/${type === 'courses' ? 'course' : type}/${slug}`}
                                             workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
-                                            professionFees={professionFeeMap}
+                                            professionFees={type === 'courses' ? learningModeFeeMap : professionFeeMap}
                                             className={`flex items-center justify-center w-full py-5 bg-gradient-to-r ${branding.from} ${branding.to} text-white font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-brand-accent/20 hover:shadow-2xl hover:shadow-brand-accent/40 transition-all duration-300 hover:-translate-y-1 active:scale-95 text-sm relative overflow-hidden`}
                                         >
                                             <span className="relative z-10">Enroll Now</span>

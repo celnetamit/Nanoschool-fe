@@ -6,6 +6,7 @@ import { WordPressPost, structureWPContent, sanitizeWPContent, StoreProduct } fr
 import { BookOpen, Award, Users, CheckCircle, Clock, Calendar, ChevronDown, ChevronUp, Star, ShieldCheck, PlayCircle, Globe } from 'lucide-react';
 import FAQ from '@/components/FAQ';
 import { FAQ_DATA } from '@/data/faqs';
+import WorkshopEnrollButton from '@/components/payments/WorkshopEnrollButton';
 
 interface CourseTemplateProps {
     post: WordPressPost;
@@ -50,6 +51,36 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
     // Extract structured data
     const { overview, modules } = structureWPContent(post.content.rendered);
     const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0]?.source_url || '/placeholder.jpg';
+
+    // Extract Learning Mode Fees for Dialog
+    const learningModeFeeMap: Record<string, string> = {};
+    const feeModules = modules.filter(m => 
+        m.title.toLowerCase().includes('fee') || 
+        m.title.toLowerCase().includes('lms') || 
+        m.title.toLowerCase().includes('video') || 
+        m.title.toLowerCase().includes('lectures')
+    );
+
+    feeModules.forEach(m => {
+        const titleLower = m.title.toLowerCase();
+        const rawText = m.content.replace(/<[^>]*>?/gm, '').trim();
+        const firstPrice = rawText.split('|')[0].trim();
+        if (firstPrice) {
+            if (titleLower.includes('live lectures')) {
+                learningModeFeeMap['Live Lectures + Video + e-LMS'] = firstPrice;
+            } else if (titleLower.includes('video')) {
+                learningModeFeeMap['Video + e-LMS'] = firstPrice;
+            } else if (titleLower.includes('e-lms')) {
+                learningModeFeeMap['e-LMS'] = firstPrice;
+            }
+        }
+    });
+
+    // Fallback if extraction fails
+    const initialPrice = formatPrice(currentPrice);
+    if (!learningModeFeeMap['e-LMS'] && storeProduct) {
+        learningModeFeeMap['e-LMS'] = initialPrice;
+    }
 
     // Smooth scroll handler
     const scrollToSection = (id: string) => {
@@ -166,9 +197,15 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                     </div>
                     {/* Simplified Enroll Button for Nav */}
                     <div className="hidden md:block">
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-2 rounded-lg transition-colors shadow-lg shadow-blue-600/20">
+                        <WorkshopEnrollButton
+                            itemType="courses"
+                            workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                            professionFees={learningModeFeeMap}
+                            courseFee={learningModeFeeMap['e-LMS'] || initialPrice}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-2 rounded-lg transition-colors shadow-lg shadow-blue-600/20"
+                        >
                             Enroll Now
-                        </button>
+                        </WorkshopEnrollButton>
                     </div>
                 </div>
             </div>
@@ -324,10 +361,16 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                                     ))}
                                 </div>
 
-                                {/* Use permalink for the direct product page on the main site */}
-                                <Link href={storeProduct?.permalink || '#'} className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-lg shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all mb-4">
+                                {/* Use enrollment button instead of direct link */}
+                                <WorkshopEnrollButton 
+                                    itemType="courses"
+                                    workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                                    professionFees={learningModeFeeMap}
+                                    courseFee={learningModeFeeMap['e-LMS'] || initialPrice}
+                                    className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-lg shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all mb-4"
+                                >
                                     Enroll Now
-                                </Link>
+                                </WorkshopEnrollButton>
 
                                 <div className="text-center text-xs text-slate-500 mb-6">
                                     30-Day Money-Back Guarantee • Lifetime Access
@@ -364,15 +407,21 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                 </div>
             </div>
 
-            {/* Mobile Floating Action Button (if relevant) */}
+            {/* Mobile Floating Action Button */}
             <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-50 flex items-center justify-between shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
                 <div>
                     <span className="text-xs text-slate-500 block">Total Fee</span>
                     <span className="text-2xl font-black text-slate-900">{formatPrice(currentPrice)}</span>
                 </div>
-                <Link href={storeProduct?.permalink || '#'} className="bg-blue-600 text-white font-bold px-8 py-3 rounded-xl shadow-lg">
+                <WorkshopEnrollButton 
+                    itemType="courses"
+                    workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                    professionFees={learningModeFeeMap}
+                    courseFee={learningModeFeeMap['e-LMS'] || initialPrice}
+                    className="bg-blue-600 text-white font-bold px-8 py-3 rounded-xl shadow-lg"
+                >
                     Enroll Now
-                </Link>
+                </WorkshopEnrollButton>
             </div>
         </div>
     );

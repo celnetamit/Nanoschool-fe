@@ -26,6 +26,7 @@ interface WorkshopEnrollmentDialogProps {
   workshopTitle?: string;
   courseFee?: string;
   professionFees?: ProfessionFees;
+  itemType?: 'workshops' | 'courses' | string;
 }
 
 export default function WorkshopEnrollmentDialog({
@@ -35,6 +36,7 @@ export default function WorkshopEnrollmentDialog({
   workshopTitle = 'AI for Plastic Pollution Analytics: Sources, Pathways & Prediction',
   courseFee = '0.00',
   professionFees = {},
+  itemType = 'workshops',
 }: WorkshopEnrollmentDialogProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +60,7 @@ export default function WorkshopEnrollmentDialog({
     couponCode: '',
     otherCurrency: 'no',
     referralSource: '',
+    learningMode: '',
     termsAgreed: false,
   });
 
@@ -104,10 +107,10 @@ export default function WorkshopEnrollmentDialog({
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
-      // When profession changes, update the payable amount
-      if (name === 'profession' && value) {
+      // When profession or learning mode changes, update the payable amount
+      if ((name === 'profession' || name === 'learningMode') && value) {
         const fee = professionFees[value];
-        setPayableAmount(fee || courseFee);
+        if (fee) setPayableAmount(fee);
       }
     }
   };
@@ -129,6 +132,7 @@ export default function WorkshopEnrollmentDialog({
           workshopTitle,
           courseFee: payableAmount,
           payableAmount,
+          itemType,
         }),
       });
 
@@ -251,7 +255,7 @@ export default function WorkshopEnrollmentDialog({
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-6 bg-white border-b border-slate-100 rounded-t-3xl">
           <div>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Enrollment Form</h2>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">{itemType === 'courses' ? 'Course Enrollment' : 'Enrollment Form'}</h2>
             <p className="text-sm text-slate-500 font-medium mt-1">New enrollment form as of 15 Aug 24</p>
           </div>
           <button 
@@ -349,46 +353,68 @@ export default function WorkshopEnrollmentDialog({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Current Affiliation</label>
-                <input 
-                  type="text" 
-                  name="currentAffiliation"
-                  value={formData.currentAffiliation}
-                  onChange={handleChange}
-                  placeholder="University or Company"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                />
-              </div>
+              {itemType !== 'courses' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Current Affiliation</label>
+                    <input 
+                      type="text" 
+                      name="currentAffiliation"
+                      value={formData.currentAffiliation}
+                      onChange={handleChange}
+                      placeholder="University or Company"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Profession *</label>
-                <select 
-                  name="profession"
-                  value={formData.profession}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all bg-white"
-                >
-                  <option value="" disabled>Select</option>
-                  <option value="Student">Student</option>
-                  <option value="Researcher">Researcher</option>
-                  <option value="Academician">Academician</option>
-                  <option value="Professional">Professional</option>
-                </select>
-              </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Profession *</label>
+                    <select 
+                      name="profession"
+                      value={formData.profession}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all bg-white"
+                    >
+                      <option value="" disabled>Select</option>
+                      <option value="Student">Student</option>
+                      <option value="Researcher">Researcher</option>
+                      <option value="Academician">Academician</option>
+                      <option value="Professional">Professional</option>
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Designation</label>
-                <input 
-                  type="text" 
-                  name="designation"
-                  value={formData.designation}
-                  onChange={handleChange}
-                  placeholder="e.g. Data Scientist"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Designation</label>
+                    <input 
+                      type="text" 
+                      name="designation"
+                      value={formData.designation}
+                      onChange={handleChange}
+                      placeholder="e.g. Data Scientist"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
+                    />
+                  </div>
+                </>
+              )}
+
+              {itemType === 'courses' && (
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Choose your learning mode *</label>
+                  <select 
+                    name="learningMode"
+                    value={formData.learningMode}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all bg-white"
+                  >
+                    <option value="" disabled>Select Mode</option>
+                    <option value="e-LMS">e-LMS</option>
+                    <option value="Video + e-LMS">Video + e-LMS</option>
+                    <option value="Live Lectures + Video + e-LMS">Live Lectures + Video + e-LMS</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
@@ -449,17 +475,19 @@ export default function WorkshopEnrollmentDialog({
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">GST/VAT No. (Not Mandatory)</label>
-                  <input 
-                    type="text" 
-                    name="gstVatNo"
-                    value={formData.gstVatNo}
-                    onChange={handleChange}
-                    placeholder="Tax ID if applicable"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                  />
-                </div>
+                {itemType !== 'courses' && (
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">GST/VAT No. (Not Mandatory)</label>
+                    <input 
+                      type="text" 
+                      name="gstVatNo"
+                      value={formData.gstVatNo}
+                      onChange={handleChange}
+                      placeholder="Tax ID if applicable"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -536,59 +564,63 @@ export default function WorkshopEnrollmentDialog({
                   {Object.keys(professionFees).length > 0 && (
                     <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
                       <span>💡</span>
-                      {formData.profession
-                        ? `Fee for ${formData.profession}`
-                        : 'Select a profession above to see applicable fee'}
+                      {itemType === 'courses' 
+                        ? (formData.learningMode ? `Fee for ${formData.learningMode}` : 'Select a learning mode above')
+                        : (formData.profession ? `Fee for ${formData.profession}` : 'Select a profession above')}
                     </p>
                   )}
                 </div>
 
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <label className="block text-sm font-bold text-slate-700 mb-3">Do you want to pay Other than USD?</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="otherCurrency" 
-                        value="yes"
-                        checked={formData.otherCurrency === 'yes'}
-                        onChange={handleChange}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <span className="text-sm font-medium">Yes</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="otherCurrency" 
-                        value="no"
-                        checked={formData.otherCurrency === 'no'}
-                        onChange={handleChange}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <span className="text-sm font-medium">No</span>
-                    </label>
+                {itemType !== 'courses' && (
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <label className="block text-sm font-bold text-slate-700 mb-3">Do you want to pay Other than USD?</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="radio" 
+                          name="otherCurrency" 
+                          value="yes"
+                          checked={formData.otherCurrency === 'yes'}
+                          onChange={handleChange}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm font-medium">Yes</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="radio" 
+                          name="otherCurrency" 
+                          value="no"
+                          checked={formData.otherCurrency === 'no'}
+                          onChange={handleChange}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm font-medium">No</span>
+                      </label>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-slate-200">
-              <label className="block text-sm font-bold text-slate-700 mb-2">How do you come to know about this workshop? *</label>
-              <select 
-                name="referralSource"
-                value={formData.referralSource}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all"
-              >
-                <option value="" disabled>Select</option>
-                <option value="Email">Email</option>
-                <option value="Social Media">Social Media</option>
-                <option value="Colleague">Colleague</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
+            {itemType !== 'courses' && (
+              <div className="mt-6 pt-6 border-t border-slate-200">
+                <label className="block text-sm font-bold text-slate-700 mb-2">How do you come to know about this workshop? *</label>
+                <select 
+                  name="referralSource"
+                  value={formData.referralSource}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all"
+                >
+                  <option value="" disabled>Select</option>
+                  <option value="Email">Email</option>
+                  <option value="Social Media">Social Media</option>
+                  <option value="Colleague">Colleague</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Terms */}
@@ -617,7 +649,7 @@ export default function WorkshopEnrollmentDialog({
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
               {isSubmitting ? 'Processing Submission...' : (
                 <>
-                  <span className="relative z-10">Confirm & Enroll in Workshop</span>
+                  <span className="relative z-10">{itemType === 'courses' ? 'Confirm & Enroll in Course' : 'Confirm & Enroll in Workshop'}</span>
                   <CheckCircle className="w-5 h-5 relative z-10" />
                 </>
               )}
