@@ -50,10 +50,8 @@ export async function POST(request: Request) {
       payment_status: '9817', 
       razorpay_order_id: '9816', 
       learningMode: '9796', // Reusing profession field for learning mode in courses
+      category: '9822', // NEW FIELD for Workshop vs Course
     };
-
-    // Set initial payment status for lead capture
-    itemMeta[fieldMapping.payment_status] = 'payment_pending';
 
     // Populate item_meta dynamically based on mapping
     for (const [bodyKey, fieldId] of Object.entries(fieldMapping)) {
