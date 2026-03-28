@@ -68,6 +68,13 @@ export default function WorkshopEnrollmentDialog({
     setIsMounted(true);
   }, []);
 
+  // Sync payableAmount with courseFee prop when it changes or dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setPayableAmount(courseFee);
+    }
+  }, [isOpen, courseFee]);
+
   // Fetch the next sequential PID whenever the dialog opens
   useEffect(() => {
     if (!isOpen) return;
@@ -110,7 +117,27 @@ export default function WorkshopEnrollmentDialog({
       // When profession or learning mode changes, update the payable amount
       if ((name === 'profession' || name === 'learningMode') && value) {
         const fee = professionFees[value];
-        if (fee) setPayableAmount(fee);
+        if (fee) {
+          setPayableAmount(fee);
+        } else if (itemType === 'courses') {
+          // Fallback calculation for courses based on base fee (courseFee)
+          // Multipliers: e-LMS 1x, Video 1.5x, Live 2.5x
+          const baseMatch = courseFee.match(/([0-9,.]+)/);
+          const baseVal = baseMatch ? parseFloat(baseMatch[0].replace(/,/g, '')) : 0;
+          
+          if (baseVal > 0) {
+            let multiplier = 1;
+            if (value.includes('Live')) multiplier = 2.5;
+            else if (value.includes('Video')) multiplier = 1.5;
+            
+            const calculated = Math.round(baseVal * multiplier);
+            const formatted = courseFee.replace(/[0-9,.]+/, calculated.toLocaleString());
+            setPayableAmount(formatted);
+          }
+        } else if (itemType === 'workshops') {
+           // For workshops, if specific fee is missing, fall back to base courseFee
+           setPayableAmount(courseFee);
+        }
       }
     }
   };
