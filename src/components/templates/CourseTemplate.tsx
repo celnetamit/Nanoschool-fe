@@ -76,11 +76,11 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
         }
     });
 
-    // Fallback if extraction fails
-    const initialPrice = formatPrice(currentPrice);
-    if (!learningModeFeeMap['e-LMS'] && storeProduct) {
-        learningModeFeeMap['e-LMS'] = initialPrice;
-    }
+    // Fallback if extraction fails and guarantee all variants are populated so forms don't guess
+    const baseCoursePrice = currency === 'USD' ? basePriceUSD : (basePriceUSD * conversionRate);
+    if (!learningModeFeeMap['e-LMS']) learningModeFeeMap['e-LMS'] = formatPrice(baseCoursePrice);
+    if (!learningModeFeeMap['Video + e-LMS']) learningModeFeeMap['Video + e-LMS'] = formatPrice(baseCoursePrice * 1.5);
+    if (!learningModeFeeMap['Live Lectures + Video + e-LMS']) learningModeFeeMap['Live Lectures + Video + e-LMS'] = formatPrice(baseCoursePrice * 2.5);
 
     // Smooth scroll handler
     const scrollToSection = (id: string) => {
@@ -201,7 +201,7 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                             itemType="courses"
                             workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
                             professionFees={learningModeFeeMap}
-                            courseFee={learningModeFeeMap['e-LMS'] || initialPrice}
+                            courseFee={formatPrice(currentPrice)}
                             className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-2 rounded-lg transition-colors shadow-lg shadow-blue-600/20"
                         >
                             Enroll Now
@@ -366,7 +366,7 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                                     itemType="courses"
                                     workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
                                     professionFees={learningModeFeeMap}
-                                    courseFee={learningModeFeeMap['e-LMS'] || initialPrice}
+                                    courseFee={formatPrice(currentPrice)}
                                     className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-lg shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all mb-4"
                                 >
                                     Enroll Now
@@ -417,7 +417,7 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                     itemType="courses"
                     workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
                     professionFees={learningModeFeeMap}
-                    courseFee={learningModeFeeMap['e-LMS'] || initialPrice}
+                    courseFee={formatPrice(currentPrice)}
                     className="bg-blue-600 text-white font-bold px-8 py-3 rounded-xl shadow-lg"
                 >
                     Enroll Now

@@ -117,13 +117,14 @@ export default function WorkshopEnrollmentDialog({
       // When profession or learning mode changes, update the payable amount
       if ((name === 'profession' || name === 'learningMode') && value) {
         const fee = professionFees[value];
+        console.log('Price Update Trace:', { name, value, fee, courseFee, professionFees });
         if (fee) {
           setPayableAmount(fee);
         } else if (itemType === 'courses') {
           // Fallback calculation for courses based on base fee (courseFee)
-          // Multipliers: e-LMS 1x, Video 1.5x, Live 2.5x
           const baseMatch = courseFee.match(/([0-9,.]+)/);
           const baseVal = baseMatch ? parseFloat(baseMatch[0].replace(/,/g, '')) : 0;
+          console.log('Calculation Trace:', { baseMatch, baseVal });
           
           if (baseVal > 0) {
             let multiplier = 1;
@@ -132,10 +133,10 @@ export default function WorkshopEnrollmentDialog({
             
             const calculated = Math.round(baseVal * multiplier);
             const formatted = courseFee.replace(/[0-9,.]+/, calculated.toLocaleString());
+            console.log('Resulting Price:', { calculated, formatted });
             setPayableAmount(formatted);
           }
         } else if (itemType === 'workshops') {
-           // For workshops, if specific fee is missing, fall back to base courseFee
            setPayableAmount(courseFee);
         }
       }
@@ -160,6 +161,7 @@ export default function WorkshopEnrollmentDialog({
           courseFee: payableAmount,
           payableAmount,
           itemType,
+          category: itemType === 'courses' ? 'Course' : 'Workshop',
         }),
       });
 
