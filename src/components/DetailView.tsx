@@ -6,6 +6,7 @@ import TestimonialSlider from './TestimonialSlider';
 import PricingSection from './PricingSection';
 import KeyHighlights from './KeyHighlights';
 import HallOfFameSection from './HallOfFameSection';
+import WorkshopEnrollButton from './payments/WorkshopEnrollButton';
 
 // function formatDate(dateString: string) ... (keeping this)
 
@@ -85,6 +86,30 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
             contentLower.includes('rs.') ||
             contentLower.includes('inr');
     });
+
+    // Build a profession → fee map from the fee modules for the enrollment dialog.
+    // The fee content format is like "₹2000 | $25" per module title (e.g. "Student Fee", "Professional Fee")
+    const professionFeeMap: Record<string, string> = {};
+    const professionKeywords: Record<string, string> = {
+        student: 'Student',
+        researcher: 'Researcher',
+        academician: 'Academician',
+        faculty: 'Academician',   // map faculty → Academician
+        professional: 'Professional',
+    };
+    feeModules.forEach(m => {
+        const titleLower = m.title.toLowerCase();
+        const rawText = m.content.replace(/<[^>]*>?/gm, '').trim();
+        // Take the first price token (INR or first value)
+        const firstPrice = rawText.split('|')[0].trim();
+        for (const [keyword, profKey] of Object.entries(professionKeywords)) {
+            if (titleLower.includes(keyword) && firstPrice) {
+                professionFeeMap[profKey] = firstPrice;
+                break;
+            }
+        }
+    });
+
     const dateModules = modules.filter(m =>
         (m.title.toLowerCase().includes('date') || m.title.toLowerCase().includes('registration')) &&
         !m.title.trim().match(/^Important Dates$/i)
@@ -263,14 +288,16 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
 
                                         <CountdownTimer targetDate={extractWorkshopDate(post.content.rendered)} />
 
-                                        <a
+                                        <WorkshopEnrollButton
+                                            itemType={type}
                                             href={`https://nanoschool.in/workshops/${slug}`}
-                                            target="_blank"
+                                            workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                                            professionFees={professionFeeMap}
                                             className="w-full py-4 bg-white text-slate-900 font-bold uppercase tracking-widest text-sm rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-black/20 flex items-center justify-center gap-2 group-hover:shadow-red-500/20"
                                         >
                                             <span>Secure Seat</span>
                                             <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                                        </a>
+                                        </WorkshopEnrollButton>
                                     </div>
                                 </div>
                             </div>
@@ -462,14 +489,16 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
                                     </div>
 
                                     <div className="space-y-4">
-                                        <a
+                                        <WorkshopEnrollButton
+                                            itemType={type}
                                             href={`https://nanoschool.in/${type === 'courses' ? 'course' : type}/${slug}`}
-                                            target="_blank"
+                                            workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                                            professionFees={professionFeeMap}
                                             className={`flex items-center justify-center w-full py-5 bg-gradient-to-r ${branding.from} ${branding.to} text-white font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-brand-accent/20 hover:shadow-2xl hover:shadow-brand-accent/40 transition-all duration-300 hover:-translate-y-1 active:scale-95 text-sm relative overflow-hidden`}
                                         >
                                             <span className="relative z-10">Enroll Now</span>
                                             <div className="absolute inset-0 bg-white/20 translate-y-full hover:translate-y-0 transition-transform duration-300"></div>
-                                        </a>
+                                        </WorkshopEnrollButton>
                                         <div className="flex items-center justify-center gap-2 opacity-60">
                                             <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Instant Access</p>
