@@ -186,6 +186,9 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
     sanitized = sanitized.replace(/<[^>]*>?/gm, '');
   } else {
     // 3. AGGRESSIVE STRIPPING for full content
+    
+    // Remove images pointing to port 7071 (Developer-only hardcoded URLs)
+    sanitized = sanitized.replace(/<img[^>]+src="http:\/\/localhost:7071\/[^>]+>/gi, '');
 
     // Remove <style> blocks and their content to prevent global layout breakage
     sanitized = sanitized.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
