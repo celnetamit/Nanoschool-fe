@@ -99,6 +99,32 @@ export async function POST(request: Request) {
       );
     }
 
+    const newEntryId = result.id;
+
+    // STEP 2: Wait 1s and PATCH the restricted Read-Only payment fields manually
+    // Since Formidable API ignores Default Values and drops Read-Only fields on POST,
+    // we must dynamically PATCH the "not_completed" defaults immediately after lead creation.
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const restrictedMeta = {
+      '9817': body.payment_status || 'payment not completed',
+      '9816': body.razorpay_order_id || 'NA',
+      '9819': body.razorpay_payment_id || 'NA',
+      '9821': body.razorpay_signature || 'NA'
+    };
+
+    try {
+      await fetch(`${FORMIDABLE_API_URL}/${newEntryId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+        },
+        body: JSON.stringify({ item_meta: restrictedMeta }),
+      });
+    } catch (patchErr) {
+      console.error('Failed to PATCH restricted initial payment defaults:', patchErr);
+    }
+
     // If course is free (amount <= 0), we bypass Razorpay and trigger the webhook now
     const amountVal = parseFloat(body.payableAmount?.toString().replace(/[^0-9.]/g, '') || String(body.courseFee || '').replace(/[^0-9.]/g, '') || '0');
     if (isNaN(amountVal) || amountVal <= 0) {
