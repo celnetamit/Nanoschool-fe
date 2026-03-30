@@ -109,7 +109,9 @@ export async function POST(request: Request) {
       '9817': body.payment_status || 'payment not completed',
       '9816': body.razorpay_order_id || 'NA',
       '9819': body.razorpay_payment_id || 'NA',
-      '9821': body.razorpay_signature || 'NA'
+      '9821': body.razorpay_signature || 'NA',
+      '9809': body.courseFee || '',
+      '9810': body.payableAmount || ''
     };
 
     try {

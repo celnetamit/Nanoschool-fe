@@ -126,7 +126,9 @@ async function saveToWordPress(data: any) {
       '9817': data.payment_status === 'completed' ? 'payment_success' : 'payment not completed',
       '9816': data.razorpay_order_id || 'NA',
       '9819': data.razorpay_payment_id || 'NA',
-      '9821': data.razorpay_signature || 'NA'
+      '9821': data.razorpay_signature || 'NA',
+      '9809': data.courseFee ? String(data.courseFee) : '',
+      '9810': data.payableAmount || data.amount ? String(data.payableAmount || data.amount) : ''
     };
 
     const patchResponse = await fetch(`${FORMIDABLE_API_URL}/${newEntryId}`, {
