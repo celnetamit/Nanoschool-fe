@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getPostBySlug } from '@/lib/wordpress';
 import { getTemplateForSlug } from '@/lib/templates';
 import HomeTemplate from '@/components/templates/HomeTemplate';

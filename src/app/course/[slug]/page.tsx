@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import CourseTemplate from '@/components/templates/CourseTemplate';
 import { getPostBySlug, getStoreProduct } from '@/lib/wordpress';
 import { notFound } from 'next/navigation';

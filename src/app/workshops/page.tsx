@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getWorkshops, getCategories } from '@/lib/wordpress';
 import WorkshopList from '@/components/WorkshopList';
 import { Metadata } from 'next';

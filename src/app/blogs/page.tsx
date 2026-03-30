@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getBlogs } from '@/lib/wordpress';
 import BlogCard from '@/components/BlogCard';
 import { Metadata } from 'next';

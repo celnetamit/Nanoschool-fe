@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getPrograms } from '@/lib/wordpress';
 import Card from '@/components/Card';
 

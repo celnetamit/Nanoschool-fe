@@ -103,8 +103,9 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
   if (!response.ok) {
     const errorMsg = `Failed to fetch workshops: ${response.status} ${response.statusText}`;
     console.error(errorMsg);
-    // Throw instead of returning [] so Next.js build fails instead of caching broken empty lists
-    throw new Error(errorMsg);
+    // Return empty instead of throwing so the Docker build doesn't fail
+    // when nanoschool.in is unreachable from the build container.
+    return { posts: [], totalPages: 0 };
   }
 
   const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);

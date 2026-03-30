@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import DetailView from '@/components/DetailView';
 import { getPostBySlug } from '@/lib/wordpress';
 import { notFound } from 'next/navigation';
