@@ -145,6 +145,12 @@ export default function WorkshopEnrollmentDialog({
 
   const handleEnrollSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (uniquePid === 'Loading...') {
+      toast.error('Please wait for the PID to generate before submitting.');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -674,7 +680,7 @@ export default function WorkshopEnrollmentDialog({
           <div className="flex flex-col sm:flex-row items-center justify-center pt-8 pb-4 border-t border-slate-100">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || uniquePid === 'Loading...'}
               className="w-full sm:w-2/3 px-8 py-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:from-blue-700 hover:to-indigo-800 transition-all shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
