@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["...", "bash"]
+nixPkgs = ["...", "bash", "curl", "wget"]
 
 [phases.install]
 dependsOn = ["setup"]
