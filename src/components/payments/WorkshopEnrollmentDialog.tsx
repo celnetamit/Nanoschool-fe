@@ -42,6 +42,7 @@ export default function WorkshopEnrollmentDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payableAmount, setPayableAmount] = useState(courseFee);
   const [paymentFailed, setPaymentFailed] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   // Unique sequential PID fetched from the server when the dialog opens
   const [uniquePid, setUniquePid] = useState('Loading...');
   const [formData, setFormData] = useState({
@@ -267,11 +268,8 @@ export default function WorkshopEnrollmentDialog({
             const verifyData = await verifyRes.json();
             if (verifyRes.ok) {
               toast.dismiss();
-              toast.success('Payment successful! Enrollment confirmed.');
-              setTimeout(() => {
-                onClose();
-                setIsSubmitting(false);
-              }, 2000);
+              setPaymentSuccess(true);
+              setIsSubmitting(false);
             } else {
               throw new Error(verifyData.error || 'Payment verification failed.');
             }
@@ -320,8 +318,11 @@ export default function WorkshopEnrollmentDialog({
       
       <div className="relative z-[101] w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-6 bg-white border-b border-slate-100 rounded-t-3xl">
+        {/* Main Enrollment Form - Hidden when showing results */}
+        {!paymentSuccess && !paymentFailed && (
+          <>
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-6 bg-white border-b border-slate-100 rounded-t-3xl">
           <div>
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">{itemType === 'courses' ? 'Course Enrollment' : 'Enrollment Form'}</h2>
             <p className="text-sm text-slate-500 font-medium mt-1">New enrollment form as of 15 Aug 24</p>
@@ -722,41 +723,78 @@ export default function WorkshopEnrollmentDialog({
                 </>
               )}
             </button>
+            </div>
+          </form>
+        </>
+      )}
+
+      {/* Premium Payment Success Popup */}
+      {paymentSuccess && (
+        <div className="p-12 text-center flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
+          <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-8 text-emerald-600 shadow-inner">
+            <CheckCircle className="w-12 h-12" />
           </div>
-        </form>
-      </div>
+          <h3 className="text-4xl font-black text-slate-900 mb-4 tracking-tighter">
+            Enrollment Successful!
+          </h3>
+          <div className="max-w-md">
+            <p className="text-slate-500 mb-8 leading-relaxed text-lg">
+              Welcome to <strong>{workshopTitle}</strong>! Your payment has been verified and your seat is now secured. All the details have been sent to <strong>{formData.email}</strong>.
+            </p>
+            
+            <div className="bg-slate-50 rounded-2xl p-6 mb-10 border border-slate-100 grid grid-cols-2 gap-4 text-left">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">PID</p>
+                <p className="font-bold text-slate-700">{uniquePid}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Amount Paid</p>
+                <p className="font-bold text-slate-700">{payableAmount}</p>
+              </div>
+            </div>
+          </div>
+          <button 
+            type="button"
+            onClick={() => {
+              setPaymentSuccess(false);
+              onClose();
+            }}
+            className="w-full max-w-xs px-8 py-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-1"
+          >
+            Go to My Dashboard
+          </button>
+        </div>
+      )}
       
       {/* Premium Payment Failure Popup */}
       {paymentFailed && (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-in zoom-in-95 duration-300 text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6 text-red-600">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-extrabold text-slate-800 mb-3">
-              {itemType === 'courses' ? 'Course Enrollment Incomplete' : 'Workshop Enrollment Incomplete'}
-            </h3>
-            <p className="text-slate-500 mb-8 leading-relaxed text-sm">
-              Your payment process was interrupted or failed. The enrollment window has been securely closed. Please try again when you are ready.
-            </p>
-            <button 
-              type="button"
-              onClick={() => {
-                setPaymentFailed(false);
-                onClose();
-              }}
-              className="w-full px-6 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg transition-all"
-            >
-              Acknowledge & Close
-            </button>
+        <div className="p-12 text-center flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
+          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-8 text-red-600 shadow-inner">
+            <X className="w-12 h-12" />
           </div>
+          <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">
+            Enrollment Incomplete
+          </h3>
+          <div className="max-w-md">
+            <p className="text-slate-500 mb-10 leading-relaxed">
+              Your payment process was interrupted or failed. The enrollment window has been securely closed to protect your data.
+            </p>
+          </div>
+          <button 
+            type="button"
+            onClick={() => {
+              setPaymentFailed(false);
+              onClose();
+            }}
+            className="w-full max-w-sm px-8 py-5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl shadow-xl transition-all"
+          >
+            Acknowledge & Close
+          </button>
         </div>
       )}
-
     </div>
-  );
+  </div>
+);
 
-  return createPortal(dialogContent, document.body);
+return createPortal(dialogContent, document.body);
 }
