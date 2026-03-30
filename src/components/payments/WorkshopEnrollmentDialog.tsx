@@ -316,7 +316,7 @@ export default function WorkshopEnrollmentDialog({
         aria-hidden="true"
       />
       
-      <div className="relative z-[101] w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className={`relative z-[101] w-full transition-all duration-500 ease-in-out ${paymentSuccess || paymentFailed ? 'max-w-md' : 'max-w-4xl'} max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95`}>
         
         {/* Main Enrollment Form - Hidden when showing results */}
         {!paymentSuccess && !paymentFailed && (
@@ -730,26 +730,26 @@ export default function WorkshopEnrollmentDialog({
 
       {/* Premium Payment Success Popup */}
       {paymentSuccess && (
-        <div className="p-12 text-center flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
-          <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-8 text-emerald-600 shadow-inner">
-            <CheckCircle className="w-12 h-12" />
+        <div className="p-10 text-center flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
+          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-6 text-emerald-600 shadow-inner">
+            <CheckCircle className="w-10 h-10" />
           </div>
-          <h3 className="text-4xl font-black text-slate-900 mb-4 tracking-tighter">
-            Enrollment Successful!
+          <h3 className="text-3xl font-black text-slate-900 mb-3 tracking-tighter">
+            Success!
           </h3>
-          <div className="max-w-md">
-            <p className="text-slate-500 mb-8 leading-relaxed text-lg">
-              Welcome to <strong>{workshopTitle}</strong>! Your payment has been verified and your seat is now secured. All the details have been sent to <strong>{formData.email}</strong>.
+          <div className="max-w-xs">
+            <p className="text-slate-500 mb-8 leading-relaxed text-sm">
+              Your enrollment for <strong>{workshopTitle}</strong> is confirmed. Details were sent to <strong>{formData.email}</strong>.
             </p>
             
-            <div className="bg-slate-50 rounded-2xl p-6 mb-10 border border-slate-100 grid grid-cols-2 gap-4 text-left">
+            <div className="bg-slate-50 rounded-2xl p-4 mb-8 border border-slate-100 grid grid-cols-2 gap-2 text-left text-xs">
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">PID</p>
-                <p className="font-bold text-slate-700">{uniquePid}</p>
+                <p className="font-bold text-slate-400 uppercase tracking-widest mb-1">PID</p>
+                <p className="font-extrabold text-slate-700">{uniquePid}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Amount Paid</p>
-                <p className="font-bold text-slate-700">{payableAmount}</p>
+                <p className="font-bold text-slate-400 uppercase tracking-widest mb-1">Paid</p>
+                <p className="font-extrabold text-slate-700">{payableAmount}</p>
               </div>
             </div>
           </div>
@@ -759,7 +759,7 @@ export default function WorkshopEnrollmentDialog({
               setPaymentSuccess(false);
               onClose();
             }}
-            className="w-full max-w-xs px-8 py-5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-1"
+            className="w-full px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95"
           >
             Go to My Dashboard
           </button>
@@ -768,16 +768,16 @@ export default function WorkshopEnrollmentDialog({
       
       {/* Premium Payment Failure Popup */}
       {paymentFailed && (
-        <div className="p-12 text-center flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-8 text-red-600 shadow-inner">
-            <X className="w-12 h-12" />
+        <div className="p-10 text-center flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6 text-red-600 shadow-inner">
+            <X className="w-10 h-10" />
           </div>
-          <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">
+          <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">
             Enrollment Incomplete
           </h3>
-          <div className="max-w-md">
-            <p className="text-slate-500 mb-10 leading-relaxed">
-              Your payment process was interrupted or failed. The enrollment window has been securely closed to protect your data.
+          <div className="max-w-xs">
+            <p className="text-slate-500 mb-8 leading-relaxed text-sm">
+              Your payment process was interrupted. The enrollment window has been securely closed to protect your data.
             </p>
           </div>
           <button 
@@ -786,7 +786,7 @@ export default function WorkshopEnrollmentDialog({
               setPaymentFailed(false);
               onClose();
             }}
-            className="w-full max-w-sm px-8 py-5 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl shadow-xl transition-all"
+            className="w-full px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-black rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95"
           >
             Acknowledge & Close
           </button>
