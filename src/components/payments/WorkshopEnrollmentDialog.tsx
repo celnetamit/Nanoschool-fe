@@ -246,8 +246,9 @@ export default function WorkshopEnrollmentDialog({
             }
           } catch (err: any) {
             toast.dismiss();
-            toast.error(err.message);
+            window.alert('Payment not completed: ' + (err.message || 'Payment verification failed.'));
             setIsSubmitting(false);
+            onClose();
           }
         },
         prefill: {
@@ -260,8 +261,9 @@ export default function WorkshopEnrollmentDialog({
         },
         modal: {
           ondismiss: function() {
-            toast('Payment cancelled. Your details are saved as a lead.', { icon: 'ℹ️' });
+            window.alert('Payment not completed.');
             setIsSubmitting(false);
+            onClose();
           }
         }
       };
