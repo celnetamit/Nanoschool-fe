@@ -533,7 +533,7 @@ export default function WorkshopEnrollmentDialog({
                   <label className="block text-sm font-bold text-slate-700 mb-2">Course Fee</label>
                   <input 
                     type="text" 
-                    value={payableAmount} 
+                    value={courseFee} 
                     readOnly 
                     className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-600 font-medium focus:outline-none"
                   />
