@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         razorpay_signature
       };
 
-      const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-success', {
+      const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(webhookPayload),
@@ -88,6 +88,7 @@ export async function POST(request: Request) {
         const whErrText = await whRes.text();
         console.error('Verify-payment Webhook rejected payload:', whRes.status, whErrText);
       }
+      console.log('Verify-payment Webhook success:', whRes.status);
     } catch (whError) {
       console.error('Webhook failed:', whError);
       // We don't fail the verification if the webhook fails, but we log the error
