@@ -127,12 +127,17 @@ export async function POST(request: Request) {
       console.error('Failed to PATCH restricted initial payment defaults:', patchErr);
     }
 
+    const mergedItemMeta = {
+      ...itemMeta,
+      ...restrictedMeta
+    };
+
     // If course is free (amount <= 0), we bypass Razorpay and trigger the webhook now
     const amountVal = parseFloat(body.payableAmount?.toString().replace(/[^0-9.]/g, '') || String(body.courseFee || '').replace(/[^0-9.]/g, '') || '0');
     if (isNaN(amountVal) || amountVal <= 0) {
       try {
         const webhookPayload = {
-          ...itemMeta,
+          ...mergedItemMeta,
           '9817': 'SUCCESS' // Or 'FREE' depending on your requirements
         };
         await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
@@ -145,7 +150,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, data: result, itemMeta: itemMeta }, { status: 200 });
+    return NextResponse.json({ success: true, data: result, itemMeta: mergedItemMeta }, { status: 200 });
   } catch (error) {
     console.error('Error in Formidable API Route:', error);
     return NextResponse.json(
