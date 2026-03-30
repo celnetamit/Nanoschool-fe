@@ -1,0 +1,64 @@
+# Stage 1: Dependencies
+FROM node:22-bullseye AS deps
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/*
+
+# Install project dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Stage 2: Builder
+FROM node:22-bullseye AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Set build-time environment variables
+ARG MENTOR_API_URL
+ARG WP_USER
+ARG WP_PASSWORD
+ARG NEXT_PUBLIC_SITE_URL
+ARG RAZORPAY_KEY_ID
+ARG RAZORPAY_KEY_SECRET
+ARG RAZORPAY_WEBHOOK_SECRET
+ARG WP_PAYMENT_API_BASE_URL
+
+ENV MENTOR_API_URL=$MENTOR_API_URL
+ENV WP_USER=$WP_USER
+ENV WP_PASSWORD=$WP_PASSWORD
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV RAZORPAY_KEY_ID=$RAZORPAY_KEY_ID
+ENV RAZORPAY_KEY_SECRET=$RAZORPAY_KEY_SECRET
+ENV RAZORPAY_WEBHOOK_SECRET=$RAZORPAY_WEBHOOK_SECRET
+ENV WP_PAYMENT_API_BASE_URL=$WP_PAYMENT_API_BASE_URL
+
+# Disable Next.js telemetry during build
+ENV NEXT_TELEMETRY_DISABLED 1
+
+RUN npm run build
+
+# Stage 3: Runner
+FROM node:22-bullseye AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Create non-privileged user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy standalone output and static files
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+CMD ["node", "server.js"]

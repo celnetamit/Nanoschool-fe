@@ -1,6 +1,0 @@
-[phases.setup]
-nixPkgs = ["...", "bash", "curl", "wget"]
-
-[phases.install]
-dependsOn = ["setup"]
-cmds = ["npm ci"]
