@@ -76,6 +76,30 @@ export default function WorkshopEnrollmentDialog({
     }
   }, [isOpen, courseFee]);
 
+  // Auto-select first available profession/mode to ensure price visibility
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const availableOptions = Object.keys(professionFees);
+    if (availableOptions.length > 0) {
+      const fieldName = itemType === 'courses' ? 'learningMode' : 'profession';
+      
+      // Only auto-select if nothing is selected yet
+      if (!formData[fieldName as keyof typeof formData]) {
+        const defaultValue = availableOptions[0];
+        console.log(`[DEBUG] Auto-selecting ${fieldName}:`, defaultValue);
+        
+        setFormData(prev => ({ ...prev, [fieldName]: defaultValue }));
+        
+        // Immediately update payableAmount as well
+        const defaultFee = professionFees[defaultValue];
+        if (defaultFee) {
+          setPayableAmount(defaultFee);
+        }
+      }
+    }
+  }, [isOpen, itemType, professionFees]);
+
   // Fetch the next sequential PID whenever the dialog opens
   useEffect(() => {
     if (!isOpen) return;

@@ -128,7 +128,8 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
         }
     });
 
-    const baseCourseFee = Object.values(professionFeeMap)[0] || '0.00';
+    const baseCourseFee = Object.values(professionFeeMap)[0] || 
+                         Object.values(learningModeFeeMap)[0] || '0.00';
 
     const dateModules = modules.filter(m =>
         (m.title.toLowerCase().includes('date') || m.title.toLowerCase().includes('registration')) &&
@@ -515,7 +516,7 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
                                             href={`https://nanoschool.in/${type === 'courses' ? 'course' : type}/${slug}`}
                                             workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
                                             professionFees={type === 'courses' ? learningModeFeeMap : professionFeeMap}
-                                            courseFee={type === 'courses' ? '0.00' : baseCourseFee} // CourseTemplate passes its own
+                                            courseFee={baseCourseFee}
                                             className={`flex items-center justify-center w-full py-5 bg-gradient-to-r ${branding.from} ${branding.to} text-white font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-brand-accent/20 hover:shadow-2xl hover:shadow-brand-accent/40 transition-all duration-300 hover:-translate-y-1 active:scale-95 text-sm relative overflow-hidden`}
                                         >
                                             <span className="relative z-10">Enroll Now</span>
