@@ -172,7 +172,8 @@ export async function POST(request: Request) {
       
       const webhookPayload = {
         ...mergedItemMeta,
-        ...body, // Include named fields (pid, name, email, etc.) for IMS DB compatibility
+        ...body, // Includes named fields (pid, name, email, etc.)
+        entryId: newEntryId,
         '9817': isFree ? 'SUCCESS' : (body.payment_status || 'payment not completed')
       };
       

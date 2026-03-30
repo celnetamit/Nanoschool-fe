@@ -71,13 +71,14 @@ export async function POST(request: Request) {
         [RZP_PAYMENT_ID_FIELD]: razorpay_payment_id,
         [RZP_SIGNATURE_FIELD]: razorpay_signature,
         // Also provide named keys for IMS logic that might not use numeric field IDs
+        entryId: entryId,
         payment_status: 'SUCCESS',
         razorpay_order_id,
         razorpay_payment_id,
         razorpay_signature
       };
 
-      const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
+      const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-success', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(webhookPayload),

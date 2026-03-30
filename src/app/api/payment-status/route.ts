@@ -88,6 +88,14 @@ async function saveToWordPress(data: any) {
         if (key === 'hasCoupon' || key === 'otherCurrency') {
           value = value === 'yes' ? 'Yes' : 'No';
         }
+
+        // Sanitization for numeric fields
+        if (key === 'courseFee' || key === 'payableAmount' || key === 'amount') {
+          if (value && typeof value === 'string') {
+            value = value.replace(/[^0-9.]/g, '');
+          }
+        }
+
         itemMeta[fieldId] = String(value);
       }
     }
