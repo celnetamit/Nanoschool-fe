@@ -101,8 +101,10 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
   const response = await fetchWP(url);
 
   if (!response.ok) {
-    console.error(`Failed to fetch workshops: ${response.status} ${response.statusText}`);
-    return { posts: [], totalPages: 0 };
+    const errorMsg = `Failed to fetch workshops: ${response.status} ${response.statusText}`;
+    console.error(errorMsg);
+    // Throw instead of returning [] so Next.js build fails instead of caching broken empty lists
+    throw new Error(errorMsg);
   }
 
   const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
