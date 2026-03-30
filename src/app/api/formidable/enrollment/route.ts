@@ -70,7 +70,17 @@ export async function POST(request: Request) {
 
         // Special case for phone number concatenation
         if (bodyKey === 'mobileNumber' && body.countryCode) {
-          value = `${body.countryCode}${value}`;
+          value = `${body.countryCode}${value}`.replace(/\s/g, ''); // Remove spaces
+        }
+
+        // SANITIZATION: Strip currency symbols from fee fields for numeric compatibility
+        if (bodyKey === 'courseFee' || bodyKey === 'payableAmount') {
+          if (value && typeof value === 'string') {
+             // Keep only digits and decimal points
+             const sanitized = value.replace(/[^0-9.]/g, '');
+             console.log(`[DEBUG] Sanitizing ${bodyKey}: "${value}" -> "${sanitized}"`);
+             value = sanitized;
+          }
         }
 
         itemMeta[fieldId] = value;
@@ -188,8 +198,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, data: result, itemMeta: returnMeta }, { status: 200 });
   } catch (error: any) {
     console.error('Error in Formidable API Route:', error);
+    // Provide slightly more context for debugging 500s during this phase
     return NextResponse.json(
-      { error: 'An unexpected error occurred processing your request.' },
+      { 
+        error: 'An unexpected error occurred processing your request.',
+        details: error.message || 'Unknown server error'
+      },
       { status: 500 }
     );
   }
