@@ -288,9 +288,24 @@ export default function WorkshopEnrollmentDialog({
           color: '#2563eb', // Blue-600 to match button
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: async function() {
             setPaymentFailed(true);
             setIsSubmitting(false);
+
+            // Notify WordPress and IMS about the payment decline
+            try {
+              await fetch('/api/razorpay/payment-declined', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  entryId: entryId,
+                  itemMeta: itemMeta,
+                  razorpay_order_id: orderData.orderId,
+                }),
+              });
+            } catch (declineErr) {
+              console.error('Failed to notify decline endpoint:', declineErr);
+            }
           }
         }
       };
