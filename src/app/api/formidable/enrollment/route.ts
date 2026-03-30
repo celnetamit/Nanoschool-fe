@@ -68,6 +68,11 @@ export async function POST(request: Request) {
           value = 'other';
         }
 
+        // Special case for phone number concatenation
+        if (bodyKey === 'mobileNumber' && body.countryCode) {
+          value = `${body.countryCode}${value}`;
+        }
+
         itemMeta[fieldId] = value;
       }
     }
@@ -89,10 +94,23 @@ export async function POST(request: Request) {
       body: JSON.stringify(payload),
     });
 
-    const result = await response.json();
+    // Robust JSON parsing
+    const contentType = response.headers.get('content-type');
+    let result;
+    
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json();
+    } else {
+      const errorText = await response.text();
+      console.error('Formidable API returned non-JSON response:', response.status, errorText);
+      return NextResponse.json(
+        { error: 'Backend connectivity issue (Non-JSON response).' },
+        { status: 502 }
+      );
+    }
 
     if (!response.ok) {
-      console.error('Formidable API Error:', result);
+      console.error('Formidable API Error Details:', result);
       return NextResponse.json(
         { error: result.message || 'Failed to submit form to backend.' },
         { status: response.status }
@@ -105,6 +123,10 @@ export async function POST(request: Request) {
     // Since Formidable API ignores Default Values and drops Read-Only fields on POST,
     // we must dynamically PATCH the "not_completed" defaults immediately after lead creation.
     await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('[DEBUG] Formidable API -> Creating Restricted Meta');
+    console.log('[DEBUG] > courseFee received:', body.courseFee);
+    console.log('[DEBUG] > payableAmount received:', body.payableAmount);
+
     const restrictedMeta = {
       '9817': body.payment_status || 'payment not completed',
       '9816': body.razorpay_order_id || 'NA',
@@ -132,26 +154,39 @@ export async function POST(request: Request) {
       ...restrictedMeta
     };
 
-    // If course is free (amount <= 0), we bypass Razorpay and trigger the webhook now
-    const amountVal = parseFloat(body.payableAmount?.toString().replace(/[^0-9.]/g, '') || String(body.courseFee || '').replace(/[^0-9.]/g, '') || '0');
-    if (isNaN(amountVal) || amountVal <= 0) {
-      try {
-        const webhookPayload = {
-          ...mergedItemMeta,
-          '9817': 'SUCCESS' // Or 'FREE' depending on your requirements
-        };
-        await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(webhookPayload),
-        });
-      } catch (whError) {
-        console.error('Initial webhook failed:', whError);
+    // ALWAYS trigger the initial webhook to IMS so it matches WordPress's immediately created lead status!
+    try {
+      // Determine initial webhook status: either SUCCESS (if free) or 'payment not completed' (if Razorpay required)
+      const amountVal = parseFloat(body.payableAmount?.toString().replace(/[^0-9.]/g, '') || String(body.courseFee || '').replace(/[^0-9.]/g, '') || '0');
+      const isFree = isNaN(amountVal) || amountVal <= 0;
+      
+      const webhookPayload = {
+        ...mergedItemMeta,
+        ...body, // Include named fields (pid, name, email, etc.) for IMS DB compatibility
+        '9817': isFree ? 'SUCCESS' : (body.payment_status || 'payment not completed')
+      };
+      
+      const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload),
+      });
+      
+      if (!whRes.ok) {
+        const whErrText = await whRes.text();
+        console.error('Initial IMS Webhook rejected payload:', whRes.status, whErrText);
       }
+    } catch (whError) {
+      console.error('Initial webhook failed:', whError);
     }
 
-    return NextResponse.json({ success: true, data: result, itemMeta: mergedItemMeta }, { status: 200 });
-  } catch (error) {
+    const returnMeta = {
+      ...mergedItemMeta,
+      ...body
+    };
+
+    return NextResponse.json({ success: true, data: result, itemMeta: returnMeta }, { status: 200 });
+  } catch (error: any) {
     console.error('Error in Formidable API Route:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred processing your request.' },

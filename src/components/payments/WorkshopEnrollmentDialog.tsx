@@ -41,6 +41,7 @@ export default function WorkshopEnrollmentDialog({
   const [isMounted, setIsMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payableAmount, setPayableAmount] = useState(courseFee);
+  const [paymentFailed, setPaymentFailed] = useState(false);
   // Unique sequential PID fetched from the server when the dialog opens
   const [uniquePid, setUniquePid] = useState('Loading...');
   const [formData, setFormData] = useState({
@@ -117,14 +118,15 @@ export default function WorkshopEnrollmentDialog({
       // When profession or learning mode changes, update the payable amount
       if ((name === 'profession' || name === 'learningMode') && value) {
         const fee = professionFees[value];
-        console.log('Price Update Trace:', { name, value, fee, courseFee, professionFees });
+        console.log('[DEBUG] Pricing Update TRIGGERED:', { changedField: name, newValue: value, lookupFee: fee });
+        
         if (fee) {
+          console.log('[DEBUG] Setting payableAmount from professionFees:', fee);
           setPayableAmount(fee);
         } else if (itemType === 'courses') {
           // Fallback calculation for courses based on base fee (courseFee)
           const baseMatch = courseFee.match(/([0-9,.]+)/);
           const baseVal = baseMatch ? parseFloat(baseMatch[0].replace(/,/g, '')) : 0;
-          console.log('Calculation Trace:', { baseMatch, baseVal });
           
           if (baseVal > 0) {
             let multiplier = 1;
@@ -133,10 +135,11 @@ export default function WorkshopEnrollmentDialog({
             
             const calculated = Math.round(baseVal * multiplier);
             const formatted = courseFee.replace(/[0-9,.]+/, calculated.toLocaleString());
-            console.log('Resulting Price:', { calculated, formatted });
+            console.log('[DEBUG] Fallback course multiplier applied:', { baseVal, multiplier, formatted });
             setPayableAmount(formatted);
           }
         } else if (itemType === 'workshops') {
+           console.log('[DEBUG] Falling back to default courseFee:', courseFee);
            setPayableAmount(courseFee);
         }
       }
@@ -153,6 +156,10 @@ export default function WorkshopEnrollmentDialog({
 
     setIsSubmitting(true);
     
+    console.log('[DEBUG] Submitting Enrollment Request...');
+    console.log('[DEBUG] Base courseFee Prop:', courseFee);
+    console.log('[DEBUG] Final derived payableAmount:', payableAmount);
+    
     try {
       // Step 1: Save lead to WordPress
       const response = await fetch('/api/formidable/enrollment', {
@@ -164,8 +171,8 @@ export default function WorkshopEnrollmentDialog({
           ...formData,
           pid: uniquePid,
           workshopTitle,
-          courseFee: payableAmount,
-          payableAmount,
+          courseFee: courseFee,   // Keep original base fee
+          payableAmount,          // Final dynamically calculated discount/fee
           itemType,
           category: itemType === 'courses' ? 'Course' : 'Workshop',
         }),
@@ -246,9 +253,8 @@ export default function WorkshopEnrollmentDialog({
             }
           } catch (err: any) {
             toast.dismiss();
-            window.alert('Payment not completed: ' + (err.message || 'Payment verification failed.'));
+            setPaymentFailed(true);
             setIsSubmitting(false);
-            onClose();
           }
         },
         prefill: {
@@ -261,9 +267,8 @@ export default function WorkshopEnrollmentDialog({
         },
         modal: {
           ondismiss: function() {
-            window.alert('Payment not completed.');
+            setPaymentFailed(true);
             setIsSubmitting(false);
-            onClose();
           }
         }
       };
@@ -541,7 +546,7 @@ export default function WorkshopEnrollmentDialog({
                   <label className="block text-sm font-bold text-slate-700 mb-2">Course Fee</label>
                   <input 
                     type="text" 
-                    value={courseFee} 
+                    value={payableAmount} 
                     readOnly 
                     className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-600 font-medium focus:outline-none"
                   />
@@ -696,6 +701,36 @@ export default function WorkshopEnrollmentDialog({
           </div>
         </form>
       </div>
+      
+      {/* Premium Payment Failure Popup */}
+      {paymentFailed && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-in zoom-in-95 duration-300 text-center flex flex-col items-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6 text-red-600">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-extrabold text-slate-800 mb-3">
+              {itemType === 'courses' ? 'Course Enrollment Incomplete' : 'Workshop Enrollment Incomplete'}
+            </h3>
+            <p className="text-slate-500 mb-8 leading-relaxed text-sm">
+              Your payment process was interrupted or failed. The enrollment window has been securely closed. Please try again when you are ready.
+            </p>
+            <button 
+              type="button"
+              onClick={() => {
+                setPaymentFailed(false);
+                onClose();
+              }}
+              className="w-full px-6 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg transition-all"
+            >
+              Acknowledge & Close
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 

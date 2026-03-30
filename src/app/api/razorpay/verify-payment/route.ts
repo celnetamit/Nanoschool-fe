@@ -69,14 +69,24 @@ export async function POST(request: Request) {
         [PAYMENT_STATUS_FIELD]: 'SUCCESS',
         [RZP_ORDER_ID_FIELD]: razorpay_order_id,
         [RZP_PAYMENT_ID_FIELD]: razorpay_payment_id,
-        [RZP_SIGNATURE_FIELD]: razorpay_signature
+        [RZP_SIGNATURE_FIELD]: razorpay_signature,
+        // Also provide named keys for IMS logic that might not use numeric field IDs
+        payment_status: 'SUCCESS',
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature
       };
 
-      await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
+      const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(webhookPayload),
       });
+
+      if (!whRes.ok) {
+        const whErrText = await whRes.text();
+        console.error('Verify-payment Webhook rejected payload:', whRes.status, whErrText);
+      }
     } catch (whError) {
       console.error('Webhook failed:', whError);
       // We don't fail the verification if the webhook fails, but we log the error
