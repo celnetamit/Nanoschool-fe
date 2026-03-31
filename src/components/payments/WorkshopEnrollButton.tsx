@@ -15,6 +15,8 @@ interface WorkshopEnrollButtonProps {
     sale?: string;
   };
   itemType?: string;
+  initialCurrency?: 'USD' | 'INR';
+  initialSelection?: string;
   href?: string;
 }
 
@@ -27,6 +29,8 @@ export default function WorkshopEnrollButton({
   professionFees = {},
   pricesInr,
   itemType = 'workshops',
+  initialCurrency = 'INR',
+  initialSelection = '',
   href
 }: WorkshopEnrollButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -64,6 +68,8 @@ export default function WorkshopEnrollButton({
         itemType={itemType}
         priceUSD={courseFee}
         pricesINR={pricesInr}
+        initialCurrency={initialCurrency}
+        initialSelection={initialSelection}
       />
     </>
   );

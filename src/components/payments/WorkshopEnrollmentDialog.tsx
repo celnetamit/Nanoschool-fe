@@ -32,6 +32,8 @@ interface WorkshopEnrollmentDialogProps {
     regular?: string;
     sale?: string;
   };
+  initialCurrency?: 'USD' | 'INR';
+  initialSelection?: string;
 }
 
 export default function WorkshopEnrollmentDialog({
@@ -44,6 +46,8 @@ export default function WorkshopEnrollmentDialog({
   itemType = 'workshops',
   priceUSD,
   pricesINR,
+  initialCurrency = 'INR',
+  initialSelection = '',
 }: WorkshopEnrollmentDialogProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,11 +76,22 @@ export default function WorkshopEnrollmentDialog({
     learningMode: '',
     termsAgreed: false,
   });
-  const [currency, setCurrency] = useState<'USD' | 'INR'>('INR'); // Default to INR based on typical user locale, or toggle
+  const [currency, setCurrency] = useState<'USD' | 'INR'>(initialCurrency); // Sync with initialSelection from page
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // AGGRESSIVE STATE SYNC: Sync currency and selection whenever dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      if (initialCurrency) setCurrency(initialCurrency);
+      if (initialSelection) {
+        const fieldName = itemType === 'courses' ? 'learningMode' : 'profession';
+        setFormData(prev => ({ ...prev, [fieldName]: initialSelection }));
+      }
+    }
+  }, [isOpen, initialCurrency, initialSelection, itemType]);
 
   // Sync payableAmount with courseFee prop when it changes or dialog opens
   useEffect(() => {
@@ -111,6 +126,13 @@ export default function WorkshopEnrollmentDialog({
     
     if (!fee) return;
 
+    // Helper to safely parse numbers from strings like "₹5,499" or "$148"
+    const parsePrice = (str: string) => {
+      if (!str) return 0;
+      const clean = str.replace(/[^0-9.]/g, '');
+      return parseFloat(clean) || 0;
+    };
+
     if (currency === 'INR') {
       // If we have real INR price from WooCommerce, use it
       if (pricesINR?.sale) {
@@ -122,7 +144,7 @@ export default function WorkshopEnrollmentDialog({
           setPayableAmount(inrMatch[0]);
         } else {
           // Hard conversion fallback if no INR found
-          const usdVal = parseFloat(fee.replace(/[^0-9.]/g, '')) || 0;
+          const usdVal = parsePrice(fee);
           if (usdVal > 0) {
             setPayableAmount(`₹${Math.round(usdVal * 84).toLocaleString()}`);
           }
@@ -134,16 +156,16 @@ export default function WorkshopEnrollmentDialog({
       if (professionFeeUSD) {
         setPayableAmount(professionFeeUSD);
       } else if (priceUSD && !priceUSD.includes('₹')) {
-         setPayableAmount(`$${parseFloat(priceUSD).toLocaleString() || priceUSD}`);
+         setPayableAmount(`$${parsePrice(priceUSD).toLocaleString() || priceUSD}`);
       } else {
         const usdMatch = fee.match(/\$\s?([0-9,]+)/);
         if (usdMatch) {
           setPayableAmount(usdMatch[0]);
         } else {
            // Fallback to conversion if it looks like INR, or just return original
-           const val = parseFloat(fee.replace(/[^0-9.]/g, '')) || 0;
+           const val = parsePrice(fee);
            if (fee.includes('₹') && val > 0) {
-              setPayableAmount(`$${Math.round(val / 84)}`);
+              setPayableAmount(`$${Math.round(val / 84).toLocaleString()}`);
            } else {
               setPayableAmount(fee);
            }

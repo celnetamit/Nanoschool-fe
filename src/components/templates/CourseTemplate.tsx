@@ -208,6 +208,9 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                             workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
                             professionFees={learningModeFeeMap}
                             courseFee={formatPrice(currentPrice)}
+                            pricesInr={post.prices_inr}
+                            initialCurrency={currency}
+                            initialSelection={selectedVariation.name}
                             className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-2 rounded-lg transition-colors shadow-lg shadow-blue-600/20"
                         >
                             Enroll Now
@@ -373,6 +376,9 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                                     workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
                                     professionFees={learningModeFeeMap}
                                     courseFee={formatPrice(currentPrice)}
+                                    pricesInr={post.prices_inr}
+                                    initialCurrency={currency}
+                                    initialSelection={selectedVariation.name}
                                     className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-lg shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all mb-4"
                                 >
                                     Enroll Now
@@ -424,6 +430,9 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                     workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
                     professionFees={learningModeFeeMap}
                     courseFee={formatPrice(currentPrice)}
+                    pricesInr={post.prices_inr}
+                    initialCurrency={currency}
+                    initialSelection={selectedVariation.name}
                     className="bg-blue-600 text-white font-bold px-8 py-3 rounded-xl shadow-lg"
                 >
                     Enroll Now
