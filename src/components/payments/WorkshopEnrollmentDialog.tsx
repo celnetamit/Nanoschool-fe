@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, MapPin, CheckCircle } from 'lucide-react';
+import { X, User, MapPin, CheckCircle, ChevronDown, Search } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { countries } from '@/data/countries';
 
 declare global {
   interface Window {
@@ -77,6 +78,8 @@ export default function WorkshopEnrollmentDialog({
     termsAgreed: false,
   });
   const [currency, setCurrency] = useState<'USD' | 'INR'>(initialCurrency); // Sync with initialSelection from page
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
 
   useEffect(() => {
     setIsMounted(true);
@@ -93,12 +96,7 @@ export default function WorkshopEnrollmentDialog({
     }
   }, [isOpen, initialCurrency, initialSelection, itemType]);
 
-  // Sync payableAmount with courseFee prop when it changes or dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setPayableAmount(courseFee);
-    }
-  }, [isOpen, courseFee]);
+  // Sync payableAmount with selection-driven logic below (Removed redundant courseFee reset)
 
   // Auto-select first available profession/mode to ensure price visibility
   useEffect(() => {
@@ -133,18 +131,32 @@ export default function WorkshopEnrollmentDialog({
       return parseFloat(clean) || 0;
     };
 
+    let baseFee = fee;
+    // Fallback calculation for courses if professionFees[selectedOption] is missing
+    if (!professionFees[selectedOption] && itemType === 'courses' && selectedOption) {
+       const baseVal = parsePrice(courseFee);
+       if (baseVal > 0) {
+         let multiplier = 1;
+         if (selectedOption.includes('Live')) multiplier = 2.5;
+         else if (selectedOption.includes('Video')) multiplier = 1.5;
+         
+         const calculated = Math.round(baseVal * multiplier);
+         baseFee = courseFee.replace(/[0-9,.]+/, calculated.toLocaleString());
+       }
+    }
+
     if (currency === 'INR') {
       // If we have real INR price from WooCommerce, use it
       if (pricesINR?.sale) {
         setPayableAmount(`₹${parseInt(pricesINR.sale).toLocaleString()}`);
       } else {
         // Fallback: search for ₹ in the original fee or convert
-        const inrMatch = fee.match(/₹\s?([0-9,]+)/);
+        const inrMatch = baseFee.match(/₹\s?([0-9,]+)/);
         if (inrMatch) {
           setPayableAmount(inrMatch[0]);
         } else {
           // Hard conversion fallback if no INR found
-          const usdVal = parsePrice(fee);
+          const usdVal = parsePrice(baseFee);
           if (usdVal > 0) {
             setPayableAmount(`₹${Math.round(usdVal * 84).toLocaleString()}`);
           }
@@ -155,19 +167,19 @@ export default function WorkshopEnrollmentDialog({
       // Prioritize parsed USD fee from the profession matching
       if (professionFeeUSD) {
         setPayableAmount(professionFeeUSD);
-      } else if (priceUSD && !priceUSD.includes('₹')) {
+      } else if (priceUSD && !priceUSD.includes('₹') && !selectedOption) {
          setPayableAmount(`$${parsePrice(priceUSD).toLocaleString() || priceUSD}`);
       } else {
-        const usdMatch = fee.match(/\$\s?([0-9,]+)/);
+        const usdMatch = baseFee.match(/\$\s?([0-9,]+)/);
         if (usdMatch) {
           setPayableAmount(usdMatch[0]);
         } else {
            // Fallback to conversion if it looks like INR, or just return original
-           const val = parsePrice(fee);
-           if (fee.includes('₹') && val > 0) {
+           const val = parsePrice(baseFee);
+           if (baseFee.includes('₹') && val > 0) {
               setPayableAmount(`$${Math.round(val / 84).toLocaleString()}`);
            } else {
-              setPayableAmount(fee);
+              setPayableAmount(baseFee);
            }
         }
       }
@@ -213,32 +225,13 @@ export default function WorkshopEnrollmentDialog({
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
-      // When profession or learning mode changes, update the payable amount
-      if ((name === 'profession' || name === 'learningMode') && value) {
-        const fee = professionFees[value];
-        console.log('[DEBUG] Pricing Update TRIGGERED:', { changedField: name, newValue: value, lookupFee: fee });
-        
-        if (fee) {
-          console.log('[DEBUG] Setting payableAmount from professionFees:', fee);
-          setPayableAmount(fee);
-        } else if (itemType === 'courses') {
-          // Fallback calculation for courses based on base fee (courseFee)
-          const baseMatch = courseFee.match(/([0-9,.]+)/);
-          const baseVal = baseMatch ? parseFloat(baseMatch[0].replace(/,/g, '')) : 0;
-          
-          if (baseVal > 0) {
-            let multiplier = 1;
-            if (value.includes('Live')) multiplier = 2.5;
-            else if (value.includes('Video')) multiplier = 1.5;
-            
-            const calculated = Math.round(baseVal * multiplier);
-            const formatted = courseFee.replace(/[0-9,.]+/, calculated.toLocaleString());
-            console.log('[DEBUG] Fallback course multiplier applied:', { baseVal, multiplier, formatted });
-            setPayableAmount(formatted);
-          }
-        } else if (itemType === 'workshops') {
-           console.log('[DEBUG] Falling back to default courseFee:', courseFee);
-           setPayableAmount(courseFee);
+      
+      // Automatic Currency Selection based on Country
+      if (name === 'country') {
+        if (value === 'India') {
+          setCurrency('INR');
+        } else {
+          setCurrency('USD');
         }
       }
     }
@@ -611,17 +604,66 @@ export default function WorkshopEnrollmentDialog({
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
                   />
                 </div>
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-bold text-slate-700 mb-2">Country *</label>
-                  <input 
-                    type="text" 
-                    name="country"
-                    value={formData.country}
-                    onChange={handleChange}
-                    required
-                    placeholder="e.g. United States"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                  />
+                  <div 
+                    onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-xl flex items-center justify-between cursor-pointer focus-within:ring-4 focus-within:ring-blue-50 focus-within:border-blue-500 transition-all bg-white"
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      {formData.country ? (
+                        <>
+                          <span className="text-xl flex-shrink-0">{countries.find(c => c.name === formData.country)?.flag}</span>
+                          <span className="font-medium text-slate-800 truncate">{formData.country}</span>
+                        </>
+                      ) : (
+                        <span className="text-slate-400">Select Country</span>
+                      )}
+                    </div>
+                    <ChevronDown className={`w-5 h-5 text-slate-400 flex-shrink-0 transition-transform ${isCountryDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
+
+                  {isCountryDropdownOpen && (
+                    <div className="absolute z-[100] mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      <div className="p-3 border-b border-slate-100 sticky top-0 bg-white">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="text"
+                            autoFocus
+                            placeholder="Search country..."
+                            value={countrySearch}
+                            onChange={(e) => setCountrySearch(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:border-blue-500 transition-all"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto no-scrollbar">
+                        {countries
+                          .filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
+                          .map(c => (
+                            <div
+                              key={c.code}
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, country: c.name }));
+                                setCurrency(c.name === 'India' ? 'INR' : 'USD');
+                                setIsCountryDropdownOpen(false);
+                                setCountrySearch('');
+                              }}
+                              className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${formData.country === c.name ? 'bg-blue-50 text-blue-600' : 'text-slate-700'}`}
+                            >
+                              <span className="text-xl">{c.flag}</span>
+                              <span className="font-medium">{c.name}</span>
+                              {formData.country === c.name && <CheckCircle className="w-4 h-4 ml-auto" />}
+                            </div>
+                          ))}
+                        {countries.filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
+                          <div className="px-4 py-6 text-center text-slate-400 text-sm">No countries found</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">PIN Code</label>
@@ -732,38 +774,24 @@ export default function WorkshopEnrollmentDialog({
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-md">
                   <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                    <span>Select Payment Currency</span>
-                    <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded uppercase font-black">Live Update</span>
+                    <span>Payment Currency</span>
+                    <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded uppercase font-black">Auto-Selected</span>
                   </label>
-                  <div className="flex p-1 bg-slate-100 rounded-xl w-full">
-                    <button
-                      type="button"
-                      onClick={() => setCurrency('INR')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${
-                        currency === 'INR' 
-                          ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200' 
-                          : 'text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      <span>🇮🇳</span>
-                      <span>INR (₹)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCurrency('USD')}
-                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${
-                        currency === 'USD' 
-                          ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200' 
-                          : 'text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      <span>🇺🇸</span>
-                      <span>USD ($)</span>
-                    </button>
+                  
+                  <div className="mt-2 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-right-4">
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm border border-blue-100">
+                      {currency === 'INR' ? '🇮🇳' : '🌎'}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-0.5">Payment In</div>
+                      <div className="font-black text-blue-900 text-lg leading-tight">
+                        {currency === 'INR' ? 'Indian Rupee (₹)' : 'US Dollar ($)'}
+                      </div>
+                      <p className="text-[10px] text-blue-500 font-medium leading-tight mt-1">
+                        Selected based on country: <span className="underline decoration-blue-300">{formData.country || 'Not Selected'}</span>
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-2 text-center">
-                    Pay in {currency === 'INR' ? 'Indian Rupees' : 'US Dollars'} based on your preference.
-                  </p>
                 </div>
               </div>
             </div>
