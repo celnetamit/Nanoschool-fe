@@ -10,6 +10,10 @@ interface WorkshopEnrollButtonProps {
   workshopTitle?: string;
   courseFee?: string;
   professionFees?: Record<string, string>;
+  pricesInr?: {
+    regular?: string;
+    sale?: string;
+  };
   itemType?: string;
   href?: string;
 }
@@ -21,6 +25,7 @@ export default function WorkshopEnrollButton({
   workshopTitle = 'Workshop',
   courseFee = '0.00',
   professionFees = {},
+  pricesInr,
   itemType = 'workshops',
   href
 }: WorkshopEnrollButtonProps) {
@@ -57,6 +62,8 @@ export default function WorkshopEnrollButton({
         courseFee={courseFee}
         professionFees={professionFees}
         itemType={itemType}
+        priceUSD={courseFee}
+        pricesINR={pricesInr}
       />
     </>
   );

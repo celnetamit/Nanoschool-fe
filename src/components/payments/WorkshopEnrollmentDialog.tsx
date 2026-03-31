@@ -27,6 +27,11 @@ interface WorkshopEnrollmentDialogProps {
   courseFee?: string;
   professionFees?: ProfessionFees;
   itemType?: 'workshops' | 'courses' | string;
+  priceUSD?: string;
+  pricesINR?: {
+    regular?: string;
+    sale?: string;
+  };
 }
 
 export default function WorkshopEnrollmentDialog({
@@ -37,6 +42,8 @@ export default function WorkshopEnrollmentDialog({
   courseFee = '0.00',
   professionFees = {},
   itemType = 'workshops',
+  priceUSD,
+  pricesINR,
 }: WorkshopEnrollmentDialogProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,6 +72,7 @@ export default function WorkshopEnrollmentDialog({
     learningMode: '',
     termsAgreed: false,
   });
+  const [currency, setCurrency] = useState<'USD' | 'INR'>('INR'); // Default to INR based on typical user locale, or toggle
 
   useEffect(() => {
     setIsMounted(true);
@@ -86,20 +94,63 @@ export default function WorkshopEnrollmentDialog({
       const fieldName = itemType === 'courses' ? 'learningMode' : 'profession';
       
       // Only auto-select if nothing is selected yet
-      if (!formData[fieldName as keyof typeof formData]) {
+      if (!(formData as any)[fieldName]) {
         const defaultValue = availableOptions[0];
-        console.log(`[DEBUG] Auto-selecting ${fieldName}:`, defaultValue);
-        
         setFormData(prev => ({ ...prev, [fieldName]: defaultValue }));
-        
-        // Immediately update payableAmount as well
-        const defaultFee = professionFees[defaultValue];
-        if (defaultFee) {
-          setPayableAmount(defaultFee);
+      }
+    }
+  }, [isOpen, itemType, professionFees, formData]);
+
+  // Effect to handle currency switching in real-time
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const selectedOption = itemType === 'courses' ? formData.learningMode : formData.profession;
+    const fee = selectedOption ? professionFees[selectedOption] : courseFee;
+    const professionFeeUSD = selectedOption ? (professionFees as any)[`${selectedOption}_usd`] : null;
+    
+    if (!fee) return;
+
+    if (currency === 'INR') {
+      // If we have real INR price from WooCommerce, use it
+      if (pricesINR?.sale) {
+        setPayableAmount(`₹${parseInt(pricesINR.sale).toLocaleString()}`);
+      } else {
+        // Fallback: search for ₹ in the original fee or convert
+        const inrMatch = fee.match(/₹\s?([0-9,]+)/);
+        if (inrMatch) {
+          setPayableAmount(inrMatch[0]);
+        } else {
+          // Hard conversion fallback if no INR found
+          const usdVal = parseFloat(fee.replace(/[^0-9.]/g, '')) || 0;
+          if (usdVal > 0) {
+            setPayableAmount(`₹${Math.round(usdVal * 84).toLocaleString()}`);
+          }
+        }
+      }
+    } else {
+      // USD mode
+      // Prioritize parsed USD fee from the profession matching
+      if (professionFeeUSD) {
+        setPayableAmount(professionFeeUSD);
+      } else if (priceUSD && !priceUSD.includes('₹')) {
+         setPayableAmount(`$${parseFloat(priceUSD).toLocaleString() || priceUSD}`);
+      } else {
+        const usdMatch = fee.match(/\$\s?([0-9,]+)/);
+        if (usdMatch) {
+          setPayableAmount(usdMatch[0]);
+        } else {
+           // Fallback to conversion if it looks like INR, or just return original
+           const val = parseFloat(fee.replace(/[^0-9.]/g, '')) || 0;
+           if (fee.includes('₹') && val > 0) {
+              setPayableAmount(`$${Math.round(val / 84)}`);
+           } else {
+              setPayableAmount(fee);
+           }
         }
       }
     }
-  }, [isOpen, itemType, professionFees]);
+  }, [currency, formData.profession, formData.learningMode, isOpen, priceUSD, pricesINR, professionFees, courseFee, itemType]);
 
   // Fetch the next sequential PID whenever the dialog opens
   useEffect(() => {
@@ -200,6 +251,8 @@ export default function WorkshopEnrollmentDialog({
           payableAmount,          // Final dynamically calculated discount/fee
           itemType,
           category: itemType === 'courses' ? 'Course' : 'Workshop',
+          currency,               // Added the selected currency
+          otherCurrency: currency === 'INR' ? 'yes' : 'no' // Map to legacy field if needed
         }),
       });
 
@@ -232,7 +285,7 @@ export default function WorkshopEnrollmentDialog({
         },
         body: JSON.stringify({
           amount: amountValue,
-          currency: 'INR', // Defaulting to INR as per usual Razorpay usage, or adjust based on otherCurrency logic
+          currency: currency, // Using the dynamic currency switch
           receipt: `rcpt_${uniquePid}`,
         }),
       });
@@ -655,35 +708,41 @@ export default function WorkshopEnrollmentDialog({
                   )}
                 </div>
 
-                {itemType !== 'courses' && (
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <label className="block text-sm font-bold text-slate-700 mb-3">Do you want to pay Other than USD?</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name="otherCurrency" 
-                          value="yes"
-                          checked={formData.otherCurrency === 'yes'}
-                          onChange={handleChange}
-                          className="w-4 h-4 text-blue-600"
-                        />
-                        <span className="text-sm font-medium">Yes</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
-                          type="radio" 
-                          name="otherCurrency" 
-                          value="no"
-                          checked={formData.otherCurrency === 'no'}
-                          onChange={handleChange}
-                          className="w-4 h-4 text-blue-600"
-                        />
-                        <span className="text-sm font-medium">No</span>
-                      </label>
-                    </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-md">
+                  <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <span>Select Payment Currency</span>
+                    <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded uppercase font-black">Live Update</span>
+                  </label>
+                  <div className="flex p-1 bg-slate-100 rounded-xl w-full">
+                    <button
+                      type="button"
+                      onClick={() => setCurrency('INR')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                        currency === 'INR' 
+                          ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200' 
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <span>🇮🇳</span>
+                      <span>INR (₹)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrency('USD')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                        currency === 'USD' 
+                          ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200' 
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      <span>🇺🇸</span>
+                      <span>USD ($)</span>
+                    </button>
                   </div>
-                )}
+                  <p className="text-[10px] text-slate-400 mt-2 text-center">
+                    Pay in {currency === 'INR' ? 'Indian Rupees' : 'US Dollars'} based on your preference.
+                  </p>
+                </div>
               </div>
             </div>
 

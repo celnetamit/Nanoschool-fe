@@ -29,16 +29,21 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
     const [selectedVariation, setSelectedVariation] = useState(variations[0]);
 
     // Price Calculation
-    const basePriceUSD = storeProduct ? parseFloat(storeProduct.prices.price) / 100 : 99; // Default 99 if no product
-    const conversionRate = 84; // Approx 1 USD = 84 INR
+    // Use the real price from WooCommerce (wc/v3) if available on the post object
+    const basePriceUSD = post.price ? parseFloat(post.price) : (storeProduct ? parseFloat(storeProduct.prices.price) / 100 : 99);
+    const regularPriceUSD = post.regular_price ? parseFloat(post.regular_price) : (storeProduct ? parseFloat(storeProduct.prices.regular_price) / 100 : basePriceUSD * 1.5);
+
+    // Use the real INR price from WooCommerce meta if available
+    const basePriceINR = post.prices_inr?.sale ? parseFloat(post.prices_inr.sale) : (basePriceUSD * 84);
+    const regularPriceINR = post.prices_inr?.regular ? parseFloat(post.prices_inr.regular) : (regularPriceUSD * 84);
 
     const currentPrice = currency === 'USD'
         ? basePriceUSD * selectedVariation.priceMultiplier
-        : (basePriceUSD * conversionRate * selectedVariation.priceMultiplier);
+        : (basePriceINR * selectedVariation.priceMultiplier);
 
     const originalPrice = currency === 'USD'
-        ? (basePriceUSD * 1.5) * selectedVariation.priceMultiplier
-        : ((basePriceUSD * 1.5) * conversionRate * selectedVariation.priceMultiplier);
+        ? regularPriceUSD * selectedVariation.priceMultiplier
+        : (regularPriceINR * selectedVariation.priceMultiplier);
 
     const formatPrice = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -77,7 +82,8 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
     });
 
     // Fallback if extraction fails and guarantee all variants are populated so forms don't guess
-    const baseCoursePrice = currency === 'USD' ? basePriceUSD : (basePriceUSD * conversionRate);
+    // Fallback if extraction fails and guarantee all variants are populated so forms don't guess
+    const baseCoursePrice = currency === 'USD' ? basePriceUSD : basePriceINR;
     if (!learningModeFeeMap['e-LMS']) learningModeFeeMap['e-LMS'] = formatPrice(baseCoursePrice);
     if (!learningModeFeeMap['Video + e-LMS']) learningModeFeeMap['Video + e-LMS'] = formatPrice(baseCoursePrice * 1.5);
     if (!learningModeFeeMap['Live Lectures + Video + e-LMS']) learningModeFeeMap['Live Lectures + Video + e-LMS'] = formatPrice(baseCoursePrice * 2.5);

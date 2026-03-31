@@ -140,7 +140,11 @@ export async function POST(request: Request) {
       '9819': body.razorpay_payment_id || '',
       '9821': body.razorpay_signature || '',
       '9809': body.courseFee || '',
-      '9810': body.payableAmount || ''
+      '9810': body.payableAmount || '',
+      '9800': body.address || '',
+      '9801': body.state || '',
+      '9802': body.country || '',
+      '9805': body.pinCode || ''
     };
 
     // STEP 2: Wait 1s and PATCH the restricted Read-Only payment fields manually
@@ -174,6 +178,10 @@ export async function POST(request: Request) {
         '9817': paymentStatus,
         '9816': body.razorpay_order_id || '',
         '9819': body.razorpay_payment_id || '',
+        '9800': body.address || '',
+        '9801': body.state || '',
+        '9802': body.country || '',
+        '9805': body.pinCode || ''
       };
       
       const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {

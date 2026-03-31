@@ -117,6 +117,20 @@ export default function Card({ post, type, listView = false }: CardProps) {
                 <div className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
                     {sanitizedExcerpt}
                 </div>
+                <div className="mt-4 mb-4">
+                    {post.price && (
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-xl font-bold text-slate-900">
+                                ${post.price}
+                            </span>
+                            {post.on_sale && post.regular_price && (
+                                <span className="text-sm text-slate-400 line-through">
+                                    ${post.regular_price}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
                 <div className="mt-auto border-t border-gray-50 pt-4 flex items-center justify-between">
                     <span className="text-xs font-medium text-gray-400">
                         {new Date(post.date).toLocaleDateString('en-GB')}

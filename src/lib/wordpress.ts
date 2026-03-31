@@ -15,7 +15,33 @@ export interface WordPressPost {
   featured_media: number;
   date: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _embedded?: any; // Using any for flexibility with WP API response
+  _embedded?: any; 
+  // Add WooCommerce price fields
+  price?: string;
+  regular_price?: string;
+  sale_price?: string;
+  on_sale?: boolean;
+  prices_inr?: {
+    regular?: string;
+    sale?: string;
+  };
+}
+
+export interface WooCommerceProduct {
+  id: number;
+  name: string;
+  slug: string;
+  price: string;
+  regular_price: string;
+  sale_price: string;
+  on_sale: boolean;
+  date_created: string;
+  description: string;
+  short_description: string;
+  images: { src: string; alt: string }[];
+  categories: { id: number; name: string; slug: string }[];
+  tags: { id: number; name: string; slug: string }[];
+  meta_data: { key: string; value: any }[];
 }
 
 export interface Category {
@@ -127,26 +153,93 @@ export async function getLandingPages(): Promise<WordPressPost[]> {
   return response.json();
 }
 
-export async function getProducts({ perPage = 100, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
-  // If perPage is 100 (default), we might still want all, but let's allow fetching just a few.
-  // Actually, standard behavior of fetchAllItems was to get ALL.
-  // Let's keep getProducts as is for compatibility if used elsewhere,
-  // and add getFeaturedProducts or simply use a new function with pagination.
-  // To avoid breaking changes, let's add a new function for paged products.
+export async function getWooCommerceProducts({ perPage = 100, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
+  const WP_USER = process.env.WP_USER;
+  const WP_PASSWORD = process.env.WP_PASSWORD;
 
-  // FIXME: Fetching all 425+ products at once causes timeouts/504 errors.
-  // For now, limiting to 100 items to ensure the page loads.
-  // return fetchAllItems<WordPressPost>('product');
-
-  let url = `${BASE_URL}/product?per_page=${perPage}&page=${page}&_embed`;
-  
-  if (categoryId > 0) {
-    url += `&product_cat=${categoryId}`;
+  if (!WP_USER || !WP_PASSWORD) {
+    console.error('Missing WooCommerce credentials in .env');
+    return [];
   }
 
-  const response = await fetchWP(url);
-  if (!response.ok) return [];
-  return response.json();
+  const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+  const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
+  let url = `${wcBaseUrl}/products?per_page=${perPage}&page=${page}`;
+
+  if (categoryId > 0) {
+    url += `&category=${categoryId}`;
+  }
+
+  try {
+    const response = await fetch(url, {
+      next: { revalidate: 3600 },
+      headers: {
+        'Authorization': authHeader,
+        'User-Agent': 'NanoSchool-Frontend'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('WooCommerce API Error:', response.status, response.statusText);
+      return [];
+    }
+
+    const wcProducts: WooCommerceProduct[] = await response.json();
+
+    return wcProducts.map(wc => {
+      // Extract INR prices from meta data if they exist
+      const inrRegularField = wc.meta_data.find(m => m.key === '_regular_price_wmcp');
+      const inrSaleField = wc.meta_data.find(m => m.key === '_sale_price_wmcp');
+      
+      let inrRegular = '';
+      let inrSale = '';
+
+      try {
+        if (inrRegularField?.value) {
+            const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
+            inrRegular = parsed.INR || '';
+        }
+        if (inrSaleField?.value) {
+            const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
+            inrSale = parsed.INR || '';
+        }
+      } catch (e) {
+        console.warn('Failed to parse INR prices for product:', wc.id);
+      }
+
+      return {
+        id: wc.id,
+        slug: wc.slug,
+        title: { rendered: wc.name },
+        excerpt: { rendered: wc.short_description },
+        content: { rendered: wc.description },
+        date: wc.date_created,
+        featured_media: 0, 
+        _embedded: {
+          'wp:featuredmedia': wc.images.length > 0 ? [{
+            source_url: wc.images[0].src,
+            alt_text: wc.images[0].alt
+          }] : []
+        },
+        price: wc.price,
+        regular_price: wc.regular_price,
+        sale_price: wc.sale_price,
+        on_sale: wc.on_sale,
+        prices_inr: {
+          regular: inrRegular,
+          sale: inrSale
+        }
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching WooCommerce products:', error);
+    return [];
+  }
+}
+
+export async function getProducts({ perPage = 100, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
+  console.log('[INFO] Fetching real WooCommerce products for page:', page);
+  return getWooCommerceProducts({ perPage, page, categoryId });
 }
 
 export async function getPagedProducts(perPage: number = 6, page: number = 1): Promise<WordPressPost[]> {
@@ -156,6 +249,80 @@ export async function getPagedProducts(perPage: number = 6, page: number = 1): P
 }
 
 export async function getPostBySlug(type: string, slug: string): Promise<WordPressPost | null> {
+  // If the type is 'courses' or 'product' or 'programs' or 'workshops', we should use the WooCommerce API to get real prices
+  if (type === 'courses' || type === 'product' || type === 'programs' || type === 'workshops') {
+    const WP_USER = process.env.WP_USER;
+    const WP_PASSWORD = process.env.WP_PASSWORD;
+
+    if (WP_USER && WP_PASSWORD) {
+      const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+      const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
+      const url = `${wcBaseUrl}/products?slug=${slug}`;
+
+      try {
+        const response = await fetch(url, {
+          next: { revalidate: 3600 },
+          headers: {
+            'Authorization': authHeader,
+            'User-Agent': 'NanoSchool-Frontend'
+          }
+        });
+
+        if (response.ok) {
+          const products: WooCommerceProduct[] = await response.json();
+          if (products.length > 0) {
+            const wc = products[0];
+            // Extract INR prices from meta data if they exist
+            const inrRegularField = wc.meta_data.find(m => m.key === '_regular_price_wmcp');
+            const inrSaleField = wc.meta_data.find(m => m.key === '_sale_price_wmcp');
+            
+            let inrRegular = '';
+            let inrSale = '';
+
+            try {
+              if (inrRegularField?.value) {
+                  const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
+                  inrRegular = parsed.INR || '';
+              }
+              if (inrSaleField?.value) {
+                  const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
+                  inrSale = parsed.INR || '';
+              }
+            } catch (e) {
+              console.warn('Failed to parse INR prices for product slug:', slug);
+            }
+
+            return {
+              id: wc.id,
+              slug: wc.slug,
+              title: { rendered: wc.name },
+              excerpt: { rendered: wc.short_description },
+              content: { rendered: wc.description },
+              date: wc.date_created,
+              featured_media: 0, 
+              _embedded: {
+                'wp:featuredmedia': wc.images.length > 0 ? [{
+                  source_url: wc.images[0].src,
+                  alt_text: wc.images[0].alt
+                }] : []
+              },
+              price: wc.price,
+              regular_price: wc.regular_price,
+              sale_price: wc.sale_price,
+              on_sale: wc.on_sale,
+              prices_inr: {
+                regular: inrRegular,
+                sale: inrSale
+              }
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching WooCommerce product by slug:', error);
+      }
+    }
+  }
+
   let restBase = 'posts';
 
   if (type === 'courses') {
