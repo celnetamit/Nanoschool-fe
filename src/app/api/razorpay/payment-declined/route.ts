@@ -54,8 +54,10 @@ export async function POST(request: Request) {
       );
 
       const webhookPayload = {
+        companyId: "3a148605-aa1c-42b4-8ab8-f78c039ee9c0",
+        brandId: "fbb632ae",
         ...numericMeta,
-        [PAYMENT_STATUS_FIELD]: 'FAILED',
+        [PAYMENT_STATUS_FIELD]: 'failed',
         [RZP_ORDER_ID_FIELD]: razorpay_order_id || '',
         [RZP_PAYMENT_ID_FIELD]: '',
         [RZP_SIGNATURE_FIELD]: '',
@@ -63,7 +65,10 @@ export async function POST(request: Request) {
 
       const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.LEAD_WEBHOOK_SECRET}`
+        },
         body: JSON.stringify(webhookPayload),
       });
 

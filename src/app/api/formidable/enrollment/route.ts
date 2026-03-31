@@ -174,8 +174,10 @@ export async function POST(request: Request) {
     // ALWAYS trigger the initial webhook to IMS
     try {
       const webhookPayload = {
+        companyId: "3a148605-aa1c-42b4-8ab8-f78c039ee9c0",
+        brandId: "fbb632ae",
         ...mergedItemMeta,
-        '9817': paymentStatus,
+        '9817': (paymentStatus || '').toLowerCase(),
         '9816': body.razorpay_order_id || '',
         '9819': body.razorpay_payment_id || '',
         '9800': body.address || '',
@@ -186,13 +188,18 @@ export async function POST(request: Request) {
       
       const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.LEAD_WEBHOOK_SECRET}`
+        },
         body: JSON.stringify(webhookPayload),
       });
       
       if (!whRes.ok) {
         const whErrText = await whRes.text();
         console.error('Initial IMS Webhook rejected payload:', whRes.status, whErrText);
+      } else {
+        console.log('[INFO] Initial IMS Webhook success:', whRes.status);
       }
     } catch (whError) {
       console.error('Initial webhook failed:', whError);
