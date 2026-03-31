@@ -129,22 +129,25 @@ export async function POST(request: Request) {
 
     const newEntryId = result.id;
 
+    // Determine initial status based on payment requirement
+    const amountVal = parseFloat(body.payableAmount?.toString().replace(/[^0-9.]/g, '') || String(body.courseFee || '').replace(/[^0-9.]/g, '') || '0');
+    const isFree = isNaN(amountVal) || amountVal <= 0;
+    const paymentStatus = isFree ? 'SUCCESS' : (body.payment_status || 'PENDING');
+
+    const restrictedMeta = {
+      '9817': paymentStatus,
+      '9816': body.razorpay_order_id || '',
+      '9819': body.razorpay_payment_id || '',
+      '9821': body.razorpay_signature || '',
+      '9809': body.courseFee || '',
+      '9810': body.payableAmount || ''
+    };
+
     // STEP 2: Wait 1s and PATCH the restricted Read-Only payment fields manually
-    // Since Formidable API ignores Default Values and drops Read-Only fields on POST,
-    // we must dynamically PATCH the "not_completed" defaults immediately after lead creation.
     await new Promise(resolve => setTimeout(resolve, 1000));
     console.log('[DEBUG] Formidable API -> Creating Restricted Meta');
     console.log('[DEBUG] > courseFee received:', body.courseFee);
     console.log('[DEBUG] > payableAmount received:', body.payableAmount);
-
-    const restrictedMeta = {
-      '9817': body.payment_status || 'payment not completed',
-      '9816': body.razorpay_order_id || 'NA',
-      '9819': body.razorpay_payment_id || 'NA',
-      '9821': body.razorpay_signature || 'NA',
-      '9809': body.courseFee || '',
-      '9810': body.payableAmount || ''
-    };
 
     try {
       await fetch(`${FORMIDABLE_API_URL}/${newEntryId}`, {
@@ -164,17 +167,13 @@ export async function POST(request: Request) {
       ...restrictedMeta
     };
 
-    // ALWAYS trigger the initial webhook to IMS so it matches WordPress's immediately created lead status!
+    // ALWAYS trigger the initial webhook to IMS
     try {
-      // Determine initial webhook status: either SUCCESS (if free) or 'payment not completed' (if Razorpay required)
-      const amountVal = parseFloat(body.payableAmount?.toString().replace(/[^0-9.]/g, '') || String(body.courseFee || '').replace(/[^0-9.]/g, '') || '0');
-      const isFree = isNaN(amountVal) || amountVal <= 0;
-      
-      const paymentStatus = isFree ? 'SUCCESS' : (body.payment_status || 'PENDING');
-      
       const webhookPayload = {
         ...mergedItemMeta,
         '9817': paymentStatus,
+        '9816': body.razorpay_order_id || '',
+        '9819': body.razorpay_payment_id || '',
       };
       
       const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
