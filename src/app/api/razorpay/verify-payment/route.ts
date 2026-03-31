@@ -62,20 +62,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Payment verified but failed to update entry' }, { status: 500 });
     }
 
-    // Trigger Success Webhook
+    // Trigger Success Webhook with clean numeric keys only
     try {
+      const numericMeta = Object.fromEntries(
+        Object.entries(itemMeta || {}).filter(([key]) => /^\d+$/.test(key))
+      );
+
       const webhookPayload = {
-        ...(itemMeta || {}),
+        ...numericMeta,
         [PAYMENT_STATUS_FIELD]: 'SUCCESS',
         [RZP_ORDER_ID_FIELD]: razorpay_order_id,
         [RZP_PAYMENT_ID_FIELD]: razorpay_payment_id,
         [RZP_SIGNATURE_FIELD]: razorpay_signature,
-        // Also provide named keys for IMS logic that might not use numeric field IDs
-        entryId: entryId,
-        payment_status: 'SUCCESS',
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature
       };
 
       const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {

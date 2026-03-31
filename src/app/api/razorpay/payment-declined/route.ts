@@ -16,7 +16,10 @@ export async function POST(request: Request) {
     const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
     const FORMIDABLE_API_URL = 'https://nanoschool.in/wp-json/frm/v2/entries';
 
-    // Step 1: Update the WordPress entry status to 'payment_declined'
+    const RZP_PAYMENT_ID_FIELD = '9819';
+    const RZP_SIGNATURE_FIELD = '9821';
+
+    // Step 1: Update the WordPress entry status to 'payment_failed'
     try {
       const updateResponse = await fetch(`${FORMIDABLE_API_URL}/${entryId}`, {
         method: 'PATCH',
@@ -26,8 +29,10 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           item_meta: {
-            [PAYMENT_STATUS_FIELD]: 'payment_declined',
+            [PAYMENT_STATUS_FIELD]: 'payment_failed',
             [RZP_ORDER_ID_FIELD]: razorpay_order_id || 'NA',
+            [RZP_PAYMENT_ID_FIELD]: 'NA',
+            [RZP_SIGNATURE_FIELD]: 'NA',
           }
         }),
       });
@@ -36,22 +41,24 @@ export async function POST(request: Request) {
         const errorData = await updateResponse.json().catch(() => ({}));
         console.error('Failed to update WordPress entry on decline:', errorData);
       } else {
-        console.log('[INFO] WordPress entry updated to payment_declined for entryId:', entryId);
+        console.log('[INFO] WordPress entry updated to payment_failed for entryId:', entryId);
       }
     } catch (wpError) {
       console.error('WordPress PATCH failed on payment decline:', wpError);
     }
 
-    // Step 2: Notify IMS about the payment decline via the registration webhook
+    // Step 2: Notify IMS about the payment failure via the registration webhook
     try {
+      const numericMeta = Object.fromEntries(
+        Object.entries(itemMeta || {}).filter(([key]) => /^\d+$/.test(key))
+      );
+
       const webhookPayload = {
-        ...(itemMeta || {}),
-        entryId: entryId,
-        [PAYMENT_STATUS_FIELD]: 'payment_declined',
+        ...numericMeta,
+        [PAYMENT_STATUS_FIELD]: 'FAILED',
         [RZP_ORDER_ID_FIELD]: razorpay_order_id || 'NA',
-        // Named keys for IMS compatibility
-        payment_status: 'DECLINED',
-        razorpay_order_id: razorpay_order_id || 'NA',
+        [RZP_PAYMENT_ID_FIELD]: 'NA',
+        [RZP_SIGNATURE_FIELD]: 'NA',
       };
 
       const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
@@ -64,7 +71,7 @@ export async function POST(request: Request) {
         const whErrText = await whRes.text();
         console.error('IMS decline webhook rejected:', whRes.status, whErrText);
       } else {
-        console.log('[INFO] IMS notified of payment decline for entryId:', entryId);
+        console.log('[INFO] IMS notified of payment failure for entryId:', entryId);
       }
     } catch (whError) {
       console.error('IMS decline webhook failed:', whError);

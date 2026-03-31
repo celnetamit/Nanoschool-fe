@@ -170,11 +170,11 @@ export async function POST(request: Request) {
       const amountVal = parseFloat(body.payableAmount?.toString().replace(/[^0-9.]/g, '') || String(body.courseFee || '').replace(/[^0-9.]/g, '') || '0');
       const isFree = isNaN(amountVal) || amountVal <= 0;
       
+      const paymentStatus = isFree ? 'SUCCESS' : (body.payment_status || 'PENDING');
+      
       const webhookPayload = {
         ...mergedItemMeta,
-        ...body, // Includes named fields (pid, name, email, etc.)
-        entryId: newEntryId,
-        '9817': isFree ? 'SUCCESS' : (body.payment_status || 'payment not completed')
+        '9817': paymentStatus,
       };
       
       const whRes = await fetch('https://ims.panoptical.org/api/webhooks/nanoschool-registration', {
