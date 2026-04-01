@@ -146,9 +146,18 @@ export default function WorkshopEnrollmentDialog({
     }
 
     if (currency === 'INR') {
-      // If we have real INR price from WooCommerce, use it
+      // If we have real INR price from WooCommerce, use it, but still apply multipliers for courses
       if (pricesINR?.sale) {
-        setPayableAmount(`₹${parseInt(pricesINR.sale).toLocaleString()}`);
+        const baseSaleVal = parseInt(pricesINR.sale);
+        if (itemType === 'courses' && selectedOption) {
+          let multiplier = 1;
+          if (selectedOption.includes('Live')) multiplier = 2.5;
+          else if (selectedOption.includes('Video')) multiplier = 1.5;
+          const calculated = Math.round(baseSaleVal * multiplier);
+          setPayableAmount(`₹${calculated.toLocaleString()}`);
+        } else {
+          setPayableAmount(`₹${baseSaleVal.toLocaleString()}`);
+        }
       } else {
         // Fallback: search for ₹ in the original fee or convert
         const inrMatch = baseFee.match(/₹\s?([0-9,]+)/);
@@ -262,8 +271,8 @@ export default function WorkshopEnrollmentDialog({
           ...formData,
           pid: uniquePid,
           workshopTitle,
-          courseFee: courseFee,   // Keep original base fee
-          payableAmount,          // Final dynamically calculated discount/fee
+          courseFee: payableAmount,   // Use the calculated fee for selected mode/profession
+          payableAmount,              // Final dynamically calculated discount/fee
           itemType,
           category: itemType === 'courses' ? 'Course' : 'Workshop',
           currency,               // Added the selected currency

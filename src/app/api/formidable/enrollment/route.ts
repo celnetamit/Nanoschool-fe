@@ -73,7 +73,8 @@ export async function POST(request: Request) {
           value = `${body.countryCode}${value}`.replace(/\s/g, ''); // Remove spaces
         }
 
-        // SANITIZATION: Strip currency symbols from fee fields for numeric compatibility
+        // NO LONGER STRIPPING CURRENCY SYMBOLS (Preserve ₹ and $ for WordPress)
+        /*
         if (bodyKey === 'courseFee' || bodyKey === 'payableAmount') {
           if (value && typeof value === 'string') {
              // Keep only digits and decimal points
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
              value = sanitized;
           }
         }
+        */
 
         itemMeta[fieldId] = value;
       }
@@ -129,8 +131,12 @@ export async function POST(request: Request) {
 
     const newEntryId = result.id;
 
+    // NO LONGER STRIPPING SYMBOLS (Preserve ₹ and $ for WordPress and IMS)
+    const cleanCourseFee = body.courseFee?.toString() || '0';
+    const cleanPayableAmount = body.payableAmount?.toString() || '0';
+
     // Determine initial status based on payment requirement
-    const amountVal = parseFloat(body.payableAmount?.toString().replace(/[^0-9.]/g, '') || String(body.courseFee || '').replace(/[^0-9.]/g, '') || '0');
+    const amountVal = parseFloat(cleanPayableAmount.replace(/[^0-9.]/g, '') || cleanCourseFee.replace(/[^0-9.]/g, '') || '0');
     const isFree = isNaN(amountVal) || amountVal <= 0;
     const paymentStatus = isFree ? 'SUCCESS' : (body.payment_status || 'PENDING');
 
@@ -139,8 +145,8 @@ export async function POST(request: Request) {
       '9816': body.razorpay_order_id || '',
       '9819': body.razorpay_payment_id || '',
       '9821': body.razorpay_signature || '',
-      '9809': body.courseFee || '',
-      '9810': body.payableAmount || '',
+      '9809': cleanCourseFee,
+      '9810': cleanPayableAmount,
       '9800': body.address || '',
       '9801': body.state || '',
       '9802': body.country || '',
@@ -176,7 +182,12 @@ export async function POST(request: Request) {
       const webhookPayload = {
         companyId: "3a148605-aa1c-42b4-8ab8-f78c039ee9c0",
         brandId: "fbb632ae",
-        ...mergedItemMeta,
+        ...body, // Capture all named frontend keys (name, email, profession, etc.)
+        ...mergedItemMeta, // Capture all Formidable numeric IDs
+        courseFee: cleanCourseFee,
+        payableAmount: cleanPayableAmount,
+        payableFeeAmount: cleanPayableAmount, // User's specific naming request
+        currency: body.currency || (cleanPayableAmount.includes('₹') ? 'INR' : 'USD'),
         '9817': (paymentStatus || '').toLowerCase(),
         '9816': body.razorpay_order_id || '',
         '9819': body.razorpay_payment_id || '',

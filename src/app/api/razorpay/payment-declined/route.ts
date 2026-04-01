@@ -47,16 +47,16 @@ export async function POST(request: Request) {
       console.error('WordPress PATCH failed on payment decline:', wpError);
     }
 
-    // Step 2: Notify IMS about the payment failure via the registration webhook
+    // Trigger Failure Webhook with full data coverage (IDs and Named keys)
     try {
-      const numericMeta = Object.fromEntries(
-        Object.entries(itemMeta || {}).filter(([key]) => /^\d+$/.test(key))
-      );
-
       const webhookPayload = {
         companyId: "3a148605-aa1c-42b4-8ab8-f78c039ee9c0",
         brandId: "fbb632ae",
-        ...numericMeta,
+        ...(itemMeta || {}), // Capture all entry metadata (IDs and Name keys)
+        courseFee: itemMeta?.['9809'] || '',
+        payableAmount: itemMeta?.['9810'] || '',
+        payableFeeAmount: itemMeta?.['9810'] || '', // User's specific naming request
+        currency: (itemMeta?.['9810'] || '').includes('₹') ? 'INR' : 'USD',
         [PAYMENT_STATUS_FIELD]: 'failed',
         [RZP_ORDER_ID_FIELD]: razorpay_order_id || '',
         [RZP_PAYMENT_ID_FIELD]: '',
