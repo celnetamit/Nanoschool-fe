@@ -54,7 +54,7 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
     };
 
     // Extract structured data
-    const { overview, modules } = structureWPContent(post.content.rendered);
+    const { overview, modules } = structureWPContent(post.content.rendered, storeProduct?.description);
     const featuredMedia = post._embedded?.['wp:featuredmedia']?.[0]?.source_url || '/placeholder.jpg';
 
     // Extract Learning Mode Fees for Dialog
@@ -230,7 +230,7 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                                 <BookOpen className="w-8 h-8 text-blue-600" />
                                 Course Overview
                             </h2>
-                            <div className="prose prose-lg prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-600">
+                            <div className="wordpress-content prose prose-lg prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-600">
                                 <div dangerouslySetInnerHTML={{ __html: overview }} />
                             </div>
 

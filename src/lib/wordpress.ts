@@ -375,7 +375,9 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
 
     // Add responsive classes to images if they don't have them
     // This is a simple regex replacement; for more complex cases, a parser would be better but this suffices for known WP content issues.
-    sanitized = sanitized.replace(/<img(?![^>]*\bclass=["'][^"']*\b(max-w-full|h-auto)\b)([^>]+)>/gi, '<img class="max-w-full h-auto" $1>');
+    // 4. Inject Premium Insight Boxes for common patterns
+    sanitized = sanitized.replace(/<p>(\s*Quick answer:)/gi, '<p class="insight-box">$1');
+
   }
 
   return sanitized.trim();
@@ -469,11 +471,43 @@ export async function getBlogBySlug(slug: string): Promise<BlogPost | null> {
   return posts.length > 0 ? posts[0] : null;
 }
 
-export function structureWPContent(html: string) {
-  if (!html) return { overview: '', modules: [] };
+export function structureWPContent(html: string, description?: string) {
+  if (!html) return { overview: description || '', modules: [] };
 
   // 1. Sanitize first to remove scripts/styles
   let cleanHtml = sanitizeWPContent(html);
+
+  // 1.1 BULLET POINT NORMALIZATION:
+  // Convert plain text bullets (• or -) into semantic <ul><li> tags
+  const bulletRegex = /(?:<p>\\s*|\\n|^)(?:•|-)\\s*(.*?)(?:\\s*<\/p>|\\s*\\n|\\s*$)/gi;
+  if (bulletRegex.test(cleanHtml)) {
+    cleanHtml = cleanHtml.replace(bulletRegex, "<li>$1</li>");
+    // Wrap adjacent <li> tags in <ul>
+    cleanHtml = cleanHtml.replace(/(<li>.*?<\/li>)+/g, "<ul>$&</ul>");
+  }
+
+  // 1.2 HEADING NORMALIZATION:
+  // Some WP content might have plain text or paragraphs that SHOULD be headings.
+  // We'll transform known heading patterns into H3 tags before splitting.
+  const headingPatterns = [
+    "About the Course",
+    "Why This Topic Matters",
+    "What Participants Will Learn",
+    "Course Structure",
+    "Why This Course Stands Out",
+    "Frequently Asked Questions",
+    "Module\\s+\\d+", // Module 1, Module 2, etc.
+    "M\\d+:"          // M1:, M2:, etc.
+  ];
+
+  headingPatterns.forEach(pattern => {
+    // Matches the pattern if it's in a paragraph, div, starts a line, or even has a colon
+    const regex = new RegExp(`(<p>\\s*|<div>\\s*|\\n|^)(${pattern})(:?\\s*</p>|:?\\s*</div>|:?\\s*\\n|:?\\s*$)`, "gi");
+    cleanHtml = cleanHtml.replace(regex, (match, p1, p2) => {
+      // Transformation into H3 for maximum style
+      return `<h3>${p2}</h3>`;
+    });
+  });
 
   // 1.5 Strip unwanted legacy sections (Need Help, Feedback, etc.)
   // Remove sections starting with headers containing these keywords until the next header or end
@@ -508,8 +542,16 @@ export function structureWPContent(html: string) {
     }
   }
 
+  const firstModule = modules.length > 0 ? modules[0] : null;
+  const fallbackOverview = firstModule ? `<h3>${firstModule.title}</h3>${firstModule.content}` : '';
+
+  // Use description if provided, otherwise fallback to the extracted overview or first module
+  const finalOverview = description && stripHtml(description).trim().length > 10 
+    ? description 
+    : (stripHtml(overview).length < 50 ? fallbackOverview : overview);
+
   return {
-    overview: stripHtml(overview).length < 50 && modules.length > 0 ? modules[0].content : overview, // Fallback if overview is empty
+    overview: finalOverview,
     modules: modules.length > 0 ? modules : []
   };
 }
