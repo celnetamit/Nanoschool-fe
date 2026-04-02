@@ -15,7 +15,7 @@ export interface WordPressPost {
   featured_media: number;
   date: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  _embedded?: any; 
+  _embedded?: any;
   // Add WooCommerce price fields
   price?: string;
   regular_price?: string;
@@ -190,18 +190,18 @@ export async function getWooCommerceProducts({ perPage = 100, page = 1, category
       // Extract INR prices from meta data if they exist
       const inrRegularField = wc.meta_data.find(m => m.key === '_regular_price_wmcp');
       const inrSaleField = wc.meta_data.find(m => m.key === '_sale_price_wmcp');
-      
+
       let inrRegular = '';
       let inrSale = '';
 
       try {
         if (inrRegularField?.value) {
-            const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
-            inrRegular = parsed.INR || '';
+          const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
+          inrRegular = parsed.INR || '';
         }
         if (inrSaleField?.value) {
-            const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
-            inrSale = parsed.INR || '';
+          const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
+          inrSale = parsed.INR || '';
         }
       } catch (e) {
         console.warn('Failed to parse INR prices for product:', wc.id);
@@ -214,7 +214,7 @@ export async function getWooCommerceProducts({ perPage = 100, page = 1, category
         excerpt: { rendered: wc.short_description },
         content: { rendered: wc.description },
         date: wc.date_created,
-        featured_media: 0, 
+        featured_media: 0,
         _embedded: {
           'wp:featuredmedia': wc.images.length > 0 ? [{
             source_url: wc.images[0].src,
@@ -275,18 +275,18 @@ export async function getPostBySlug(type: string, slug: string): Promise<WordPre
             // Extract INR prices from meta data if they exist
             const inrRegularField = wc.meta_data.find(m => m.key === '_regular_price_wmcp');
             const inrSaleField = wc.meta_data.find(m => m.key === '_sale_price_wmcp');
-            
+
             let inrRegular = '';
             let inrSale = '';
 
             try {
               if (inrRegularField?.value) {
-                  const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
-                  inrRegular = parsed.INR || '';
+                const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
+                inrRegular = parsed.INR || '';
               }
               if (inrSaleField?.value) {
-                  const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
-                  inrSale = parsed.INR || '';
+                const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
+                inrSale = parsed.INR || '';
               }
             } catch (e) {
               console.warn('Failed to parse INR prices for product slug:', slug);
@@ -299,7 +299,7 @@ export async function getPostBySlug(type: string, slug: string): Promise<WordPre
               excerpt: { rendered: wc.short_description },
               content: { rendered: wc.description },
               date: wc.date_created,
-              featured_media: 0, 
+              featured_media: 0,
               _embedded: {
                 'wp:featuredmedia': wc.images.length > 0 ? [{
                   source_url: wc.images[0].src,
@@ -354,7 +354,7 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
     sanitized = sanitized.replace(/<[^>]*>?/gm, '');
   } else {
     // 3. AGGRESSIVE STRIPPING for full content
-    
+
     // Remove images pointing to port 7071 (Developer-only hardcoded URLs)
     sanitized = sanitized.replace(/<img[^>]+src="http:\/\/localhost:7071\/[^>]+>/gi, '');
 
@@ -377,6 +377,63 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
     // This is a simple regex replacement; for more complex cases, a parser would be better but this suffices for known WP content issues.
     // 4. Inject Premium Insight Boxes for common patterns
     sanitized = sanitized.replace(/<p>(\s*Quick answer:)/gi, '<p class="insight-box">$1');
+
+    // 5. Detect text-based headings that should be structural headings
+    const headingPatterns = [
+      "About the Course",
+      "Why This Topic Matters",
+      "What Participants Will Learn",
+      "Course Structure",
+      "Why This Course Stands Out",
+      "Frequently Asked Questions",
+      "Program Overview",
+      "Detailed Syllabus",
+      "Curriculum",
+      "Project Details",
+      "Certification",
+      "Who Should Attend",
+      "Learning Outcomes",
+      "The program integrates",
+      "Real-World Applications",
+      "Key Features"
+    ];
+
+    headingPatterns.forEach(pattern => {
+      // PRO: Aggressive detection of headings inside ANY block-level tag (p, div, h2-h6)
+      // Handles: <div>About the Course</div>, <p><strong>About the Course</strong></p>, etc.
+      // Also handles &nbsp; and varied whitespace
+      const regex = new RegExp(`<(?:p|div|h[2-6])(?:\\s+[^>]*)*?>[\\s\\&nbsp\\;]*(?:<strong>[\\s\\&nbsp\\;]*)?(${pattern}:?)(?:[\\s\\&nbsp\\;]*<\\/strong>)?[\\s\\&nbsp\\;]*<\\/(?:p|div|h[2-6])>`, 'gi');
+      sanitized = sanitized.replace(regex, '<h3>$1</h3>');
+    });
+
+    // 6. PRO MODULE DETECTOR: Detect "Module X" patterns in any container
+    // Handles: Module 1, Module: 1, MODULE - 1, Module — 1, etc.
+    // Catches hyphens (-), slashes (/), colons (:), and em-dashes (—)
+    sanitized = sanitized.replace(/<(?:p|div|h[2-6])(?:\s+[^>]*)*?>[\s\&nbsp\;]*(?:<strong>[\s\&nbsp\;]*)?(Module\s+\d+[\s\:\-\—\/\|]*.*?)(?:\s*<\/strong>)?[\s\&nbsp\;]*<\/(?:p|div|h[2-6])>/gi, '<h4>$1</h4>');
+
+    // 7. PRO SEMANTIC NORMALIZER (Ultimate Protection)
+    // Ensure all H[2-4] get our design system classes
+    sanitized = sanitized.replace(/<(h[2-4])([^>]*)>(.*?)<\/h\1>/gi, '<$1 class="wp-title" $2>$3</$1>');
+
+    // Convert bulleted text strings into clean <li>Item</li>
+    // Target both <div>• Text</div> and plain text lines in the description
+    sanitized = sanitized.replace(/(?:^|<br\s*\/?>|<(?:div|p|li)[^>]*>)\s*•\s*(.*?)(?=\s*(?:<|$))/gi, '<li>$1</li>');
+    
+    // Safety wrap for Li elements that are orphans
+    sanitized = sanitized.replace(/(<li>.*?<\/li>)+/g, (match) => {
+      if (match.includes('<ul>')) return match; 
+      return `<ul>${match}</ul>`;
+    });
+    
+    // Multi-pass cleanup for redundant UL nesting
+    sanitized = sanitized.replace(/<\/ul>\s*<ul>/g, '');
+
+    // Convert orphaned <div>Text</div> into <p>Text</p>
+    sanitized = sanitized.replace(/<div>\s*((?!<(?:h|ul|li|div|p|blockquote)).*?)\s*<\/div>/gi, '<p>$1</p>');
+
+    // Structural healing for broken headings
+    sanitized = sanitized.replace(/<\/p><h([2-4])>/gi, '</h$1><h$1>');
+    sanitized = sanitized.replace(/<h([2-4])>(.*?)<\/p>/gi, '<h$1>$2</h$1>');
 
   }
 
@@ -477,38 +534,6 @@ export function structureWPContent(html: string, description?: string) {
   // 1. Sanitize first to remove scripts/styles
   let cleanHtml = sanitizeWPContent(html);
 
-  // 1.1 BULLET POINT NORMALIZATION:
-  // Convert plain text bullets (• or -) into semantic <ul><li> tags
-  const bulletRegex = /(?:<p>\\s*|\\n|^)(?:•|-)\\s*(.*?)(?:\\s*<\/p>|\\s*\\n|\\s*$)/gi;
-  if (bulletRegex.test(cleanHtml)) {
-    cleanHtml = cleanHtml.replace(bulletRegex, "<li>$1</li>");
-    // Wrap adjacent <li> tags in <ul>
-    cleanHtml = cleanHtml.replace(/(<li>.*?<\/li>)+/g, "<ul>$&</ul>");
-  }
-
-  // 1.2 HEADING NORMALIZATION:
-  // Some WP content might have plain text or paragraphs that SHOULD be headings.
-  // We'll transform known heading patterns into H3 tags before splitting.
-  const headingPatterns = [
-    "About the Course",
-    "Why This Topic Matters",
-    "What Participants Will Learn",
-    "Course Structure",
-    "Why This Course Stands Out",
-    "Frequently Asked Questions",
-    "Module\\s+\\d+", // Module 1, Module 2, etc.
-    "M\\d+:"          // M1:, M2:, etc.
-  ];
-
-  headingPatterns.forEach(pattern => {
-    // Matches the pattern if it's in a paragraph, div, starts a line, or even has a colon
-    const regex = new RegExp(`(<p>\\s*|<div>\\s*|\\n|^)(${pattern})(:?\\s*</p>|:?\\s*</div>|:?\\s*\\n|:?\\s*$)`, "gi");
-    cleanHtml = cleanHtml.replace(regex, (match, p1, p2) => {
-      // Transformation into H3 for maximum style
-      return `<h3>${p2}</h3>`;
-    });
-  });
-
   // 1.5 Strip unwanted legacy sections (Need Help, Feedback, etc.)
   // Remove sections starting with headers containing these keywords until the next header or end
   const unwantedRegex = /<(h[1-6])[^>]*>.*?(Need Help|Feedback|Reviews|Related Products).*?<\/\1>[\s\S]*?(?=(<h[1-6])|$)/gi;
@@ -545,9 +570,12 @@ export function structureWPContent(html: string, description?: string) {
   const firstModule = modules.length > 0 ? modules[0] : null;
   const fallbackOverview = firstModule ? `<h3>${firstModule.title}</h3>${firstModule.content}` : '';
 
-  // Use description if provided, otherwise fallback to the extracted overview or first module
-  const finalOverview = description && stripHtml(description).trim().length > 10 
-    ? description 
+  // Sanitize description if provided
+  const cleanDescription = description ? sanitizeWPContent(description) : '';
+
+  // Use sanitized description if provided, otherwise fallback to the extracted overview or first module
+  const finalOverview = cleanDescription && stripHtml(cleanDescription).trim().length > 10
+    ? cleanDescription
     : (stripHtml(overview).length < 50 ? fallbackOverview : overview);
 
   return {

@@ -163,6 +163,14 @@ a:focus-visible {
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
 }
 
+.pro-course-overview {
+  background: #ffffff;
+  border-radius: 2rem;
+  padding: 3rem;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
 /* Constrain all images with premium look */
 .wordpress-content img {
   max-width: 100% !important;
@@ -207,22 +215,24 @@ a:focus-visible {
   line-height: 1.6;
 }
 
-/* Primary Bullets - Elegant, Gradient Checkmarks */
+/* Primary Bullets - Larger and more prominent */
 .wordpress-content ul li::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 0.3rem; /* Slightly more offset for smaller icon */
-  width: 1.35rem;
-  height: 1.35rem;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
-  mask-size: 80%; /* Slightly smaller icon within the box */
+  left: 0.25rem;
+  top: 0.2rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  mask-size: 60%;
   mask-repeat: no-repeat;
   mask-position: center;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
-  -webkit-mask-size: 80%;
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  -webkit-mask-size: 60%;
+  border-radius: 50%;
+  background-color: #eff6ff; /* Background behind mask if needed, but linear gradient is applied */
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
 }
 
 /* Specific styling for the first paragraph if it's an intro */
@@ -290,24 +300,20 @@ a:focus-visible {
 
 .wordpress-content h3 { 
   font-size: 1.85rem; 
-  color: #0f172a;
-  font-weight: 850;
-  margin-top: 4rem;
-  margin-bottom: 1.5rem;
+  color: #1e293b;
+  padding-bottom: 0.75rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  line-height: 1.2;
+  gap: 0.75rem;
 }
 
 .wordpress-content h3::before {
   content: "";
-  width: 0.6rem;
-  height: 2rem;
-  background: linear-gradient(to bottom, #2563eb, #7c3aed);
+  width: 0.5rem;
+  height: 1.5rem;
+  background: #3b82f6;
   border-radius: 99px;
   display: inline-block;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
 }
 
 .wordpress-content h4 {

@@ -230,7 +230,7 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                                 <BookOpen className="w-8 h-8 text-blue-600" />
                                 Course Overview
                             </h2>
-                            <div className="wordpress-content prose prose-lg prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-600">
+                            <div className="pro-course-overview wordpress-content prose prose-lg prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-600">
                                 <div dangerouslySetInnerHTML={{ __html: overview }} />
                             </div>
 
