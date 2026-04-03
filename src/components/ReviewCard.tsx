@@ -1,43 +1,61 @@
-import { Star, User } from 'lucide-react';
+import { Star, Clock, Bookmark } from 'lucide-react';
 
 interface ReviewProps {
     name: string;
     date: string;
+    time?: string;
     comment: string;
+    workshopName?: string;
     rating?: number;
 }
 
-export default function ReviewCard({ name, date, comment, rating = 5 }: ReviewProps) {
+export default function ReviewCard({ name, date, time, comment, workshopName, rating = 5 }: ReviewProps) {
     return (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                        <User size={20} />
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-slate-900 text-sm line-clamp-1">{name}</h4>
-                        <p className="text-xs text-slate-500">{date}</p>
-                    </div>
+        <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-500 h-full flex flex-col group relative overflow-hidden">
+            
+            {/* 1. Topic Name at Top (Using 'name' key from API) */}
+            <div className="mb-4">
+                <div className="flex items-center gap-2 mb-1.5 font-bold text-slate-400">
+                    <Bookmark size={10} className="text-blue-500 fill-blue-50" />
+                    <span className="text-[8.5px] uppercase tracking-[0.1em]">Student Review Topic</span>
                 </div>
-                <div className="flex gap-0.5">
-                    {[...Array(5)].map((_, i) => (
-                        <Star
-                            key={i}
-                            size={14}
-                            className={`${i < rating ? 'fill-yellow-400 text-yellow-400' : 'fill-slate-100 text-slate-100'}`}
-                        />
-                    ))}
-                </div>
+                <h4 className="text-[14px] font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors line-clamp-1">
+                    {workshopName || 'NanoSchool Academic Program'}
+                </h4>
             </div>
 
-            <div className="relative flex-grow">
-                <svg className="absolute -top-2 -left-2 w-8 h-8 text-blue-100 opacity-50 transform -scale-x-100" fill="currentColor" viewBox="0 0 32 32">
-                    <path d="M10 8c-3.3 0-6 2.7-6 6v10h10V14H6c0-2.2 1.8-4 4-4V8zm16 0c-3.3 0-6 2.7-6 6v10h10V14h-8c0-2.2 1.8-4 4-4V8z" />
-                </svg>
-                <p className="text-slate-600 text-sm leading-relaxed italic relative z-10 pl-2">
+            {/* 2. Rating */}
+            <div className="flex gap-0.5 mb-4">
+                {[...Array(5)].map((_, i) => (
+                    <Star
+                        key={i}
+                        size={10}
+                        className={`${i < rating ? 'fill-yellow-400 text-yellow-400' : 'fill-slate-100 text-slate-100'}`}
+                    />
+                ))}
+            </div>
+
+            {/* 3. The Feedback Message (Compressed) */}
+            <div className="flex-grow mb-5 relative">
+                <p className="text-[12.5px] font-bold text-slate-500 leading-snug italic border-l border-blue-500/20 pl-3 line-clamp-3">
                     &quot;{comment}&quot;
                 </p>
+            </div>
+
+            {/* 4. Verified Attribution Footer (Compact) */}
+            <div className="mt-auto pt-4 border-t border-slate-50">
+                <div className="flex flex-col gap-0.5">
+                    <span className="text-[12.5px] font-black text-slate-900 leading-tight">{name}</span>
+                    <div className="flex items-center gap-1.5 text-[9.5px] font-bold text-slate-400 uppercase tracking-tight">
+                        <span>{date}</span>
+                        {time && (
+                            <span className="flex items-center gap-1 text-slate-400/60 lowercase">
+                                <Clock size={8} />
+                                {time}
+                            </span>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

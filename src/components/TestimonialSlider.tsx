@@ -3,8 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import ReviewCard from './ReviewCard';
 import reviewsData from '@/data/reviews.json';
+import { FeedbackData } from '@/lib/feedback';
 
-export default function TestimonialSlider() {
+interface TestimonialSliderProps {
+    feedbacks?: FeedbackData[];
+}
+
+export default function TestimonialSlider({ feedbacks }: TestimonialSliderProps) {
+    const displayFeedbacks = feedbacks && feedbacks.length > 0 ? feedbacks : reviewsData;
     const [scrolled, setScrolled] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -46,13 +52,15 @@ export default function TestimonialSlider() {
                 style={{ scrollBehavior: 'auto' }}
             >
                 {/* Duplicate arrays for infinite scroll effect */}
-                {[...reviewsData, ...reviewsData].map((review, index) => (
-                    <div key={index} className="min-w-[300px] max-w-[350px] flex-shrink-0">
+                {[...displayFeedbacks, ...displayFeedbacks].map((review, index) => (
+                    <div key={index} className="min-w-[280px] max-w-[300px] flex-shrink-0">
                         <ReviewCard
                             name={review.name}
                             date={review.date}
+                            time={'time' in review ? review.time as string : undefined}
                             comment={review.comment}
                             rating={review.rating}
+                            workshopName={'workshopName' in review ? review.workshopName as string : 'Verified Workshop'}
                         />
                     </div>
                 ))}

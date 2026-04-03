@@ -8,6 +8,7 @@ import KeyHighlights from './KeyHighlights';
 import HallOfFameSection from './HallOfFameSection';
 import WorkshopEnrollButton from './payments/WorkshopEnrollButton';
 import Link from 'next/link';
+import { getFeedbacks } from '@/lib/feedback';
 
 // function formatDate(dateString: string) ... (keeping this)
 
@@ -45,6 +46,8 @@ function extractWorkshopDate(content: string): string | undefined {
 
 export default async function DetailView({ params, type }: { params: Promise<{ slug: string }>, type: string }) {
     const { slug } = await params;
+    // Fetch live feedback entries from Formidable Form 326
+    const liveFeedbacks = await getFeedbacks();
     const post = await getPostBySlug(type, slug);
 
     if (!post) {
@@ -558,7 +561,7 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
 
                     {/* Student Success Stories */}
                     <div className="lg:col-span-12">
-                        <TestimonialSlider />
+                        <TestimonialSlider feedbacks={liveFeedbacks} />
                     </div>
                 </div>
             </div>
