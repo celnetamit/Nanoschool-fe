@@ -2,15 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import ReviewCard from './ReviewCard';
-import reviewsData from '@/data/reviews.json';
 import { FeedbackData } from '@/lib/feedback';
 
 interface TestimonialSliderProps {
     feedbacks?: FeedbackData[];
 }
 
-export default function TestimonialSlider({ feedbacks }: TestimonialSliderProps) {
-    const displayFeedbacks = feedbacks && feedbacks.length > 0 ? feedbacks : reviewsData;
+export default function TestimonialSlider({ feedbacks = [] }: TestimonialSliderProps) {
     const [scrolled, setScrolled] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,19 +49,25 @@ export default function TestimonialSlider({ feedbacks }: TestimonialSliderProps)
                 className="flex gap-6 overflow-x-auto pb-8 px-4 scrollbar-hide select-none"
                 style={{ scrollBehavior: 'auto' }}
             >
-                {/* Duplicate arrays for infinite scroll effect */}
-                {[...displayFeedbacks, ...displayFeedbacks].map((review, index) => (
-                    <div key={index} className="min-w-[280px] max-w-[300px] flex-shrink-0">
-                        <ReviewCard
-                            name={review.name}
-                            date={review.date}
-                            time={'time' in review ? review.time as string : undefined}
-                            comment={review.comment}
-                            rating={review.rating}
-                            workshopName={'workshopName' in review ? review.workshopName as string : 'Verified Workshop'}
-                        />
+                {/* Display Feedbacks only if available */}
+                {feedbacks.length > 0 ? (
+                    [...feedbacks, ...feedbacks].map((review, index) => (
+                        <div key={index} className="min-w-[280px] max-w-[320px] flex-shrink-0">
+                            <ReviewCard
+                                name={review.name}
+                                date={review.date}
+                                time={review.time}
+                                comment={review.comment}
+                                rating={review.rating}
+                                workshopName={review.workshopName}
+                            />
+                        </div>
+                    ))
+                ) : (
+                    <div className="w-full text-center py-10 opacity-30 font-black text-slate-400 uppercase tracking-widest text-[11px]">
+                        Loading success stories...
                     </div>
-                ))}
+                )}
             </div>
         </div>
     );

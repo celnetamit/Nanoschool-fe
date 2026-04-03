@@ -75,9 +75,9 @@ export async function getFeedbacks(): Promise<FeedbackData[]> {
         }
 
         return {
-          name: meta.m8t22 || 'Student',
-          comment: meta.qci7w || meta.anl9l || '',
-          rating: parseInt(meta['51af9']) || 5, // Using 51af9 as specified in example
+          name: meta.m8t22 || meta['97qte'] || 'Student',
+          comment: (meta.qci7w || meta.anl9l || '').trim(),
+          rating: Math.min(5, Math.ceil((parseInt(meta['51af9']) || normalizedRating) * 1.25)),
           date: formattedDate,
           time: formattedTime,
           workshopName: cleanWorkshop,
