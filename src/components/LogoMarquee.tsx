@@ -7,7 +7,7 @@ const LOGOS = [
     { name: 'IIT Delhi', src: 'https://upload.wikimedia.org/wikipedia/en/f/fd/Indian_Institute_of_Technology_Delhi_Logo.svg' },
     { name: 'BITS Pilani', src: 'https://upload.wikimedia.org/wikipedia/en/d/d3/BITS_Pilani-Logo.svg' },
     { name: 'AIIMS', src: 'https://commons.wikimedia.org/wiki/Special:FilePath/AIIMS_New_Delhi.png' },
-    { name: 'DRDO', src: 'https://commons.wikimedia.org/wiki/Special:FilePath/DRDO-logo.png' },
+    { name: 'DRDO', src: 'https://commons.wikimedia.org/wiki/Special:FilePath/Defence_Research_and_Development_Organisation.svg' },
     { name: 'CSIR', src: 'https://upload.wikimedia.org/wikipedia/en/1/13/CSIR_Logo.svg' },
     { name: 'DST', src: 'https://commons.wikimedia.org/wiki/Special:FilePath/DST_Logo_June_2020.png' },
     { name: 'DBT', src: 'https://commons.wikimedia.org/wiki/Special:FilePath/Dpt.bt.png' },
@@ -39,6 +39,7 @@ export default function LogoMarquee() {
                                 width={120}
                                 height={60}
                                 className="object-contain max-h-12 w-auto"
+                                unoptimized={true}
                             />
                             <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-black/80 px-2 py-1 rounded">
                                 {logo.name}
@@ -53,6 +54,7 @@ export default function LogoMarquee() {
                                 width={120}
                                 height={60}
                                 className="object-contain max-h-12 w-auto"
+                                unoptimized={true}
                             />
                             <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-black/80 px-2 py-1 rounded">
                                 {logo.name}
