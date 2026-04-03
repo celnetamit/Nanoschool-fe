@@ -7,6 +7,7 @@ import PricingSection from './PricingSection';
 import KeyHighlights from './KeyHighlights';
 import HallOfFameSection from './HallOfFameSection';
 import WorkshopEnrollButton from './payments/WorkshopEnrollButton';
+import Link from 'next/link';
 
 // function formatDate(dateString: string) ... (keeping this)
 
@@ -545,7 +546,12 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
                                 <div className={`absolute -right-8 -bottom-8 w-40 h-40 ${branding.bg} rounded-full opacity-50 blur-2xl group-hover:scale-125 transition-transform duration-700`}></div>
                                 <h4 className="text-lg font-black mb-3 text-gray-900">Need Guidance?</h4>
                                 <p className="text-sm text-gray-600 mb-6 leading-relaxed">Not sure if this course is right for you? Schedule a free 15-minute consultation with our academic advisors.</p>
-                                <button className="text-[10px] font-black uppercase tracking-[0.2em] px-6 py-3 border-2 border-gray-900 text-gray-900 rounded-xl hover:bg-gray-900 hover:text-white transition-all w-full">Book Consultation</button>
+                                <Link
+                                    href="/contact-us"
+                                    className="inline-block text-center text-[10px] font-black uppercase tracking-[0.2em] px-6 py-3 border-2 border-gray-900 text-gray-900 rounded-xl hover:bg-gray-900 hover:text-white transition-all w-full"
+                                >
+                                    Book Consultation
+                                </Link>
                             </div>
                         </div>
                     </div>

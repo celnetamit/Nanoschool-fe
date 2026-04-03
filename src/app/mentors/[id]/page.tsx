@@ -2,8 +2,10 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, MapPin, Building, Calendar, Sparkles, Ribbon, ArrowUpRight } from 'lucide-react';
+import { ChevronLeft, MapPin, Building, Calendar, Sparkles, Ribbon, ArrowUpRight, BookOpen, Globe, Quote, Zap } from 'lucide-react';
 import { getMentorById } from '@/lib/mentors';
+import MentorStats from '@/components/mentors/MentorStats';
+import MentorReviews from '@/components/mentors/MentorReviews';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -124,6 +126,9 @@ export default async function MentorProfilePage({ params }: { params: Promise<{ 
           {/* Right Content Area */}
           <div className="lg:w-[65%] flex flex-col gap-8 md:gap-10">
              
+             {/* NEW: Stats Grid Overlaying the background */}
+             <MentorStats stats={mentor.stats} />
+
              {/* About Module */}
              <div className="bg-[#111111]/80 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden group">
                <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 blur-[100px] group-hover:bg-indigo-500/10 transition-colors duration-700"></div>
@@ -144,33 +149,82 @@ export default async function MentorProfilePage({ params }: { params: Promise<{ 
                )}
              </div>
 
-             {/* Skills Module */}
-             <div className="bg-[#111111]/80 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden group">
-               <div className="absolute bottom-0 right-0 w-[300px] h-[300px] bg-emerald-500/5 blur-[100px] group-hover:bg-emerald-500/10 transition-colors duration-700"></div>
-               
-               <h3 className="text-2xl font-extrabold mb-8 text-white flex items-center gap-3">
-                 <span className="w-8 h-1 bg-emerald-500 rounded-full"></span>
-                 Core Expertise
-               </h3>
-               
-               {mentor.skills.length > 0 ? (
-                 <div className="flex flex-wrap gap-3 relative z-10">
-                   {mentor.skills.map((skill, idx) => (
-                     <span 
-                       key={idx} 
-                       className="px-4 py-2.5 rounded-[12px] bg-white/[0.03] border border-white/10 text-slate-200 text-[13px] md:text-[14px] font-bold hover:bg-white/[0.08] hover:border-white/20 transition-all cursor-default"
-                     >
-                       {skill}
-                     </span>
-                   ))}
-                 </div>
-               ) : (
-                 <p className="text-slate-500 italic">No specific skills listed.</p>
-               )}
-             </div>
+              {/* Skills Module */}
+              <div className="bg-[#111111]/80 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden group">
+                <div className="absolute bottom-0 right-0 w-[300px] h-[300px] bg-emerald-500/5 blur-[100px] group-hover:bg-emerald-500/10 transition-colors duration-700"></div>
+                
+                <h3 className="text-2xl font-extrabold mb-8 text-white flex items-center gap-3">
+                  <span className="w-8 h-1 bg-emerald-500 rounded-full"></span>
+                  Core Expertise
+                </h3>
+                
+                {mentor.skills.length > 0 ? (
+                  <div className="flex flex-wrap gap-3 relative z-10">
+                    {mentor.skills.map((skill, idx) => (
+                      <span 
+                        key={idx} 
+                        className="px-4 py-2.5 rounded-[12px] bg-white/[0.03] border border-white/10 text-slate-200 text-[13px] md:text-[14px] font-bold hover:bg-white/[0.08] hover:border-white/20 transition-all cursor-default"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 italic">No specific skills listed.</p>
+                )}
+              </div>
+
+              {/* NEW: Research & Publications (Shown only if data exists) */}
+              {mentor.publications && mentor.publications.length > 0 && (
+                <div className="bg-[#111111]/80 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-[300px] h-[300px] bg-blue-500/5 blur-[100px] group-hover:bg-blue-500/10 transition-colors duration-700 pointer-events-none"></div>
+                  
+                  <h3 className="text-2xl font-extrabold mb-8 text-white flex items-center gap-3">
+                    <span className="w-8 h-1 bg-blue-500 rounded-full"></span>
+                    Research & Contributions
+                  </h3>
+
+                  <div className="space-y-6 relative z-10">
+                    {mentor.publications.map((pub, i) => (
+                      <div key={i} className="flex gap-4 group/item">
+                        <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center flex-shrink-0 group-hover/item:border-indigo-500/50 transition-colors">
+                          <BookOpen size={18} className="text-indigo-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-200 group-hover/item:text-white transition-colors">{pub.title}</h4>
+                          <p className="text-xs text-slate-500 font-medium mt-1">{pub.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* NEW: Global Collaborations (Shown only if data exists) */}
+              {mentor.collaborations && mentor.collaborations.length > 0 && (
+                <div className="bg-[#111111]/80 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden group">
+                  <h3 className="text-2xl font-extrabold mb-8 text-white flex items-center gap-3">
+                    <span className="w-8 h-1 bg-amber-500 rounded-full"></span>
+                    International Reach
+                  </h3>
+                  
+                  <p className="text-sm text-slate-400 font-medium mb-8">Trusted by academic institutions and enterprises worldwide for specialized training and technical consultancy.</p>
+
+                  <div className="flex flex-wrap gap-6 opacity-40 group-hover:opacity-70 transition-opacity duration-700 grayscale group-hover:grayscale-0">
+                    {mentor.collaborations.map((org, i) => (
+                      <div key={i} className="px-6 py-3 rounded-xl border border-white/10 bg-white/[0.02] text-xs font-black uppercase tracking-widest text-slate-300">
+                        {org}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
           </div>
         </div>
+
+        {/* Global Reviews Section (Only if present in API) */}
+        <MentorReviews reviews={mentor.reviews} />
 
       </div>
     </div>

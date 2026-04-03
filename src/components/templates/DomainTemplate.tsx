@@ -102,8 +102,8 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
 
     // Map slugs to course (product) category IDs
     const courseCategoryMap: Record<string, number> = {
-        'ai': 4658,
-        'artificial-intelligence': 4658,
+        'ai': 4657,
+        'artificial-intelligence': 4657,
         'biotech': 6253,
         'nano-technology': 6260,
     };
@@ -147,7 +147,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                         {/* CTAs */}
                         <div className="flex flex-col sm:flex-row gap-4 mb-12">
                             <Link
-                                href="/workshops"
+                                href={`/workshops${workshopCategoryId ? `?category=${workshopCategoryId}` : ''}`}
                                 className="px-10 py-4 bg-white text-gray-900 font-bold rounded-full hover:bg-gray-100 transition-all shadow-2xl hover:scale-105 inline-flex items-center justify-center gap-2"
                             >
                                 Browse Workshops
@@ -156,7 +156,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                                 </svg>
                             </Link>
                             <Link
-                                href="/course"
+                                href={`/course${courseCategoryId ? `?category=${courseCategoryId}` : ''}`}
                                 className="px-10 py-4 bg-white/10 backdrop-blur-sm border-2 border-white text-white font-bold rounded-full hover:bg-white/20 transition-all"
                             >
                                 View Courses
@@ -284,7 +284,7 @@ export default function DomainTemplate({ slug }: DomainTemplateProps) {
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <Link
-                            href="/workshops"
+                            href={`/workshops${workshopCategoryId ? `?category=${workshopCategoryId}` : ''}`}
                             className="px-10 py-4 bg-white text-gray-900 font-bold rounded-full hover:bg-gray-100 transition-all shadow-lg"
                         >
                             Explore Workshops

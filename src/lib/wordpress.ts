@@ -219,7 +219,21 @@ export async function getWooCommerceProducts({ perPage = 100, page = 1, category
           'wp:featuredmedia': wc.images.length > 0 ? [{
             source_url: wc.images[0].src,
             alt_text: wc.images[0].alt
-          }] : []
+          }] : [],
+          'wp:term': [
+            wc.categories.map(cat => ({
+              id: cat.id,
+              name: cat.name,
+              slug: cat.slug,
+              taxonomy: 'product_cat'
+            })),
+            wc.tags.map(tag => ({
+              id: tag.id,
+              name: tag.name,
+              slug: tag.slug,
+              taxonomy: 'product_tag'
+            }))
+          ]
         },
         price: wc.price,
         regular_price: wc.regular_price,

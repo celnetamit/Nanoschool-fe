@@ -1,9 +1,18 @@
+export const dynamic = 'force-dynamic';
+
 import { getProducts } from '@/lib/wordpress';
 import ProductGrid from '@/components/ProductGrid';
-// import Link from 'next/link';
 
-export default async function CoursesPage() {
-    const courses = await getProducts();
+export default async function CoursesPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+    const resolvedParams = await searchParams;
+    const categoryId = typeof resolvedParams.category === 'string' ? parseInt(resolvedParams.category) : 0;
+    
+    // Fetch products (optionally filtered by category)
+    const courses = await getProducts({ categoryId });
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -24,8 +33,7 @@ export default async function CoursesPage() {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 -mt-8 relative z-20">
-
-                <ProductGrid products={courses} />
+                <ProductGrid products={courses} initialCategoryId={categoryId} />
             </div>
         </div>
     );

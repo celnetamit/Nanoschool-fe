@@ -6,6 +6,7 @@ import Card from '@/components/Card';
 
 interface ProductGridProps {
     products: WordPressPost[];
+    initialCategoryId?: number;
 }
 
 interface Term {
@@ -16,9 +17,21 @@ interface Term {
     count?: number;
 }
 
-export default function ProductGrid({ products }: ProductGridProps) {
+export default function ProductGrid({ products, initialCategoryId }: ProductGridProps) {
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    
+    // Find the slug for the initial category ID if provided
+    const initialCategorySlug = useMemo(() => {
+        if (!initialCategoryId) return 'all';
+        for (const product of products) {
+            const terms = (product._embedded?.['wp:term'] || []).flat();
+            const category = terms.find((t: any) => t.taxonomy === 'product_cat' && t.id === initialCategoryId);
+            if (category) return category.slug;
+        }
+        return 'all';
+    }, [products, initialCategoryId]);
+
+    const [selectedCategory, setSelectedCategory] = useState<string>(initialCategorySlug);
     const [selectedTag, setSelectedTag] = useState<string>('all');
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'az' | 'za'>('newest');
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
