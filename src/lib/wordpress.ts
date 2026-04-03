@@ -56,8 +56,10 @@ async function fetchWP(url: string): Promise<Response> {
   try {
     const response = await fetch(url, {
       next: { revalidate: 3600 },
+      keepalive: false,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Connection': 'close'
       }
     });
     return response;
@@ -173,9 +175,11 @@ export async function getWooCommerceProducts({ perPage = 100, page = 1, category
   try {
     const response = await fetch(url, {
       next: { revalidate: 3600 },
+      keepalive: false,
       headers: {
         'Authorization': authHeader,
-        'User-Agent': 'NanoSchool-Frontend'
+        'User-Agent': 'NanoSchool-Frontend',
+        'Connection': 'close'
       }
     });
 
@@ -276,9 +280,11 @@ export async function getPostBySlug(type: string, slug: string): Promise<WordPre
       try {
         const response = await fetch(url, {
           next: { revalidate: 3600 },
+          keepalive: false,
           headers: {
             'Authorization': authHeader,
-            'User-Agent': 'NanoSchool-Frontend'
+            'User-Agent': 'NanoSchool-Frontend',
+            'Connection': 'close'
           }
         });
 
@@ -636,8 +642,10 @@ export async function getStoreProduct(slug: string): Promise<StoreProduct | null
 
     const res = await fetch(`${storeApiUrl}/products?slug=${slug}&_embed`, {
       next: { revalidate: 3600 },
+      keepalive: false,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Connection': 'close'
       }
     });
 
@@ -655,8 +663,10 @@ export async function getStoreProduct(slug: string): Promise<StoreProduct | null
     // Fallback: Try fetching a larger list and finding by slug if the direct param doesn't work
     const resList = await fetch(`${storeApiUrl}/products?per_page=20`, {
       next: { revalidate: 3600 },
+      keepalive: false,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Connection': 'close'
       }
     });
 
