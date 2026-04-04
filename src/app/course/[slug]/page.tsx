@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 import CourseTemplate from '@/components/templates/CourseTemplate';
 import { getPostBySlug, getStoreProduct } from '@/lib/wordpress';

@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 import { getBlogs } from '@/lib/wordpress';
 import BlogCard from '@/components/BlogCard';

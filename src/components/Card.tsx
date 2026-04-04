@@ -1,6 +1,7 @@
 import { WordPressPost, sanitizeWPContent } from '@/lib/wordpress';
 import Link from 'next/link';
 import Image from 'next/image';
+import DateDisplay from './DateDisplay';
 
 interface CardProps {
     post: WordPressPost;
@@ -36,9 +37,12 @@ export default function Card({ post, type, listView = false }: CardProps) {
                             <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 rounded-full">
                                 {type === 'courses' ? 'COURSE' : type === 'course' ? 'COURSE' : type.endsWith('s') ? type.slice(0, -1) : type}
                             </span>
-                            <span className="text-gray-400 text-xs font-medium">
-                                {new Date(post.date).toLocaleDateString('en-GB')}
-                            </span>
+                            <DateDisplay 
+                                date={post.date} 
+                                locale="en-GB" 
+                                formatOptions={{ day: '2-digit', month: '2-digit', year: 'numeric' }}
+                                className="text-gray-400 text-xs font-medium"
+                            />
                         </div>
                         <Link href={`/${type}/${post.slug}`}>
                             <h3
@@ -132,9 +136,12 @@ export default function Card({ post, type, listView = false }: CardProps) {
                     )}
                 </div>
                 <div className="mt-auto border-t border-gray-50 pt-4 flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-400">
-                        {new Date(post.date).toLocaleDateString('en-GB')}
-                    </span>
+                    <DateDisplay 
+                        date={post.date} 
+                        locale="en-GB" 
+                        formatOptions={{ day: '2-digit', month: '2-digit', year: 'numeric' }}
+                        className="text-xs font-medium text-gray-400"
+                    />
                     <Link
                         href={`/${type}/${post.slug}`}
                         className="inline-flex items-center text-sm font-bold text-blue-600 hover:text-blue-700"

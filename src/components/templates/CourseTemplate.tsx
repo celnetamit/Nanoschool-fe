@@ -137,6 +137,7 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                         src={featuredMedia}
                         alt={post.title.rendered}
                         fill
+                        sizes="100vw"
                         className="object-cover opacity-20 blur-sm scale-110"
                         priority
                     />

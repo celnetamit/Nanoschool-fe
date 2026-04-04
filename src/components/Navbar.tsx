@@ -228,6 +228,7 @@ export default function Navbar() {
                                         src="https://nanoschool.in/wp-content/uploads/2025/05/NSTC-Logo-2-removebg-preview.png"
                                         alt="NanoSchool Logo"
                                         fill
+                                        sizes="(max-width: 768px) 100vw, 44px"
                                         className="object-contain"
                                     />
                                 </div>

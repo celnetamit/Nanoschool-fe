@@ -13,6 +13,7 @@ export default function Footer() {
                                 src="https://nanoschool.in/wp-content/uploads/2025/05/NSTC-Logo-2-removebg-preview.png"
                                 alt="NanoSchool"
                                 fill
+                                sizes="(max-width: 768px) 160px, 160px"
                                 className="object-contain object-left"
                             />
                         </Link>

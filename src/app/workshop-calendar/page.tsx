@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 import { getWorkshops, getCategories } from '@/lib/wordpress';
 import WorkshopCalendar from '@/components/WorkshopCalendar';

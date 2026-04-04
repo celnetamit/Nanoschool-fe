@@ -13,7 +13,7 @@ const FAQ = dynamic(() => import('@/components/FAQ'));
 
 export default function Home() {
   // Preload the critical LCP background texture to ensure immediate painting of the Hero
-  preload('https://grainy-gradients.vercel.app/noise.svg', { as: 'image' });
+  preload('/noise.svg', { as: 'image' });
 
   // No blocking awaits at the root! The Hero streams instantly to the browser (< 0.8s LCP).
 
@@ -26,7 +26,7 @@ export default function Home() {
           <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen animate-pulse duration-[4s]"></div>
           <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[100px] mix-blend-screen animate-pulse duration-[7s]"></div>
           {/* Noise Texture for Texture */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }}></div>
+          <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("/noise.svg")' }}></div>
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 flex flex-col items-center text-center">
@@ -210,7 +210,7 @@ export default function Home() {
 
       {/* CTA Section - Minimal & Strong */}
       <section className="relative py-32 bg-slate-900 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05]"></div>
+        <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.05]"></div>
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen"></div>
 
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">

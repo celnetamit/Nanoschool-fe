@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 import { getProducts } from '@/lib/wordpress';
 import ProductGrid from '@/components/ProductGrid';
@@ -18,7 +18,7 @@ export default async function CoursesPage({
         <div className="min-h-screen bg-slate-50">
             {/* New Premium Header */}
             <div className="relative bg-slate-900 py-24 overflow-hidden">
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05]"></div>
+                <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.05]"></div>
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen pointer-events-none"></div>
                 <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[100px] mix-blend-screen pointer-events-none"></div>
 

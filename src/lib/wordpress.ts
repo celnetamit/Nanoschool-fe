@@ -1,4 +1,6 @@
 const BASE_URL = 'https://nanoschool.in/wp-json/wp/v2';
+import { cache } from 'react';
+import { fetchWithTimeout } from './fetch-utils';
 
 export interface WordPressPost {
   id: number;
@@ -53,20 +55,37 @@ export interface Category {
 
 // Helper function for consistent fetching
 async function fetchWP(url: string): Promise<Response> {
+  const WP_USER = process.env.WP_USER;
+  const WP_PASSWORD = process.env.WP_PASSWORD;
+  const headers: Record<string, string> = {
+    'User-Agent': 'NanoSchool-Frontend/1.0',
+    'Accept': 'application/json',
+    'Connection': 'close'
+  };
+
+  if (WP_USER && WP_PASSWORD) {
+    headers['Authorization'] = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+  }
+
   try {
-    const response = await fetch(url, {
-      next: { revalidate: 3600 },
-      keepalive: false,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Connection': 'close'
-      }
+    const response = await fetchWithTimeout(url, {
+      timeoutMs: 15000, // 15s timeout
+      next: { revalidate: 3600 }, // 1 hour cache
+      headers
     });
+
+    if (!response.ok) {
+        console.warn(`[WP API] Warning: ${url} returned ${response.status} ${response.statusText}`);
+    }
+
     return response;
   } catch (error) {
-    console.error(`Fetch error for ${url}:`, error);
-    // Return a dummy error response to be handled by caller
-    return new Response(null, { status: 500, statusText: 'Fetch Network Error' });
+    console.error(`[WP API] Error fetching ${url}:`, error);
+    // Return a dummy 500 response
+    return new Response(JSON.stringify({ error: 'Fetch Network Error' }), { 
+        status: 500, 
+        headers: { 'Content-Type': 'application/json' } 
+    });
   }
 }
 
@@ -92,8 +111,10 @@ async function fetchAllItems<T>(endpoint: string): Promise<T[]> {
   let allItems = await response.json();
 
   if (totalPages > 1) {
+    // Safety cap: Never auto-fetch more than 10 pages in a burst loop
+    const cap = Math.min(totalPages, 10);
     const promises = [];
-    for (let page = 2; page <= totalPages; page++) {
+    for (let page = 2; page <= cap; page++) {
       promises.push(
         fetchWP(`${BASE_URL}/${endpoint}?per_page=${perPage}&page=${page}&_embed`).then((res) => (res.ok ? res.json() : []))
       );
@@ -117,29 +138,61 @@ export async function getPrograms(): Promise<WordPressPost[]> {
 }
 
 export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { page?: number, perPage?: number, category?: number } = {}): Promise<{ posts: WordPressPost[], totalPages: number }> {
-  let url = `${BASE_URL}/posts?per_page=${perPage}&page=${page}&_embed`;
-  if (category > 0) {
-    url += `&categories=${category}`;
-  } else {
-    // If "All" workshops requested, filter by ALL allowed workshop categories
-    // 5088: AI, 5059: Biotech, 5085: Nanotech
-    url += `&categories=5088,5059,5085`;
-  }
+    let url = `${BASE_URL}/posts?per_page=${perPage}&page=${page}&_embed`;
+    if (category > 0) {
+        url += `&categories=${category}`;
+    } else {
+        // If "All" workshops requested, filter by ALL allowed workshop categories
+        url += `&categories=5088,5059,5085`;
+    }
 
-  const response = await fetchWP(url);
+    const response = await fetchWP(url);
 
-  if (!response.ok) {
-    const errorMsg = `Failed to fetch workshops: ${response.status} ${response.statusText}`;
-    console.error(errorMsg);
-    // Return empty instead of throwing so the Docker build doesn't fail
-    // when nanoschool.in is unreachable from the build container.
-    return { posts: [], totalPages: 0 };
-  }
+    if (!response.ok) {
+        console.error(`Failed to fetch workshops: ${response.status}`);
+        return { posts: [], totalPages: 0 };
+    }
 
-  const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
-  const posts = await response.json();
+    const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
+    const posts: WordPressPost[] = await response.json();
 
-  return { posts, totalPages };
+    // PERFORMANCE OPTIMIZATION: Parallel WooCommerce Pricing Fetch
+    // Fetch prices for all 9 posts in ONE parallel burst
+    const WP_USER = process.env.WP_USER;
+    const WP_PASSWORD = process.env.WP_PASSWORD;
+
+    if (WP_USER && WP_PASSWORD && posts.length > 0) {
+        const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+        const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
+
+        const pricingPromises = posts.map(async (post) => {
+            try {
+                const wcUrl = `${wcBaseUrl}/products?slug=${post.slug}`;
+                const res = await fetchWithTimeout(wcUrl, {
+                    timeoutMs: 3000, // Hard 3s limit for individual pricing
+                    headers: { 'Authorization': authHeader },
+                    next: { revalidate: 3600 }
+                });
+
+                if (res.ok) {
+                    const products = await res.json();
+                    if (products.length > 0) {
+                        const product = products[0];
+                        post.price = product.price;
+                        post.regular_price = product.regular_price;
+                        post.sale_price = product.sale_price;
+                        post.on_sale = product.on_sale;
+                    }
+                }
+            } catch (err) {
+                console.error(`Failed to fetch price for workshop ${post.slug}:`, err);
+            }
+        });
+
+        await Promise.all(pricingPromises);
+    }
+
+    return { posts, totalPages };
 }
 
 export async function getMedia(id: number) {
@@ -155,7 +208,7 @@ export async function getLandingPages(): Promise<WordPressPost[]> {
   return response.json();
 }
 
-export async function getWooCommerceProducts({ perPage = 100, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
+export async function getWooCommerceProducts({ perPage = 40, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
   const WP_USER = process.env.WP_USER;
   const WP_PASSWORD = process.env.WP_PASSWORD;
 
@@ -173,7 +226,8 @@ export async function getWooCommerceProducts({ perPage = 100, page = 1, category
   }
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
+      timeoutMs: 8000,
       next: { revalidate: 3600 },
       keepalive: false,
       headers: {
@@ -255,7 +309,7 @@ export async function getWooCommerceProducts({ perPage = 100, page = 1, category
   }
 }
 
-export async function getProducts({ perPage = 100, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
+export async function getProducts({ perPage = 40, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
   console.log('[INFO] Fetching real WooCommerce products for page:', page);
   return getWooCommerceProducts({ perPage, page, categoryId });
 }
@@ -266,99 +320,119 @@ export async function getPagedProducts(perPage: number = 6, page: number = 1): P
   return response.json();
 }
 
-export async function getPostBySlug(type: string, slug: string): Promise<WordPressPost | null> {
-  // If the type is 'courses' or 'product' or 'programs' or 'workshops', we should use the WooCommerce API to get real prices
-  if (type === 'courses' || type === 'product' || type === 'programs' || type === 'workshops') {
+/**
+ * Fetches a single post by slug from optimized parallel WordPress/WooCommerce checks.
+ * Wrapped in React cache() to deduplicate Metadata and Page renders.
+ */
+export const getPostBySlug = cache(async function(type: string, slug: string): Promise<WordPressPost | null> {
     const WP_USER = process.env.WP_USER;
     const WP_PASSWORD = process.env.WP_PASSWORD;
 
-    if (WP_USER && WP_PASSWORD) {
-      const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
-      const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
-      const url = `${wcBaseUrl}/products?slug=${slug}`;
+    // Decide if we should try WooCommerce
+    const isWcType = ['courses', 'product', 'programs', 'workshops'].includes(type);
 
-      try {
-        const response = await fetch(url, {
-          next: { revalidate: 3600 },
-          keepalive: false,
-          headers: {
-            'Authorization': authHeader,
-            'User-Agent': 'NanoSchool-Frontend',
-            'Connection': 'close'
-          }
-        });
+    // 1. Prepare WooCommerce Promise
+    const wcPromise = (isWcType && WP_USER && WP_PASSWORD) ? (async () => {
+        const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+        const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
+        const url = `${wcBaseUrl}/products?slug=${slug}`;
 
-        if (response.ok) {
-          const products: WooCommerceProduct[] = await response.json();
-          if (products.length > 0) {
-            const wc = products[0];
-            // Extract INR prices from meta data if they exist
-            const inrRegularField = wc.meta_data.find(m => m.key === '_regular_price_wmcp');
-            const inrSaleField = wc.meta_data.find(m => m.key === '_sale_price_wmcp');
+        try {
+            const response = await fetchWithTimeout(url, {
+                timeoutMs: 2500, // Hard 2.5s limit for pricing data
+                next: { revalidate: 3600 },
+                headers: {
+                    'Authorization': authHeader,
+                }
+            });
 
-            let inrRegular = '';
-            let inrSale = '';
+            if (response.ok) {
+                const products: WooCommerceProduct[] = await response.json();
+                return products.length > 0 ? products[0] : null;
+            }
+        } catch (error) {
+            console.error('Error fetching WooCommerce product by slug:', error);
+        }
+        return null;
+    })() : Promise.resolve(null);
 
-            try {
-              if (inrRegularField?.value) {
+    // 2. Prepare WordPress Promise
+    const wpPromise = (async () => {
+        let restBase = 'posts';
+        if (type === 'courses') {
+            restBase = 'product';
+        } else if (type === 'pages') {
+            restBase = 'pages';
+        } else if (type === 'programs') {
+            restBase = 'program';
+        } else if (type === 'workshops') {
+            restBase = 'posts';
+        }
+
+        try {
+            const response = await fetchWP(`${BASE_URL}/${restBase}?slug=${slug}&_embed`);
+            if (response.ok) {
+                const posts = await response.json();
+                return posts.length > 0 ? posts[0] : null;
+            }
+        } catch (error) {
+            console.error('Error fetching WP post by slug:', error);
+        }
+        return null;
+    })();
+
+    // 3. Execute in parallel
+    const [wc, wpPost] = await Promise.all([wcPromise, wpPromise]);
+
+    // 4. Merge results (Prioritize WooCommerce for pricing/e-commerce meta)
+    if (wc) {
+        // Extract INR prices
+        const inrRegularField = wc.meta_data.find((m: any) => m.key === '_regular_price_wmcp');
+        const inrSaleField = wc.meta_data.find((m: any) => m.key === '_sale_price_wmcp');
+
+        let inrRegular = '';
+        let inrSale = '';
+
+        try {
+            if (inrRegularField?.value) {
                 const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
                 inrRegular = parsed.INR || '';
-              }
-              if (inrSaleField?.value) {
+            }
+            if (inrSaleField?.value) {
                 const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
                 inrSale = parsed.INR || '';
-              }
-            } catch (e) {
-              console.warn('Failed to parse INR prices for product slug:', slug);
             }
+        } catch (e) {
+            console.warn('Failed to parse INR prices for product slug:', slug);
+        }
 
-            return {
-              id: wc.id,
-              slug: wc.slug,
-              title: { rendered: wc.name },
-              excerpt: { rendered: wc.short_description },
-              content: { rendered: wc.description },
-              date: wc.date_created,
-              featured_media: 0,
-              _embedded: {
+        return {
+            id: wc.id,
+            slug: wc.slug,
+            title: { rendered: wc.name },
+            excerpt: { rendered: wc.short_description },
+            content: { rendered: wc.description },
+            date: wc.date_created,
+            featured_media: 0,
+            _embedded: {
                 'wp:featuredmedia': wc.images.length > 0 ? [{
-                  source_url: wc.images[0].src,
-                  alt_text: wc.images[0].alt
+                    source_url: wc.images[0].src,
+                    alt_text: wc.images[0].alt
                 }] : []
-              },
-              price: wc.price,
-              regular_price: wc.regular_price,
-              sale_price: wc.sale_price,
-              on_sale: wc.on_sale,
-              prices_inr: {
+            },
+            price: wc.price,
+            regular_price: wc.regular_price,
+            sale_price: wc.sale_price,
+            on_sale: wc.on_sale,
+            prices_inr: {
                 regular: inrRegular,
                 sale: inrSale
-              }
-            };
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching WooCommerce product by slug:', error);
-      }
+            }
+        };
     }
-  }
 
-  let restBase = 'posts';
-
-  if (type === 'courses') {
-    restBase = 'product'; // Map 'courses' URL to 'product' API
-  } else if (type === 'pages') {
-    restBase = 'pages'; // Map 'pages' URL to 'pages' API
-  } else if (type === 'programs') {
-    restBase = 'program'; // Keep programs if still needed? User didn't mention, but safe to keep
-  }
-
-  // Use _embed to get featured media in the same request
-  const response = await fetchWP(`${BASE_URL}/${restBase}?slug=${slug}&_embed`);
-  if (!response.ok) return null;
-  const posts = await response.json();
-  return posts.length > 0 ? posts[0] : null;
-}
+    return wpPost;
+});
 
 export function sanitizeWPContent(html: string, stripAllTags: boolean = false): string {
   if (!html) return '';
@@ -541,12 +615,12 @@ export async function getBlogs(): Promise<BlogPost[]> {
   });
 }
 
-export async function getBlogBySlug(slug: string): Promise<BlogPost | null> {
+export const getBlogBySlug = cache(async function(slug: string): Promise<BlogPost | null> {
   const response = await fetchWP(`${BASE_URL}/nstc_blog?slug=${slug}&_embed`);
   if (!response.ok) return null;
   const posts = await response.json();
   return posts.length > 0 ? posts[0] : null;
-}
+});
 
 export function structureWPContent(html: string, description?: string) {
   if (!html) return { overview: description || '', modules: [] };

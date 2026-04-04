@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { BlogPost, parseBlogContent } from '@/lib/wordpress';
+import DateDisplay from './DateDisplay';
 
 export default function BlogCard({ post }: { post: BlogPost }) {
     const { title, content } = parseBlogContent(post.content.rendered);
@@ -19,6 +20,7 @@ export default function BlogCard({ post }: { post: BlogPost }) {
                     src={imageUrl}
                     alt={displayTitle}
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
@@ -32,7 +34,7 @@ export default function BlogCard({ post }: { post: BlogPost }) {
 
             <div className="p-6 flex flex-col flex-grow">
                 <div className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-2">
-                    <span>{new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                    <DateDisplay date={post.date} />
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight group-hover:text-blue-600 transition-colors">

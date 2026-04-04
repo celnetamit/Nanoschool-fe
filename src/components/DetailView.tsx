@@ -1,5 +1,6 @@
-import { getPostBySlug, structureWPContent } from '@/lib/wordpress';
+import { getPostBySlug, structureWPContent, WordPressPost } from '@/lib/wordpress';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import Image from 'next/image';
 import CountdownTimer from './CountdownTimer';
 import TestimonialSlider from './TestimonialSlider';
@@ -44,11 +45,11 @@ function extractWorkshopDate(content: string): string | undefined {
     return undefined;
 }
 
-export default async function DetailView({ params, type }: { params: Promise<{ slug: string }>, type: string }) {
+export default async function DetailView({ params, type, initialPost }: { params: Promise<{ slug: string }>, type: string, initialPost?: WordPressPost }) {
     const { slug } = await params;
-    // Fetch live feedback entries from Formidable Form 326
-    const liveFeedbacks = await getFeedbacks();
-    const post = await getPostBySlug(type, slug);
+
+    // Use initialPost if provided to skip redundant fetch
+    const post = initialPost || await getPostBySlug(type, slug);
 
     if (!post) {
         notFound();
@@ -254,8 +255,8 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
                         src={imageUrl}
                         alt={post.title.rendered}
                         fill
-                        className="object-cover scale-105 blur-[2px] opacity-90"
                         priority
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
                         sizes="100vw"
                     />
                     {/* Darker gradient for better text contrast */}
@@ -561,10 +562,25 @@ export default async function DetailView({ params, type }: { params: Promise<{ s
 
                     {/* Student Success Stories */}
                     <div className="lg:col-span-12">
-                        <TestimonialSlider feedbacks={liveFeedbacks} />
+                        <Suspense fallback={
+                            <div className="w-full py-20 bg-slate-50 flex flex-col items-center justify-center border-t border-gray-100">
+                                <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading Success Stories...</p>
+                            </div>
+                        }>
+                            <FeedbackSection />
+                        </Suspense>
                     </div>
                 </div>
             </div>
         </div>
     );
+}
+
+/**
+ * Async sub-component to fetch and render feedbacks without blocking the main page.
+ */
+async function FeedbackSection() {
+    const liveFeedbacks = await getFeedbacks();
+    return <TestimonialSlider feedbacks={liveFeedbacks} />;
 }

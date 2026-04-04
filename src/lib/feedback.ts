@@ -25,8 +25,8 @@ export async function getFeedbacks(): Promise<FeedbackData[]> {
   try {
     const authString = Buffer.from(`${user}:${pass}`).toString('base64');
     
-    // Fetch a healthy sample (e.g. 100 entries) from the feedback form
-    const fetchUrl = `${url}&page_size=100`;
+    // Fetch a healthy sample (e.g. 25 entries) from the feedback form
+    const fetchUrl = `${url}&page_size=25`;
 
     const response = await fetch(fetchUrl, {
       next: { revalidate: 86400 }, // Cache for 24 hours

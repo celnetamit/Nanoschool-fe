@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 import { getPrograms } from '@/lib/wordpress';
 import Card from '@/components/Card';

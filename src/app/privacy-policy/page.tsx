@@ -10,7 +10,7 @@ export default function PrivacyPolicyPage() {
         <div className="min-h-screen bg-slate-50">
             {/* Header */}
             <div className="bg-slate-900 text-white pt-32 pb-20 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+                <div className="absolute inset-0 opacity-10 bg-[url('/noise.svg')]"></div>
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
                     <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Privacy Policy</h1>
                     <p className="text-lg text-slate-400 max-w-2xl mx-auto">

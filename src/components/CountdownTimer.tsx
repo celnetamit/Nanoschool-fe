@@ -40,11 +40,14 @@ export default function CountdownTimer({ targetDate }: CountdownTimerProps) {
         };
     };
 
-    // Initialize with function to prevent initial hydration mismatch if calculating based on 'now'
-    // Actually, using 'now' in hydration can cause mismatches.
-    // Ideally we start with 0 or a fixed state and effect updates it.
-    // But for this fix, we will just move the calc logic.
-    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+    // Initialize with null to prevent initial hydration mismatch
+    const [timeLeft, setTimeLeft] = useState<{
+        days: number;
+        hours: number;
+        minutes: number;
+        seconds: number;
+        isExpired: boolean;
+    } | null>(null);
 
     useEffect(() => {
         // Update immediately on mount to sync
@@ -60,6 +63,18 @@ export default function CountdownTimer({ targetDate }: CountdownTimerProps) {
 
     // Format with leading zeros
     const format = (num: number) => num.toString().padStart(2, '0');
+
+    // Return null or a skeleton during hydration
+    if (!timeLeft) {
+        return (
+            <div className="flex gap-2 mb-6 p-3 bg-black/20 rounded-xl border border-white/5 animate-pulse">
+                <div className="flex-1 h-10 bg-white/5 rounded-lg"></div>
+                <div className="flex-1 h-10 bg-white/5 rounded-lg"></div>
+                <div className="flex-1 h-10 bg-white/5 rounded-lg"></div>
+                <div className="flex-1 h-10 bg-white/5 rounded-lg"></div>
+            </div>
+        );
+    }
 
     if (timeLeft.isExpired) {
         return (

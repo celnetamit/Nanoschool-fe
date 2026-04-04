@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 import DetailView from '@/components/DetailView';
 import { getPostBySlug } from '@/lib/wordpress';
@@ -61,7 +61,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     return (
         <>
             <WorkshopJsonLd workshop={post} siteUrl={siteUrl} />
-            <DetailView params={params} type="workshops" />
+            <DetailView params={params} type="workshops" initialPost={post} />
         </>
     );
 }

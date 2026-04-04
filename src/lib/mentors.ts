@@ -1,3 +1,4 @@
+import { cache } from 'react';
 export interface MentorData {
   id: string;
   name: string;
@@ -38,7 +39,7 @@ export interface MentorFilter {
   experience?: string;
 }
 
-export async function getMentors(page: number = 1, pageSize: number = 10, filters?: MentorFilter): Promise<MentorsResponse> {
+export const getMentors = cache(async function(page: number = 1, pageSize: number = 10, filters?: MentorFilter): Promise<MentorsResponse> {
   const url = process.env.MENTOR_API_URL;
   const user = process.env.WP_USER;
   const pass = process.env.WP_PASSWORD;
@@ -144,9 +145,9 @@ export async function getMentors(page: number = 1, pageSize: number = 10, filter
     console.error('Error in getMentors:', error);
     return { mentors: [], totalCount: 0, totalApprovedCount: 0 };
   }
-}
+});
 
-export async function getMentorById(id: string): Promise<MentorData | null> {
+export const getMentorById = cache(async function(id: string): Promise<MentorData | null> {
   const url = process.env.MENTOR_API_URL;
   const user = process.env.WP_USER;
   const pass = process.env.WP_PASSWORD;
@@ -206,4 +207,4 @@ export async function getMentorById(id: string): Promise<MentorData | null> {
     console.error(`Error fetching mentor ${id}:`, error);
     return null;
   }
-}
+});

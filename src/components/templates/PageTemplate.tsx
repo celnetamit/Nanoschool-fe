@@ -12,6 +12,7 @@ export default function PageTemplate({ post }: { post: WordPressPost }) {
                             src={post._embedded['wp:featuredmedia'][0].source_url}
                             alt={post.title.rendered}
                             fill
+                            sizes="100vw"
                             className="object-cover"
                             priority
                         />
