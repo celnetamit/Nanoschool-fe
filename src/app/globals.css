@@ -187,6 +187,98 @@ a:focus-visible {
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.12);
 }
 
+/* Creative Keyframes */
+@keyframes float-logo {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes spin-gradient {
+  100% { transform: rotate(360deg); }
+}
+
+/* Logo / Partner Grid creative template */
+.wordpress-content .logo-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+  gap: 3rem !important;
+  align-items: center !important;
+  justify-items: center !important;
+  margin: 5rem auto !important;
+  padding: 4rem;
+  position: relative;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 2.5rem;
+  box-shadow: 
+    0 25px 50px -12px rgba(59, 130, 246, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 0 0 20px rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Glowing rotating background behind the grid items */
+.wordpress-content .logo-grid::before {
+  content: "";
+  position: absolute;
+  top: -100px;
+  left: -100px;
+  right: -100px;
+  bottom: -100px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(59, 130, 246, 0.1) 90deg,
+    rgba(147, 51, 234, 0.1) 180deg,
+    transparent 270deg
+  );
+  animation: spin-gradient 15s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.wordpress-content .logo-grid span {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  animation: float-logo 4s ease-in-out infinite;
+  perspective: 1000px;
+}
+
+/* Staggered float animations to make it feel organic and alive */
+.wordpress-content .logo-grid span:nth-child(2n) { animation-delay: 1s; }
+.wordpress-content .logo-grid span:nth-child(3n) { animation-delay: 2s; }
+.wordpress-content .logo-grid span:nth-child(4n) { animation-delay: 3s; }
+.wordpress-content .logo-grid span:nth-child(5n) { animation-delay: 0.5s; }
+
+.wordpress-content .logo-grid img {
+  margin: 0 !important;
+  max-width: 100% !important;
+  max-height: 85px !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  filter: grayscale(100%) opacity(50%) drop-shadow(0 0 0 transparent) !important;
+  transform-style: preserve-3d;
+}
+
+.wordpress-content .logo-grid img:hover {
+  transform: scale(1.15) rotateY(10deg) rotateX(5deg) translateY(-5px) !important;
+  filter: grayscale(0%) opacity(100%) drop-shadow(-10px 15px 20px rgba(59, 130, 246, 0.25)) !important;
+  background: transparent !important;
+  z-index: 10;
+  position: relative;
+}
+
 /* Fix centered text overuse */
 .wordpress-content [style*="text-align: center"] {
   text-align: left !important;
@@ -231,7 +323,8 @@ a:focus-visible {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
   -webkit-mask-size: 60%;
   border-radius: 50%;
-  background-color: #eff6ff; /* Background behind mask if needed, but linear gradient is applied */
+  background-color: #eff6ff;
+  /* Background behind mask if needed, but linear gradient is applied */
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
 }
 
@@ -276,8 +369,8 @@ a:focus-visible {
   letter-spacing: -0.03em;
 }
 
-.wordpress-content h2 { 
-  font-size: 2.5rem; 
+.wordpress-content h2 {
+  font-size: 2.5rem;
   background: linear-gradient(135deg, #0f172a 0%, #3b82f6 100%);
   background-clip: text;
   -webkit-background-clip: text;
@@ -298,8 +391,8 @@ a:focus-visible {
   border-radius: 2px;
 }
 
-.wordpress-content h3 { 
-  font-size: 1.85rem; 
+.wordpress-content h3 {
+  font-size: 1.85rem;
   color: #1e293b;
   padding-bottom: 0.75rem;
   display: flex;

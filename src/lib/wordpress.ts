@@ -75,16 +75,16 @@ async function fetchWP(url: string): Promise<Response> {
     });
 
     if (!response.ok) {
-        console.warn(`[WP API] Warning: ${url} returned ${response.status} ${response.statusText}`);
+      console.warn(`[WP API] Warning: ${url} returned ${response.status} ${response.statusText}`);
     }
 
     return response;
   } catch (error) {
     console.error(`[WP API] Error fetching ${url}:`, error);
     // Return a dummy 500 response
-    return new Response(JSON.stringify({ error: 'Fetch Network Error' }), { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json' } 
+    return new Response(JSON.stringify({ error: 'Fetch Network Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
@@ -138,61 +138,61 @@ export async function getPrograms(): Promise<WordPressPost[]> {
 }
 
 export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { page?: number, perPage?: number, category?: number } = {}): Promise<{ posts: WordPressPost[], totalPages: number }> {
-    let url = `${BASE_URL}/posts?per_page=${perPage}&page=${page}&_embed`;
-    if (category > 0) {
-        url += `&categories=${category}`;
-    } else {
-        // If "All" workshops requested, filter by ALL allowed workshop categories
-        url += `&categories=5088,5059,5085`;
-    }
+  let url = `${BASE_URL}/posts?per_page=${perPage}&page=${page}&_embed`;
+  if (category > 0) {
+    url += `&categories=${category}`;
+  } else {
+    // If "All" workshops requested, filter by ALL allowed workshop categories
+    url += `&categories=5088,5059,5085`;
+  }
 
-    const response = await fetchWP(url);
+  const response = await fetchWP(url);
 
-    if (!response.ok) {
-        console.error(`Failed to fetch workshops: ${response.status}`);
-        return { posts: [], totalPages: 0 };
-    }
+  if (!response.ok) {
+    console.error(`Failed to fetch workshops: ${response.status}`);
+    return { posts: [], totalPages: 0 };
+  }
 
-    const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
-    const posts: WordPressPost[] = await response.json();
+  const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
+  const posts: WordPressPost[] = await response.json();
 
-    // PERFORMANCE OPTIMIZATION: Parallel WooCommerce Pricing Fetch
-    // Fetch prices for all 9 posts in ONE parallel burst
-    const WP_USER = process.env.WP_USER;
-    const WP_PASSWORD = process.env.WP_PASSWORD;
+  // PERFORMANCE OPTIMIZATION: Parallel WooCommerce Pricing Fetch
+  // Fetch prices for all 9 posts in ONE parallel burst
+  const WP_USER = process.env.WP_USER;
+  const WP_PASSWORD = process.env.WP_PASSWORD;
 
-    if (WP_USER && WP_PASSWORD && posts.length > 0) {
-        const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
-        const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
+  if (WP_USER && WP_PASSWORD && posts.length > 0) {
+    const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+    const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
 
-        const pricingPromises = posts.map(async (post) => {
-            try {
-                const wcUrl = `${wcBaseUrl}/products?slug=${post.slug}`;
-                const res = await fetchWithTimeout(wcUrl, {
-                    timeoutMs: 3000, // Hard 3s limit for individual pricing
-                    headers: { 'Authorization': authHeader },
-                    next: { revalidate: 3600 }
-                });
-
-                if (res.ok) {
-                    const products = await res.json();
-                    if (products.length > 0) {
-                        const product = products[0];
-                        post.price = product.price;
-                        post.regular_price = product.regular_price;
-                        post.sale_price = product.sale_price;
-                        post.on_sale = product.on_sale;
-                    }
-                }
-            } catch (err) {
-                console.error(`Failed to fetch price for workshop ${post.slug}:`, err);
-            }
+    const pricingPromises = posts.map(async (post) => {
+      try {
+        const wcUrl = `${wcBaseUrl}/products?slug=${post.slug}`;
+        const res = await fetchWithTimeout(wcUrl, {
+          timeoutMs: 3000, // Hard 3s limit for individual pricing
+          headers: { 'Authorization': authHeader },
+          next: { revalidate: 3600 }
         });
 
-        await Promise.all(pricingPromises);
-    }
+        if (res.ok) {
+          const products = await res.json();
+          if (products.length > 0) {
+            const product = products[0];
+            post.price = product.price;
+            post.regular_price = product.regular_price;
+            post.sale_price = product.sale_price;
+            post.on_sale = product.on_sale;
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to fetch price for workshop ${post.slug}:`, err);
+      }
+    });
 
-    return { posts, totalPages };
+    await Promise.all(pricingPromises);
+  }
+
+  return { posts, totalPages };
 }
 
 export async function getMedia(id: number) {
@@ -324,114 +324,114 @@ export async function getPagedProducts(perPage: number = 6, page: number = 1): P
  * Fetches a single post by slug from optimized parallel WordPress/WooCommerce checks.
  * Wrapped in React cache() to deduplicate Metadata and Page renders.
  */
-export const getPostBySlug = cache(async function(type: string, slug: string): Promise<WordPressPost | null> {
-    const WP_USER = process.env.WP_USER;
-    const WP_PASSWORD = process.env.WP_PASSWORD;
+export const getPostBySlug = cache(async function (type: string, slug: string): Promise<WordPressPost | null> {
+  const WP_USER = process.env.WP_USER;
+  const WP_PASSWORD = process.env.WP_PASSWORD;
 
-    // Decide if we should try WooCommerce
-    const isWcType = ['courses', 'product', 'programs', 'workshops'].includes(type);
+  // Decide if we should try WooCommerce
+  const isWcType = ['courses', 'product', 'programs', 'workshops'].includes(type);
 
-    // 1. Prepare WooCommerce Promise
-    const wcPromise = (isWcType && WP_USER && WP_PASSWORD) ? (async () => {
-        const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
-        const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
-        const url = `${wcBaseUrl}/products?slug=${slug}`;
+  // 1. Prepare WooCommerce Promise
+  const wcPromise = (isWcType && WP_USER && WP_PASSWORD) ? (async () => {
+    const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+    const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
+    const url = `${wcBaseUrl}/products?slug=${slug}`;
 
-        try {
-            const response = await fetchWithTimeout(url, {
-                timeoutMs: 2500, // Hard 2.5s limit for pricing data
-                next: { revalidate: 3600 },
-                headers: {
-                    'Authorization': authHeader,
-                }
-            });
-
-            if (response.ok) {
-                const products: WooCommerceProduct[] = await response.json();
-                return products.length > 0 ? products[0] : null;
-            }
-        } catch (error) {
-            console.error('Error fetching WooCommerce product by slug:', error);
+    try {
+      const response = await fetchWithTimeout(url, {
+        timeoutMs: 2500, // Hard 2.5s limit for pricing data
+        next: { revalidate: 3600 },
+        headers: {
+          'Authorization': authHeader,
         }
-        return null;
-    })() : Promise.resolve(null);
+      });
 
-    // 2. Prepare WordPress Promise
-    const wpPromise = (async () => {
-        let restBase = 'posts';
-        if (type === 'courses') {
-            restBase = 'product';
-        } else if (type === 'pages') {
-            restBase = 'pages';
-        } else if (type === 'programs') {
-            restBase = 'program';
-        } else if (type === 'workshops') {
-            restBase = 'posts';
-        }
+      if (response.ok) {
+        const products: WooCommerceProduct[] = await response.json();
+        return products.length > 0 ? products[0] : null;
+      }
+    } catch (error) {
+      console.error('Error fetching WooCommerce product by slug:', error);
+    }
+    return null;
+  })() : Promise.resolve(null);
 
-        try {
-            const response = await fetchWP(`${BASE_URL}/${restBase}?slug=${slug}&_embed`);
-            if (response.ok) {
-                const posts = await response.json();
-                return posts.length > 0 ? posts[0] : null;
-            }
-        } catch (error) {
-            console.error('Error fetching WP post by slug:', error);
-        }
-        return null;
-    })();
-
-    // 3. Execute in parallel
-    const [wc, wpPost] = await Promise.all([wcPromise, wpPromise]);
-
-    // 4. Merge results (Prioritize WooCommerce for pricing/e-commerce meta)
-    if (wc) {
-        // Extract INR prices
-        const inrRegularField = wc.meta_data.find((m: any) => m.key === '_regular_price_wmcp');
-        const inrSaleField = wc.meta_data.find((m: any) => m.key === '_sale_price_wmcp');
-
-        let inrRegular = '';
-        let inrSale = '';
-
-        try {
-            if (inrRegularField?.value) {
-                const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
-                inrRegular = parsed.INR || '';
-            }
-            if (inrSaleField?.value) {
-                const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
-                inrSale = parsed.INR || '';
-            }
-        } catch (e) {
-            console.warn('Failed to parse INR prices for product slug:', slug);
-        }
-
-        return {
-            id: wc.id,
-            slug: wc.slug,
-            title: { rendered: wc.name },
-            excerpt: { rendered: wc.short_description },
-            content: { rendered: wc.description },
-            date: wc.date_created,
-            featured_media: 0,
-            _embedded: {
-                'wp:featuredmedia': wc.images.length > 0 ? [{
-                    source_url: wc.images[0].src,
-                    alt_text: wc.images[0].alt
-                }] : []
-            },
-            price: wc.price,
-            regular_price: wc.regular_price,
-            sale_price: wc.sale_price,
-            on_sale: wc.on_sale,
-            prices_inr: {
-                regular: inrRegular,
-                sale: inrSale
-            }
-        };
+  // 2. Prepare WordPress Promise
+  const wpPromise = (async () => {
+    let restBase = 'posts';
+    if (type === 'courses') {
+      restBase = 'product';
+    } else if (type === 'pages') {
+      restBase = 'pages';
+    } else if (type === 'programs') {
+      restBase = 'program';
+    } else if (type === 'workshops') {
+      restBase = 'posts';
     }
 
-    return wpPost;
+    try {
+      const response = await fetchWP(`${BASE_URL}/${restBase}?slug=${slug}&_embed`);
+      if (response.ok) {
+        const posts = await response.json();
+        return posts.length > 0 ? posts[0] : null;
+      }
+    } catch (error) {
+      console.error('Error fetching WP post by slug:', error);
+    }
+    return null;
+  })();
+
+  // 3. Execute in parallel
+  const [wc, wpPost] = await Promise.all([wcPromise, wpPromise]);
+
+  // 4. Merge results (Prioritize WooCommerce for pricing/e-commerce meta)
+  if (wc) {
+    // Extract INR prices
+    const inrRegularField = wc.meta_data.find((m: any) => m.key === '_regular_price_wmcp');
+    const inrSaleField = wc.meta_data.find((m: any) => m.key === '_sale_price_wmcp');
+
+    let inrRegular = '';
+    let inrSale = '';
+
+    try {
+      if (inrRegularField?.value) {
+        const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
+        inrRegular = parsed.INR || '';
+      }
+      if (inrSaleField?.value) {
+        const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
+        inrSale = parsed.INR || '';
+      }
+    } catch (e) {
+      console.warn('Failed to parse INR prices for product slug:', slug);
+    }
+
+    return {
+      id: wc.id,
+      slug: wc.slug,
+      title: { rendered: wc.name },
+      excerpt: { rendered: wc.short_description },
+      content: { rendered: wc.description },
+      date: wc.date_created,
+      featured_media: 0,
+      _embedded: {
+        'wp:featuredmedia': wc.images.length > 0 ? [{
+          source_url: wc.images[0].src,
+          alt_text: wc.images[0].alt
+        }] : []
+      },
+      price: wc.price,
+      regular_price: wc.regular_price,
+      sale_price: wc.sale_price,
+      on_sale: wc.on_sale,
+      prices_inr: {
+        regular: inrRegular,
+        sale: inrSale
+      }
+    };
+  }
+
+  return wpPost;
 });
 
 export function sanitizeWPContent(html: string, stripAllTags: boolean = false): string {
@@ -442,6 +442,9 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
 
   // 2. Strip other bracketed shortcodes
   sanitized = sanitized.replace(/\[.*?\]/g, '');
+
+  // Add space after strong tag if needed for UI spacing when inline
+  sanitized = sanitized.replace(/<\/strong>([A-Za-z])/g, '</strong> $1');
 
   if (stripAllTags) {
     // Strip all HTML tags for excerpts
@@ -512,13 +515,13 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
     // Convert bulleted text strings into clean <li>Item</li>
     // Target both <div>• Text</div> and plain text lines in the description
     sanitized = sanitized.replace(/(?:^|<br\s*\/?>|<(?:div|p|li)[^>]*>)\s*•\s*(.*?)(?=\s*(?:<|$))/gi, '<li>$1</li>');
-    
+
     // Safety wrap for Li elements that are orphans
     sanitized = sanitized.replace(/(<li>.*?<\/li>)+/g, (match) => {
-      if (match.includes('<ul>')) return match; 
+      if (match.includes('<ul>')) return match;
       return `<ul>${match}</ul>`;
     });
-    
+
     // Multi-pass cleanup for redundant UL nesting
     sanitized = sanitized.replace(/<\/ul>\s*<ul>/g, '');
 
@@ -528,6 +531,20 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
     // Structural healing for broken headings
     sanitized = sanitized.replace(/<\/p><h([2-4])>/gi, '</h$1><h$1>');
     sanitized = sanitized.replace(/<h([2-4])>(.*?)<\/p>/gi, '<h$1>$2</h$1>');
+
+    // 8. Convert sequential image lists (like partner logos) into modern grids
+    sanitized = sanitized.replace(/<p>([\s\S]*?)<\/p>/gi, (match, inner) => {
+      const imgCount = (inner.match(/<img/gi) || []).length;
+      if (imgCount >= 3) {
+        // Evaluate text content without tags
+        const textOnly = inner.replace(/<[^>]*>?/gm, '').trim();
+        // If there's barely any text, it's a logo grid
+        if (textOnly.length < 50) {
+          return `<div class="logo-grid">${inner}</div>`;
+        }
+      }
+      return match;
+    });
 
   }
 
@@ -615,7 +632,7 @@ export async function getBlogs(): Promise<BlogPost[]> {
   });
 }
 
-export const getBlogBySlug = cache(async function(slug: string): Promise<BlogPost | null> {
+export const getBlogBySlug = cache(async function (slug: string): Promise<BlogPost | null> {
   const response = await fetchWP(`${BASE_URL}/nstc_blog?slug=${slug}&_embed`);
   if (!response.ok) return null;
   const posts = await response.json();

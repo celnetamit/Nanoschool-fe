@@ -28,12 +28,9 @@ export default function AboutTemplate({ post }: AboutTemplateProps) {
                         {post.title.rendered}
                     </h1>
 
-                    {post.excerpt?.rendered && (
-                        <div
-                            className="text-xl md:text-2xl text-blue-100 max-w-4xl mx-auto leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: sanitizeWPContent(post.excerpt.rendered, true) }}
-                        />
-                    )}
+                    <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto leading-relaxed drop-shadow-md">
+                        Connecting minds and driving progress. Welcome to NanoSchool, a pioneering ed-tech firm at the forefront of promoting the power and potential of deep tech since 2006.
+                    </p>
                 </div>
             </section>
 
