@@ -70,7 +70,7 @@ async function fetchWP(url: string, useAuth: boolean = false): Promise<Response>
 
   try {
     const response = await fetchWithTimeout(url, {
-      timeoutMs: 15000, // 15s timeout
+      timeoutMs: 30000, // 30s timeout for WP Content
       next: { revalidate: 3600 }, // 1 hour cache
       headers
     });
@@ -175,7 +175,7 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
         try {
           const wcUrl = `${wcBaseUrl}/products?slug=${post.slug}`;
           const res = await fetchWithTimeout(wcUrl, {
-            timeoutMs: 3000, 
+            timeoutMs: 8000, // Increased to 8s for WC pricing
             headers: { 'Authorization': authHeader },
             next: { revalidate: 3600 }
           });

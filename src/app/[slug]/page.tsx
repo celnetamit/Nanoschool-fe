@@ -80,6 +80,11 @@ export default async function SlugPage({
         post = await getPostBySlug('pages', 'about');
     }
 
+    // Handle nano-technology mapping to nanotech-4
+    if (!post && slug === 'nano-technology') {
+        post = await getPostBySlug('pages', 'nanotech-4');
+    }
+
     // For about-us specifically, provide fallback content if still no post
     if (!post && slug === 'about-us') {
         post = {

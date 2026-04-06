@@ -31,11 +31,11 @@ export async function fetchWithTimeout(
   options: FetchOptions = {}
 ): Promise<Response> {
   const {
-    timeoutMs = 15000,
+    timeoutMs = 25000, // Increased default to 25s
     useCache = options.method === undefined || options.method?.toUpperCase() === 'GET',
-    ttlMs = 10000,
-    retries = 1,
-    retryDelayMs = 1000,
+    ttlMs = 15000,    // Increased TTL to 15s
+    retries = 2,      // Default to 2 retries (3 total attempts)
+    retryDelayMs = 2000, // 2s delay between retries
     ...fetchOptions
   } = options;
 
@@ -46,23 +46,19 @@ export async function fetchWithTimeout(
   if (useCache && cacheKey && l1Cache.has(cacheKey)) {
     const entry = l1Cache.get(cacheKey)!;
     if (Date.now() - entry.timestamp < ttlMs) {
-
       return new Response(entry.body, {
         status: entry.status,
         statusText: entry.statusText,
         headers: new Headers(entry.headers),
       });
-    } else {
-      l1Cache.delete(cacheKey); // Evict stale
     }
+    // STALE content is left in the map for recovery if the subsequent fetch fails
   }
 
   // 2. Request Deduplication (In-Flight checks)
   if (cacheKey && inflightRequests.has(cacheKey)) {
-
     const sharedPromise = inflightRequests.get(cacheKey)!;
     const res = await sharedPromise;
-    // We clone the response so both the original caller and the waiting caller can read the body.
     return res.clone();
   }
 
@@ -72,9 +68,6 @@ export async function fetchWithTimeout(
     const id = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      // Keep-alive setup natively configured in Next.js internal dispatcher, 
-      // explicitly disabling keepalive here because WordPress PHP-FPM frequently drops connections
-      // unexpectedly causing 30-second TCP socket hangs in Node.js.
       const finalFetchOptions: RequestInit = {
         ...fetchOptions,
         signal: controller.signal,
@@ -108,28 +101,38 @@ export async function fetchWithTimeout(
       return response;
 
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        if (currentAttempt < retries) {
-          console.warn(`[TIMEOUT] Timeout (${timeoutMs}ms) for ${url}. Retrying attempt ${currentAttempt + 1}...`);
-          await new Promise(res => setTimeout(res, retryDelayMs * (currentAttempt + 1)));
-          return executeFetch(currentAttempt + 1);
-        }
-        return new Response(null, {
-          status: 504,
-          statusText: 'Gateway Timeout (NanoSchool-Timeout)'
-        });
-      }
+      const isRetryable = currentAttempt < retries;
 
-      if (currentAttempt < retries) {
-        console.warn(`[FETCH-ERROR] Error for ${url}: ${error.message}. Retrying attempt ${currentAttempt + 1}...`);
-        await new Promise(res => setTimeout(res, retryDelayMs * (currentAttempt + 1)));
+      if (isRetryable) {
+        const delay = retryDelayMs * (currentAttempt + 1);
+        console.warn(`[RETRYING] ${url} (Attempt ${currentAttempt + 1}/${retries}). Error: ${error.message}. Delay: ${delay}ms`);
+        await new Promise(res => setTimeout(res, delay));
         return executeFetch(currentAttempt + 1);
       }
 
-      console.error(`[FETCH-ERROR] Final error for ${url}:`, error);
+      // FINAL FAILURE - Attempt [STALE-RECOVERY]
+      if (useCache && cacheKey && l1Cache.has(cacheKey)) {
+        const staleEntry = l1Cache.get(cacheKey)!;
+        console.error(`[STALE-RECOVERY] Fetch failed for ${url} (Error: ${error.message}). Serving stale content from cache.`);
+        return new Response(staleEntry.body, {
+          status: staleEntry.status,
+          statusText: `${staleEntry.statusText} (Shield-Recovered)`,
+          headers: new Headers(staleEntry.headers),
+        });
+      }
+
+      // NO RECOVERY POSSIBLE
+      if (error.name === 'AbortError') {
+        return new Response(null, {
+          status: 504,
+          statusText: 'Gateway Timeout (NanoSchool-Shield-Blocked)'
+        });
+      }
+
+      console.error(`[FETCH-CRITICAL] Network failure for ${url}:`, error.message);
       return new Response(null, {
         status: 500,
-        statusText: `Fetch Error: ${error.message || 'Unknown'}`
+        statusText: `Fetch Error: ${error.message || 'Unknown Network Failure'}`
       });
     } finally {
       clearTimeout(id);
@@ -146,10 +149,8 @@ export async function fetchWithTimeout(
   
   try {
     const res = await fetchPromise;
-    // Original caller receives a clone.
     return res.clone();
   } finally {
-    // Cleanup inflight map after resolution or failure
     inflightRequests.delete(cacheKey);
   }
 }
