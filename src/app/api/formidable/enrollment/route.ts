@@ -79,7 +79,7 @@ export async function POST(request: Request) {
           if (value && typeof value === 'string') {
              // Keep only digits and decimal points
              const sanitized = value.replace(/[^0-9.]/g, '');
-             console.log(`[DEBUG] Sanitizing ${bodyKey}: "${value}" -> "${sanitized}"`);
+
              value = sanitized;
           }
         }
@@ -155,9 +155,7 @@ export async function POST(request: Request) {
 
     // STEP 2: Wait 1s and PATCH the restricted Read-Only payment fields manually
     await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('[DEBUG] Formidable API -> Creating Restricted Meta');
-    console.log('[DEBUG] > courseFee received:', body.courseFee);
-    console.log('[DEBUG] > payableAmount received:', body.payableAmount);
+
 
     try {
       await fetch(`${FORMIDABLE_API_URL}/${newEntryId}`, {
@@ -210,7 +208,7 @@ export async function POST(request: Request) {
         const whErrText = await whRes.text();
         console.error('Initial IMS Webhook rejected payload:', whRes.status, whErrText);
       } else {
-        console.log('[INFO] Initial IMS Webhook success:', whRes.status);
+
       }
     } catch (whError) {
       console.error('Initial webhook failed:', whError);

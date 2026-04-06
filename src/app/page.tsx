@@ -8,7 +8,7 @@ import FeaturedWorkshops from '@/components/home/FeaturedWorkshops';
 import CardSkeletonGrid from '@/components/home/CardSkeletonGrid';
 
 const LogoMarquee = dynamic(() => import('@/components/LogoMarquee'));
-const TestimonialSlider = dynamic(() => import('@/components/TestimonialSlider'));
+import AsyncTestimonialSlider from '@/components/home/AsyncTestimonialSlider';
 const FAQ = dynamic(() => import('@/components/FAQ'));
 
 export default function Home() {
@@ -179,13 +179,9 @@ export default function Home() {
       </section>
 
       {/* Testimonials (New) */}
-      <section className="py-24 bg-slate-50 overflow-hidden">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">Success Stories</h2>
-          <p className="text-lg text-slate-600">Hear from our alumni who are now leading the industry</p>
-        </div>
-        <TestimonialSlider />
-      </section>
+      <Suspense fallback={<div className="w-full py-32 text-center opacity-30 font-black text-slate-400 uppercase tracking-widest text-sm">Loading success stories...</div>}>
+        <AsyncTestimonialSlider />
+      </Suspense>
 
       {/* Featured Courses - Premium Grid */}
       <Suspense fallback={<CardSkeletonGrid count={6} bgClass="bg-slate-50 border-b border-slate-200" />}>

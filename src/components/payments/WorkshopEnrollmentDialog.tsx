@@ -256,9 +256,7 @@ export default function WorkshopEnrollmentDialog({
 
     setIsSubmitting(true);
     
-    console.log('[DEBUG] Submitting Enrollment Request...');
-    console.log('[DEBUG] Base courseFee Prop:', courseFee);
-    console.log('[DEBUG] Final derived payableAmount:', payableAmount);
+
     
     try {
       // Step 1: Save lead to WordPress

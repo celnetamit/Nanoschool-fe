@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         const errorData = await updateResponse.json().catch(() => ({}));
         console.error('Failed to update WordPress entry on decline:', errorData);
       } else {
-        console.log('[INFO] WordPress entry updated to payment_failed for entryId:', entryId);
+
       }
     } catch (wpError) {
       console.error('WordPress PATCH failed on payment decline:', wpError);
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         const whErrText = await whRes.text();
         console.error('IMS decline webhook rejected:', whRes.status, whErrText);
       } else {
-        console.log('[INFO] IMS notified of payment failure for entryId:', entryId);
+
       }
     } catch (whError) {
       console.error('IMS decline webhook failed:', whError);

@@ -320,7 +320,7 @@ export async function getWooCommerceProducts({ perPage = 40, page = 1, categoryI
 }
 
 export async function getProducts({ perPage = 40, page = 1, categoryId = 0 } = {}): Promise<WordPressPost[]> {
-  console.log('[INFO] Fetching real WooCommerce products for page:', page);
+
   return getWooCommerceProducts({ perPage, page, categoryId });
 }
 

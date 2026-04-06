@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { WordPressPost } from '@/lib/wordpress';
+import { Internship } from '@/lib/internships';
 
 interface InternshipTemplateProps {
     post?: WordPressPost | null;
+    internships?: Internship[];
 }
 
 interface Project {
@@ -83,7 +85,9 @@ const PROJECTS: Project[] = [
     }
 ];
 
-export default function InternshipTemplate({ post }: InternshipTemplateProps) {
+export default function InternshipTemplate({ post, internships = [] }: InternshipTemplateProps) {
+    const displayProjects = internships.length > 0 ? internships : PROJECTS;
+
     return (
         <div className="bg-white">
             {/* Hero Section */}
@@ -144,7 +148,7 @@ export default function InternshipTemplate({ post }: InternshipTemplateProps) {
                     </div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {PROJECTS.map((project, index) => (
+                        {displayProjects.map((project, index) => (
                             <div key={index} className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col h-full group hover:-translate-y-1 relative overflow-hidden">
                                 {/* Top colored accent */}
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-emerald-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
@@ -183,9 +187,9 @@ export default function InternshipTemplate({ post }: InternshipTemplateProps) {
 
                                 <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-gray-100">
                                     <Link
-                                        href={project.detailsLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        href={(project as any).key ? `/internship/${(project as any).key}` : project.detailsLink}
+                                        target={(project as any).key ? "_self" : "_blank"}
+                                        rel={(project as any).key ? "" : "noopener noreferrer"}
                                         className="px-4 py-2 rounded-lg text-gray-600 bg-gray-50 hover:bg-gray-100 hover:text-gray-900 font-semibold text-sm text-center transition-colors flex items-center justify-center gap-1"
                                     >
                                         Details

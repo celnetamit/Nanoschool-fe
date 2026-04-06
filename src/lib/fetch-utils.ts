@@ -46,7 +46,7 @@ export async function fetchWithTimeout(
   if (useCache && cacheKey && l1Cache.has(cacheKey)) {
     const entry = l1Cache.get(cacheKey)!;
     if (Date.now() - entry.timestamp < ttlMs) {
-      console.log(`[L1-CACHE HIT] 🚀 Fast-returning: ${url}`);
+
       return new Response(entry.body, {
         status: entry.status,
         statusText: entry.statusText,
@@ -59,7 +59,7 @@ export async function fetchWithTimeout(
 
   // 2. Request Deduplication (In-Flight checks)
   if (cacheKey && inflightRequests.has(cacheKey)) {
-    console.log(`[DEDUPE] ♻️ Waiting for existing in-flight request: ${url}`);
+
     const sharedPromise = inflightRequests.get(cacheKey)!;
     const res = await sharedPromise;
     // We clone the response so both the original caller and the waiting caller can read the body.

@@ -12,6 +12,7 @@ import InternshipTemplate from '@/components/templates/InternshipTemplate';
 import FaqTemplate from '@/components/templates/FaqTemplate';
 import JsonLd from '@/components/JsonLd';
 import { notFound } from 'next/navigation';
+import { getInternships } from '@/lib/internships';
 import { Metadata } from 'next';
 
 const DOMAIN_METADATA: Record<string, { title: string, description: string, keywords: string[] }> = {
@@ -104,6 +105,12 @@ export default async function SlugPage({
     // Determine which template to use
     const template = getTemplateForSlug(slug);
 
+    // Fetch dynamic content strictly if required by the template
+    let internships: any[] = [];
+    if (template === 'internship') {
+        internships = await getInternships();
+    }
+
     // FAQ Schema for specific domains (AEO/GEO Optimization)
     let faqSchema = null;
     if (slug === 'ai' || slug === 'biotech' || slug === 'nano-technology') {
@@ -148,7 +155,7 @@ export default async function SlugPage({
                 return <ContactTemplate post={post} />;
 
             case 'internship':
-                return <InternshipTemplate post={post} />;
+                return <InternshipTemplate post={post} internships={internships} />;
 
             case 'faqs':
                 return <FaqTemplate />;
