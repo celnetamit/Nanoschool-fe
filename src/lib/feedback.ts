@@ -27,14 +27,14 @@ export async function getFeedbacks(): Promise<FeedbackData[]> {
   try {
     const authString = Buffer.from(`${user}:${pass}`).toString('base64');
     
-    // Fetch a healthy sample (e.g. 25 entries) from the feedback form
-    const fetchUrl = `${url}&page_size=25`;
+    // Fetch a healthy sample (e.g. 50 entries to guarantee latest) and explicitly request DESC
+    const fetchUrl = `${url}&page_size=50&order=DESC`;
 
     const response = await fetchWithTimeout(fetchUrl, {
-      timeoutMs: 5000, // 5s absolute max for feedbacks
+      timeoutMs: 20000, // 20s max because WP Forms API takes ~15 seconds to query
       useCache: true,
-      ttlMs: 60000, // 1 min local in-memory cache fallback
-      next: { revalidate: 86400 }, // Cache for 24 hours in Next.js
+      ttlMs: 300000, // 5 min local in-memory cache fallback
+      next: { revalidate: 300 }, // Cache in Next.js for 5 minutes. Fast enough to be 'latest' but safe.
       headers: {
         'Authorization': `Basic ${authString}`,
         'Content-Type': 'application/json',

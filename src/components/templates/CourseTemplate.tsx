@@ -7,13 +7,15 @@ import { BookOpen, Award, Users, CheckCircle, Clock, Calendar, ChevronDown, Chev
 import FAQ from '@/components/FAQ';
 import { FAQ_DATA } from '@/data/faqs';
 import WorkshopEnrollButton from '@/components/payments/WorkshopEnrollButton';
+import { FeedbackData } from '@/lib/feedback';
 
 interface CourseTemplateProps {
     post: WordPressPost;
     storeProduct?: StoreProduct | null;
+    feedbacks?: FeedbackData[];
 }
 
-export default function CourseTemplate({ post, storeProduct }: CourseTemplateProps) {
+export default function CourseTemplate({ post, storeProduct, feedbacks }: CourseTemplateProps) {
     const [activeSection, setActiveSection] = useState('overview');
     const [scrolled, setScrolled] = useState(false);
     const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
@@ -284,30 +286,53 @@ export default function CourseTemplate({ post, storeProduct }: CourseTemplatePro
                             </div>
                         </section>
 
-                        {/* REVIEWS SECTION placeholder */}
+                        {/* REVIEWS SECTION */}
                         <section id="reviews" className="scroll-mt-32">
                             <h2 className="text-3xl font-black text-slate-900 mb-8 flex items-center gap-3">
                                 <Star className="w-8 h-8 text-yellow-500" />
                                 Student Reviews
                             </h2>
-                            {/* Placeholder reviews */}
-                            <div className="grid md:grid-cols-2 gap-6">
-                                {[1, 2].map((i) => (
-                                    <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                                        <div className="flex items-center gap-1 text-yellow-400 mb-4">
-                                            {[...Array(5)].map((_, j) => <Star key={j} className="w-4 h-4 fill-current" />)}
-                                        </div>
-                                        <p className="text-slate-600 mb-4 italic">"This course completely changed my career trajectory. The practical projects were incredibly coherent with industry standards."</p>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center font-bold text-slate-500">S{i}</div>
-                                            <div>
-                                                <div className="font-bold text-slate-900">Student Name</div>
-                                                <div className="text-xs text-slate-500">Genomics Analyst</div>
+                            {feedbacks && feedbacks.length > 0 ? (
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {feedbacks.slice(0, 4).map((feedback, i) => (
+                                        <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-full">
+                                            <div className="flex items-center gap-1 text-yellow-400 mb-3">
+                                                {[...Array(5)].map((_, j) => (
+                                                    <Star key={j} className={`w-3.5 h-3.5 ${j < feedback.rating ? 'fill-current' : 'text-slate-200'}`} />
+                                                ))}
+                                            </div>
+                                            <p className="text-sm text-slate-600 mb-3 italic flex-grow">"{feedback.comment}"</p>
+                                            <div className="flex items-center gap-2 mt-auto">
+                                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-600 uppercase">
+                                                    {feedback.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-bold text-slate-900 leading-tight">{feedback.name}</div>
+                                                    <div className="text-xs text-slate-500">{feedback.date}</div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {[1, 2].map((i) => (
+                                        <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-full">
+                                            <div className="flex items-center gap-1 text-yellow-400 mb-3">
+                                                {[...Array(5)].map((_, j) => <Star key={j} className="w-3.5 h-3.5 fill-current" />)}
+                                            </div>
+                                            <p className="text-sm text-slate-600 mb-3 flex-grow italic">"This course completely changed my career trajectory. The practical projects were incredibly coherent with industry standards."</p>
+                                            <div className="flex items-center gap-2 mt-auto">
+                                                <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-xs font-bold text-slate-500">S{i}</div>
+                                                <div>
+                                                    <div className="text-sm font-bold text-slate-900 leading-tight">Student Name</div>
+                                                    <div className="text-xs text-slate-500">Genomics Analyst</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </section>
 
                         {/* FAQ SECTION */}

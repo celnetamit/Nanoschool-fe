@@ -2,6 +2,7 @@ export const revalidate = 3600;
 
 import CourseTemplate from '@/components/templates/CourseTemplate';
 import { getPostBySlug, getStoreProduct } from '@/lib/wordpress';
+import { getFeedbacks } from '@/lib/feedback';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import JsonLd from '@/components/JsonLd';
@@ -48,9 +49,10 @@ export default async function CourseDetail({
     params: Promise<{ slug: string }>;
 }) {
     const { slug } = await params;
-    const [post, storeProduct] = await Promise.all([
+    const [post, storeProduct, feedbacks] = await Promise.all([
         getPostBySlug('courses', slug),
-        getStoreProduct(slug)
+        getStoreProduct(slug),
+        getFeedbacks()
     ]);
 
     if (!post) {
@@ -85,7 +87,7 @@ export default async function CourseDetail({
     return (
         <>
             <JsonLd data={jsonLd} />
-            <CourseTemplate post={post} storeProduct={storeProduct} />
+            <CourseTemplate post={post} storeProduct={storeProduct} feedbacks={feedbacks} />
         </>
     );
 }
