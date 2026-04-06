@@ -33,7 +33,7 @@ export async function fetchWithTimeout(
   const {
     timeoutMs = 15000,
     useCache = options.method === undefined || options.method?.toUpperCase() === 'GET',
-    ttlMs = 300000, // 5 MINUTES L1 cache to prevent OOM / connection exhaustion on Coolify
+    ttlMs = 10000,
     retries = 1,
     retryDelayMs = 1000,
     ...fetchOptions
@@ -73,11 +73,12 @@ export async function fetchWithTimeout(
 
     try {
       // Keep-alive setup natively configured in Next.js internal dispatcher, 
-      // but explicitly passed for clear connection pooling intent.
+      // explicitly disabling keepalive here because WordPress PHP-FPM frequently drops connections
+      // unexpectedly causing 30-second TCP socket hangs in Node.js.
       const finalFetchOptions: RequestInit = {
         ...fetchOptions,
         signal: controller.signal,
-        keepalive: fetchOptions.keepalive ?? true, 
+        keepalive: fetchOptions.keepalive ?? false, 
       };
 
       const response = await fetch(url, finalFetchOptions);

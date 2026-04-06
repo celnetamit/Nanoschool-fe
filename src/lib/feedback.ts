@@ -12,6 +12,8 @@ export interface FeedbackData {
   workshopName: string;
 }
 
+import { fetchWithTimeout } from './fetch-utils';
+
 export async function getFeedbacks(): Promise<FeedbackData[]> {
   const url = process.env.USER_FEEDBACK_API;
   const user = process.env.WP_USER;
@@ -28,8 +30,11 @@ export async function getFeedbacks(): Promise<FeedbackData[]> {
     // Fetch a healthy sample (e.g. 25 entries) from the feedback form
     const fetchUrl = `${url}&page_size=25`;
 
-    const response = await fetch(fetchUrl, {
-      next: { revalidate: 86400 }, // Cache for 24 hours
+    const response = await fetchWithTimeout(fetchUrl, {
+      timeoutMs: 5000, // 5s absolute max for feedbacks
+      useCache: true,
+      ttlMs: 60000, // 1 min local in-memory cache fallback
+      next: { revalidate: 86400 }, // Cache for 24 hours in Next.js
       headers: {
         'Authorization': `Basic ${authString}`,
         'Content-Type': 'application/json',

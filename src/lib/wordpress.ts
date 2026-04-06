@@ -1,4 +1,4 @@
-const BASE_URL = 'https://nanoschool.in/wp-json/wp/v2';
+const BASE_URL = process.env.WP_INTERNAL_URL || 'https://nanoschool.in/wp-json/wp/v2';
 import { cache } from 'react';
 import { fetchWithTimeout } from './fetch-utils';
 
@@ -54,7 +54,7 @@ export interface Category {
 }
 
 // Helper function for consistent fetching
-async function fetchWP(url: string): Promise<Response> {
+async function fetchWP(url: string, useAuth: boolean = false): Promise<Response> {
   const WP_USER = process.env.WP_USER;
   const WP_PASSWORD = process.env.WP_PASSWORD;
   const headers: Record<string, string> = {
@@ -63,7 +63,8 @@ async function fetchWP(url: string): Promise<Response> {
     'Connection': 'close'
   };
 
-  if (WP_USER && WP_PASSWORD) {
+  // Only attach auth if explicitly requested, as Next.js forcefully bypasses cache if Authorization header is present
+  if (useAuth && WP_USER && WP_PASSWORD) {
     headers['Authorization'] = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
   }
 
@@ -156,40 +157,49 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
   const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
   const posts: WordPressPost[] = await response.json();
 
-  // PERFORMANCE OPTIMIZATION: Parallel WooCommerce Pricing Fetch
-  // Fetch prices for all 9 posts in ONE parallel burst
+  // PREVENT DDOS: Chunked WooCommerce Pricing Fetch (Max 3 concurrent)
+  // Instead of Promise.all on ALL posts at once, we batch them to avoid triggering WordPress/Cloudflare rate-limits.
   const WP_USER = process.env.WP_USER;
   const WP_PASSWORD = process.env.WP_PASSWORD;
 
   if (WP_USER && WP_PASSWORD && posts.length > 0) {
     const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
-    const wcBaseUrl = BASE_URL.replace('/wp/v2', '/wc/v3');
+    const baseUrl = process.env.WP_INTERNAL_URL || BASE_URL;
+    const wcBaseUrl = baseUrl.replace('/wp/v2', '/wc/v3');
 
-    const pricingPromises = posts.map(async (post) => {
-      try {
-        const wcUrl = `${wcBaseUrl}/products?slug=${post.slug}`;
-        const res = await fetchWithTimeout(wcUrl, {
-          timeoutMs: 3000, // Hard 3s limit for individual pricing
-          headers: { 'Authorization': authHeader },
-          next: { revalidate: 3600 }
-        });
+    const chunkSize = 3;
+    for (let i = 0; i < posts.length; i += chunkSize) {
+      const chunk = posts.slice(i, i + chunkSize);
+      
+      await Promise.all(chunk.map(async (post) => {
+        try {
+          const wcUrl = `${wcBaseUrl}/products?slug=${post.slug}`;
+          const res = await fetchWithTimeout(wcUrl, {
+            timeoutMs: 3000, 
+            headers: { 'Authorization': authHeader },
+            next: { revalidate: 3600 }
+          });
 
-        if (res.ok) {
-          const products = await res.json();
-          if (products.length > 0) {
-            const product = products[0];
-            post.price = product.price;
-            post.regular_price = product.regular_price;
-            post.sale_price = product.sale_price;
-            post.on_sale = product.on_sale;
+          if (res.ok) {
+            const products = await res.json();
+            if (products.length > 0) {
+              const product = products[0];
+              post.price = product.price;
+              post.regular_price = product.regular_price;
+              post.sale_price = product.sale_price;
+              post.on_sale = product.on_sale;
+            }
           }
+        } catch (err) {
+          console.error(`Failed to fetch price for workshop ${post.slug}:`, err);
         }
-      } catch (err) {
-        console.error(`Failed to fetch price for workshop ${post.slug}:`, err);
+      }));
+      
+      // Add a tiny artificial delay between chunks to let the WP database breathe
+      if (i + chunkSize < posts.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-    });
-
-    await Promise.all(pricingPromises);
+    }
   }
 
   return { posts, totalPages };
@@ -499,14 +509,15 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
       // PRO: Aggressive detection of headings inside ANY block-level tag (p, div, h2-h6)
       // Handles: <div>About the Course</div>, <p><strong>About the Course</strong></p>, etc.
       // Also handles &nbsp; and varied whitespace
-      const regex = new RegExp(`<(?:p|div|h[2-6])(?:\\s+[^>]*)*?>[\\s\\&nbsp\\;]*(?:<strong>[\\s\\&nbsp\\;]*)?(${pattern}:?)(?:[\\s\\&nbsp\\;]*<\\/strong>)?[\\s\\&nbsp\\;]*<\\/(?:p|div|h[2-6])>`, 'gi');
+      // FIXED REGEX: Prevent catastrophic backtracking by replacing (?:\s+[^>]*)*?> with [^>]*>
+      const regex = new RegExp(`<(?:p|div|h[2-6])[^>]*>[\\s\\&nbsp\\;]*(?:<strong>[\\s\\&nbsp\\;]*)?(${pattern}:?)(?:[\\s\\&nbsp\\;]*<\\/strong>)?[\\s\\&nbsp\\;]*<\\/(?:p|div|h[2-6])>`, 'gi');
       sanitized = sanitized.replace(regex, '<h3>$1</h3>');
     });
 
     // 6. PRO MODULE DETECTOR: Detect "Module X" patterns in any container
     // Handles: Module 1, Module: 1, MODULE - 1, Module — 1, etc.
-    // Catches hyphens (-), slashes (/), colons (:), and em-dashes (—)
-    sanitized = sanitized.replace(/<(?:p|div|h[2-6])(?:\s+[^>]*)*?>[\s\&nbsp\;]*(?:<strong>[\s\&nbsp\;]*)?(Module\s+\d+[\s\:\-\—\/\|]*.*?)(?:\s*<\/strong>)?[\s\&nbsp\;]*<\/(?:p|div|h[2-6])>/gi, '<h4>$1</h4>');
+    // FIXED REGEX: Used [^>]*> and replaced .*? with [^<]{0,150} to strictly prevent node event loop freezing
+    sanitized = sanitized.replace(/<(?:p|div|h[2-6])[^>]*>[\s\&nbsp\;]*(?:<strong>[\s\&nbsp\;]*)?(Module\s+\d+[\s\:\-\—\/\|]*[^<]{0,150})(?:\s*<\/strong>)?[\s\&nbsp\;]*<\/(?:p|div|h[2-6])>/gi, '<h4>$1</h4>');
 
     // 7. PRO SEMANTIC NORMALIZER (Ultimate Protection)
     // Ensure all H[2-4] get our design system classes
@@ -526,7 +537,8 @@ export function sanitizeWPContent(html: string, stripAllTags: boolean = false): 
     sanitized = sanitized.replace(/<\/ul>\s*<ul>/g, '');
 
     // Convert orphaned <div>Text</div> into <p>Text</p>
-    sanitized = sanitized.replace(/<div>\s*((?!<(?:h|ul|li|div|p|blockquote)).*?)\s*<\/div>/gi, '<p>$1</p>');
+    // FIXED REGEX: Prevent O(2^N) backtracking by using [^<]* instead of .*? with negative lookaheads
+    sanitized = sanitized.replace(/<div>\s*([^<]+)\s*<\/div>/gi, '<p>$1</p>');
 
     // Structural healing for broken headings
     sanitized = sanitized.replace(/<\/p><h([2-4])>/gi, '</h$1><h$1>');
