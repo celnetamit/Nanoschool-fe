@@ -196,9 +196,9 @@ export default function InternshipTemplate({ post, internships = [] }: Internshi
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                     </Link>
                                     <Link
-                                        href={project.registerLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        href={(project as any).key ? `/internship/apply/${(project as any).key}` : project.registerLink}
+                                        target={(project as any).key ? "_self" : "_blank"}
+                                        rel={(project as any).key ? "" : "noopener noreferrer"}
                                         className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm text-center transition-colors shadow-lg shadow-teal-500/20"
                                     >
                                         Register

@@ -67,9 +67,7 @@ export default async function InternshipDetailsPage({
 
                             <div className="flex flex-wrap gap-4">
                                 <Link 
-                                    href={internship.registerLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    href={`/internship/apply/${internship.key}`}
                                     className="px-8 py-4 bg-teal-500 hover:bg-teal-400 text-white font-bold rounded-xl transition-all shadow-[0_0_30px_-5px_rgba(20,184,166,0.4)] hover:shadow-[0_0_40px_-5px_rgba(20,184,166,0.6)] hover:-translate-y-1"
                                 >
                                     Apply Now
@@ -175,9 +173,7 @@ export default async function InternshipDetailsPage({
                                 </div>
 
                                 <Link 
-                                    href={internship.registerLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    href={`/internship/apply/${internship.key}`}
                                     className="w-full py-4 text-center font-bold rounded-xl transition-all border-2 border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white"
                                 >
                                     Select {option.mode}
@@ -188,9 +184,7 @@ export default async function InternshipDetailsPage({
                                 <h3 className="text-xl font-bold text-slate-900 mb-4">Registration Open</h3>
                                 <p className="text-slate-600 mb-6">Proceed directly to our partner portal to view options and register.</p>
                                 <Link 
-                                    href={internship.registerLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    href={`/internship/apply/${internship.key}`}
                                     className="px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl"
                                 >
                                     Apply Now
