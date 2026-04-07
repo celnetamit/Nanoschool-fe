@@ -13,6 +13,7 @@ import FaqTemplate from '@/components/templates/FaqTemplate';
 import JsonLd from '@/components/JsonLd';
 import { notFound } from 'next/navigation';
 import { getInternships } from '@/lib/internships';
+import { getUpcomingEvents } from '@/lib/events';
 import { Metadata } from 'next';
 
 const DOMAIN_METADATA: Record<string, { title: string, description: string, keywords: string[] }> = {
@@ -112,8 +113,14 @@ export default async function SlugPage({
 
     // Fetch dynamic content strictly if required by the template
     let internships: any[] = [];
+    let upcomingEvents: any[] = [];
     if (template === 'internship') {
-        internships = await getInternships();
+        const [internshipsRes, eventsRes] = await Promise.all([
+            getInternships(),
+            getUpcomingEvents()
+        ]);
+        internships = internshipsRes;
+        upcomingEvents = eventsRes;
     }
 
     // FAQ Schema for specific domains (AEO/GEO Optimization)
@@ -160,7 +167,7 @@ export default async function SlugPage({
                 return <ContactTemplate post={post} />;
 
             case 'internship':
-                return <InternshipTemplate post={post} internships={internships} />;
+                return <InternshipTemplate post={post} internships={internships} upcomingEvents={upcomingEvents} />;
 
             case 'faqs':
                 return <FaqTemplate />;

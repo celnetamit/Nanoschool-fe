@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { WordPressPost } from '@/lib/wordpress';
 import { Internship } from '@/lib/internships';
+import { UpcomingEvent } from '@/lib/events';
+import UpcomingEvents from '@/components/UpcomingEvents';
 
 interface InternshipTemplateProps {
     post?: WordPressPost | null;
     internships?: Internship[];
+    upcomingEvents?: UpcomingEvent[];
 }
 
 interface Project {
@@ -85,7 +88,7 @@ const PROJECTS: Project[] = [
     }
 ];
 
-export default function InternshipTemplate({ post, internships = [] }: InternshipTemplateProps) {
+export default function InternshipTemplate({ post, internships = [], upcomingEvents = [] }: InternshipTemplateProps) {
     const displayProjects = internships.length > 0 ? internships : PROJECTS;
 
     return (
@@ -209,6 +212,9 @@ export default function InternshipTemplate({ post, internships = [] }: Internshi
                     </div>
                 </div>
             </section>
+
+            {/* Upcoming Events Section (New) */}
+            <UpcomingEvents events={upcomingEvents} />
 
             {/* Program Benefits */}
             <section className="py-24 bg-white" id="contact">

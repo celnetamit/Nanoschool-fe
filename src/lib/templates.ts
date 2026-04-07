@@ -37,6 +37,9 @@ export const TEMPLATE_MAP: Record<string, 'home' | 'domain' | 'about' | 'mentors
 
     // Internship
     'biotech-internship': 'internship',
+    'nstc-internship-programs': 'internship',
+    'summer-winter-internship-projects': 'internship',
+    'summer-internship': 'internship',
 };
 
 

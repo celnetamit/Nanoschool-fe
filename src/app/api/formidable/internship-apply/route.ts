@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchWithTimeout } from '@/lib/fetch-utils';
 
 export async function POST(request: Request) {
   try {
@@ -19,22 +20,25 @@ export async function POST(request: Request) {
     }
 
     // Map your frontend field names to Formidable field IDs for Form 554.
+    // Verified via live site inspection (item_meta names).
     const itemMeta: Record<string, string | number | string[]> = {
-      '66qvj': body.internshipId || '',
-      '8vudu': body.applicationId || '',
-      'l9w7q': body.projectTitle || '',
-      '5ycy8': body.mode || '',
-      'osn4c': body.duration || '',
-      'u5108': body.fullName || '',
-      'l0s01': body.email || '',
-      'jqnig': body.phone || '',
-      'urskg': body.address || '',
-      '2mjze': body.affiliation || '',
-      '7j5ww': body.country || '',
-      'c5s53': body.education || '',
-      'zsrzh': body.majorCourse || '',
-      '4fkgw': body.knowNstcThrough || '',
-      'heb09': body.declaration ? 'I agree to the Terms & Conditions' : ''
+      '7881': body.projectTitle || '',       // Project Name / Title
+      '7970': body.internshipId || '',      // Internship iD
+      '7876': body.fullName || '',          // Full Name
+      '7877': body.email || '',             // Email
+      '7878': body.phone || '',             // Phone
+      '7980': body.address || '',           // Full Address
+      '7882': body.affiliation || '',       // Affiliation/Institution
+      '7979': body.country || '',           // Country
+      '7924': body.education || '',         // Education
+      '7925': body.majorCourse || '',       // Major Course / Department
+      '7981': body.mode || '',              // Mode
+      '7982': body.duration || '',          // Duration
+      '7931': body.knowNstcThrough || '',   // Referral (Verified as 7931)
+      '9127': 'Pending',                    // Payment
+      '7932': body.declaration 
+        ? 'I hereby declare that, the above furnished information is true to my knowledge and I will abide by the Terms & Conditions of NSTC Centre for Science and Technology.' 
+        : ''                                // Declaration (Verified as 7932 + Exact String)
     };
 
     const payload = {
@@ -43,13 +47,17 @@ export async function POST(request: Request) {
     };
 
     const authHeader = `Basic ${Buffer.from(`${wpUser}:${wpPassword}`).toString('base64')}`;
-    const response = await fetch(FORMIDABLE_API_URL, {
+    
+    // Using fetchWithTimeout for robust connectivity to WordPress
+    const response = await fetchWithTimeout(FORMIDABLE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': authHeader,
       },
       body: JSON.stringify(payload),
+      timeoutMs: 30000, // 30s timeout for stability
+      retries: 2        // 2 automatic retries on failure
     });
 
     const contentType = response.headers.get('content-type');

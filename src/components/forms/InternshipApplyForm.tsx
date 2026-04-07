@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Internship } from '@/lib/internships';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
+import { countries } from '@/data/countries';
+
 interface InternshipApplyFormProps {
     internship: Internship;
     applicationId: string;
@@ -70,7 +72,12 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
                 // Scroll to top of form
                 window.scrollTo({ top: 300, behavior: 'smooth' });
             } else {
-                setErrorMessage(result.error || 'Something went wrong. Please try again.');
+                // Handle object errors (validation errors) or string errors
+                let msg = result.error || 'Something went wrong. Please try again.';
+                if (typeof msg === 'object') {
+                    msg = Object.values(msg).join(' ');
+                }
+                setErrorMessage(msg);
                 setSubmitStatus('error');
             }
         } catch (error) {
@@ -82,32 +89,54 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
         }
     };
 
-    if (submitStatus === 'success') {
-        return (
-            <div className="text-center py-16 px-8 animate-in fade-in zoom-in duration-500">
-                <div className="w-24 h-24 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-8">
-                    <CheckCircle className="w-12 h-12 text-teal-600" />
-                </div>
-                <h2 className="text-3xl font-black text-slate-900 mb-4">Application Received!</h2>
-                <p className="text-xl text-slate-600 mb-10 max-w-lg mx-auto">
-                    Your application for the <strong>{internship.title}</strong> has been successfully submitted. Our team will review your details and contact you via email shortly.
-                </p>
-                <button 
-                    onClick={() => router.push('/biotech-internship')}
-                    className="px-8 py-4 bg-slate-900 text-white font-bold rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
-                >
-                    Return to Internship Overview
-                </button>
-            </div>
-        );
-    }
+    const closeModal = () => {
+        if (submitStatus === 'success') {
+            router.push('/biotech-internship');
+        } else {
+            setSubmitStatus('idle');
+        }
+    };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
-            {submitStatus === 'error' && (
-                <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg flex items-center gap-3 text-red-700 font-medium">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                    <p>{errorMessage}</p>
+        <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 relative">
+            {/* Status Popup Modal */}
+            {submitStatus !== 'idle' && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2.5rem] p-8 md:p-12 max-w-lg w-full shadow-2xl border border-white relative overflow-hidden animate-in zoom-in-95 duration-300">
+                        {/* Decorative Background */}
+                        <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-[60px] -mr-16 -mt-16 ${submitStatus === 'success' ? 'bg-teal-500/20' : 'bg-red-500/20'}`}></div>
+                        
+                        <div className="relative z-10 text-center">
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${submitStatus === 'success' ? 'bg-teal-50' : 'bg-red-50'}`}>
+                                {submitStatus === 'success' ? (
+                                    <CheckCircle className="w-10 h-10 text-teal-600" />
+                                ) : (
+                                    <AlertCircle className="w-10 h-10 text-red-600" />
+                                )}
+                            </div>
+
+                            <h2 className="text-3xl font-black text-slate-900 mb-4">
+                                {submitStatus === 'success' ? 'Application Received!' : 'Submission Failed'}
+                            </h2>
+                            
+                            <p className="text-slate-600 mb-10 font-medium leading-relaxed">
+                                {submitStatus === 'success' 
+                                    ? `Your application for the ${internship.title} has been successfully submitted. We'll contact you shortly.`
+                                    : errorMessage || 'Something went wrong while processing your application. Please try again.'
+                                }
+                            </p>
+
+                            <button 
+                                type="button"
+                                onClick={closeModal}
+                                className={`w-full py-4 rounded-2xl font-bold text-white transition-all shadow-lg active:scale-[0.98] ${
+                                    submitStatus === 'success' ? 'bg-teal-500 hover:bg-teal-600 shadow-teal-500/20' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20'
+                                }`}
+                            >
+                                {submitStatus === 'success' ? 'Continue' : 'Try Again'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -236,14 +265,11 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
                         value={formData.country} onChange={handleChange}
                         className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all font-medium"
                     >
-                        <option value="India">India</option>
-                        <option value="United States">United States</option>
-                        <option value="United Kingdom">United Kingdom</option>
-                        <option value="Canada">Canada</option>
-                        <option value="Australia">Australia</option>
-                        <option value="Germany">Germany</option>
-                        <option value="Singapore">Singapore</option>
-                        <option value="Other">Other</option>
+                        {countries.map((country) => (
+                            <option key={country.code} value={country.name}>
+                                {country.flag} {country.name}
+                            </option>
+                        ))}
                     </select>
                 </div>
                 <div>
@@ -254,12 +280,12 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
                         className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all font-medium"
                     >
                         <option value="">Select Qualification</option>
-                        <option value="B.Tech / B.E.">B.Tech / B.E.</option>
-                        <option value="M.Tech / M.E.">M.Tech / M.E.</option>
                         <option value="B.Sc.">B.Sc.</option>
+                        <option value="B.E.">B.E.</option>
+                        <option value="B.Tech.">B.Tech.</option>
                         <option value="M.Sc.">M.Sc.</option>
-                        <option value="PhD">PhD / Researcher</option>
-                        <option value="Professional">Working Professional</option>
+                        <option value="M.Tech.">M.Tech.</option>
+                        <option value="M.B.A.">M.B.A.</option>
                         <option value="Other">Other</option>
                     </select>
                 </div>
@@ -282,11 +308,13 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none transition-all font-medium"
                 >
                     <option value="">Select Reference</option>
-                    <option value="Google Search">Google Search</option>
-                    <option value="Social Media">Social Media (LinkedIn/Instagram)</option>
-                    <option value="Website / Portal">News / Educational Portal</option>
-                    <option value="Friends / Faculty">Faculty / Friends</option>
-                    <option value="Other">Other</option>
+                    <option value="General Google search">General Google search</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Friends">Friends</option>
+                    <option value="Professor">Professor</option>
+                    <option value="Other modes">Other modes</option>
                 </select>
             </div>
 
