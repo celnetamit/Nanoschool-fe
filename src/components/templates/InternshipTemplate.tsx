@@ -10,86 +10,9 @@ interface InternshipTemplateProps {
     upcomingEvents?: UpcomingEvent[];
 }
 
-interface Project {
-    title: string;
-    description: string;
-    duration?: string;
-    mode?: string;
-    icon: string;
-    detailsLink: string;
-    registerLink: string;
-    category: 'Dry Lab' | 'Workshop';
-}
-
-const PROJECTS: Project[] = [
-    // Dry Lab Projects
-    {
-        title: "Structure-Based In Silico Drug Design",
-        description: "Learn to design novel drug candidates using computational methods.",
-        duration: "1 Month",
-        mode: "Offline / Online",
-        icon: "💊",
-        detailsLink: "https://nanoschool.in/course/structure-based-in-silico-drug-design/",
-        registerLink: "https://nanoschool.in/biotech-internship/projects/application/cvtfk/#apply",
-        category: 'Dry Lab'
-    },
-    {
-        title: "siRNA Design Online Training",
-        description: "Master the design of small interfering RNA for gene silencing applications.",
-        duration: "45 Days",
-        mode: "Online",
-        icon: "🧬",
-        detailsLink: "https://nanoschool.in/course/sirna-design-and-rna-secondary-structure-prediction/",
-        registerLink: "https://nanoschool.in/biotech-internship/projects/application/w5cc4/#apply",
-        category: 'Dry Lab'
-    },
-    {
-        title: "NGS Data Processing",
-        description: "Analyze Next-Generation Sequencing data for genomic insights.",
-        duration: "1 Month",
-        mode: "Online",
-        icon: "💻",
-        detailsLink: "https://nanoschool.in/course/ngs-data-processing-and-interpretation/",
-        registerLink: "https://nanoschool.in/biotech-internship/projects/application/sv4v7/#apply",
-        category: 'Dry Lab'
-    },
-    // Upcoming Events / Workshops
-    {
-        title: "E. coli Plasmid Conjugation & Transformation",
-        description: "Tracking Gene Transfer Using Antibiotic Markers. Trace Horizontal Gene Transfer in Real Time.",
-        icon: "🧫",
-        detailsLink: "https://nanoschool.in/biotechnology/btws/e-coli-plasmid-conjugation-and-transformation-tracking-gene-transfer-using-antibiotic-markers/",
-        registerLink: "https://nanoschool.in/biotechnology/btws/e-coli-plasmid-conjugation-and-transformation-tracking-gene-transfer-using-antibiotic-markers//#apply",
-        category: 'Workshop'
-    },
-    {
-        title: "Antibiotic Resistance Genes (ARGs)",
-        description: "Detection and Characterization. Decode Resistance. Analyze Genomes. Advance Public Health.",
-        icon: "🛡️",
-        detailsLink: "https://nanoschool.in/biotechnology/btws/detection-and-characterization-of-antibiotic-resistance-genes-args/",
-        registerLink: "https://nanoschool.in/biotechnology/btws/detection-and-characterization-of-antibiotic-resistance-genes-args//#apply",
-        category: 'Workshop'
-    },
-    {
-        title: "Generative AI in Drug Discovery",
-        description: "Designing the future of medicine with Generative AI. From Molecules to Medicines.",
-        icon: "🤖",
-        detailsLink: "https://nanoschool.in/biotechnology/btws/generative-ai-in-drug-discovery-from-molecules-to-medicines/",
-        registerLink: "https://nanoschool.in/biotechnology/btws/generative-ai-in-drug-discovery-from-molecules-to-medicines//#apply",
-        category: 'Workshop'
-    },
-    {
-        title: "Wastewater & Environmental AMR Surveillance",
-        description: "Tracking antimicrobial resistance beyond hospitals — from wastewater to actionable insights.",
-        icon: "🌍",
-        detailsLink: "https://nanoschool.in/biotechnology/btws/wastewater-environmental-amr-surveillance-using-metagenomics/",
-        registerLink: "https://nanoschool.in/biotechnology/btws/wastewater-environmental-amr-surveillance-using-metagenomics//#apply",
-        category: 'Workshop'
-    }
-];
-
 export default function InternshipTemplate({ post, internships = [], upcomingEvents = [] }: InternshipTemplateProps) {
-    const displayProjects = internships.length > 0 ? internships : PROJECTS;
+    // Strictly show only LIVE API-provided internship programs
+    const displayProjects = internships;
 
     return (
         <div className="bg-white">
@@ -151,64 +74,70 @@ export default function InternshipTemplate({ post, internships = [], upcomingEve
                     </div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {displayProjects.map((project, index) => (
-                            <div key={index} className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col h-full group hover:-translate-y-1 relative overflow-hidden">
-                                {/* Top colored accent */}
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-emerald-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+                        {displayProjects.length > 0 ? (
+                            displayProjects.map((project, index) => (
+                                <div key={index} className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col h-full group hover:-translate-y-1 relative overflow-hidden">
+                                    {/* Top colored accent */}
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-emerald-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
 
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center text-3xl shadow-inner">
-                                        {project.icon}
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center text-3xl shadow-inner">
+                                            {project.icon}
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${project.category.toLowerCase().includes('dry') ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                                            {project.category}
+                                        </span>
                                     </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${project.category === 'Dry Lab' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                                        {project.category}
-                                    </span>
-                                </div>
 
-                                <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-teal-600 transition-colors">
-                                    {project.title}
-                                </h3>
+                                    <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-teal-600 transition-colors">
+                                        {project.title}
+                                    </h3>
 
-                                <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow">
-                                    {project.description}
-                                </p>
+                                    <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow">
+                                        {project.description}
+                                    </p>
 
-                                {(project.duration || project.mode) && (
-                                    <div className="flex flex-wrap gap-2 mb-6 text-xs text-gray-500 font-medium">
-                                        {project.duration && (
-                                            <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
-                                                <span>⏱️</span> {project.duration}
-                                            </div>
-                                        )}
-                                        {project.mode && (
-                                            <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
-                                                <span>📍</span> {project.mode}
-                                            </div>
-                                        )}
+                                    {(project.duration || project.mode) && (
+                                        <div className="flex flex-wrap gap-2 mb-6 text-xs text-gray-500 font-medium">
+                                            {project.duration && (
+                                                <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
+                                                    <span>⏱️</span> {project.duration}
+                                                </div>
+                                            )}
+                                            {project.mode && (
+                                                <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
+                                                    <span>📍</span> {project.mode}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-gray-100">
+                                        <Link
+                                            href={(project as any).key ? `/internship/${(project as any).key}` : project.detailsLink}
+                                            target={(project as any).key ? "_self" : "_blank"}
+                                            rel={(project as any).key ? "" : "noopener noreferrer"}
+                                            className="px-4 py-2 rounded-lg text-gray-600 bg-gray-50 hover:bg-gray-100 hover:text-gray-900 font-semibold text-sm text-center transition-colors flex items-center justify-center gap-1"
+                                        >
+                                            Details
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                        </Link>
+                                        <Link
+                                            href={(project as any).key ? `/internship/apply/${(project as any).key}` : project.registerLink}
+                                            target={(project as any).key ? "_self" : "_blank"}
+                                            rel={(project as any).key ? "" : "noopener noreferrer"}
+                                            className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm text-center transition-colors shadow-lg shadow-teal-500/20"
+                                        >
+                                            Register
+                                        </Link>
                                     </div>
-                                )}
-
-                                <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-gray-100">
-                                    <Link
-                                        href={(project as any).key ? `/internship/${(project as any).key}` : project.detailsLink}
-                                        target={(project as any).key ? "_self" : "_blank"}
-                                        rel={(project as any).key ? "" : "noopener noreferrer"}
-                                        className="px-4 py-2 rounded-lg text-gray-600 bg-gray-50 hover:bg-gray-100 hover:text-gray-900 font-semibold text-sm text-center transition-colors flex items-center justify-center gap-1"
-                                    >
-                                        Details
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                    </Link>
-                                    <Link
-                                        href={(project as any).key ? `/internship/apply/${(project as any).key}` : project.registerLink}
-                                        target={(project as any).key ? "_self" : "_blank"}
-                                        rel={(project as any).key ? "" : "noopener noreferrer"}
-                                        className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm text-center transition-colors shadow-lg shadow-teal-500/20"
-                                    >
-                                        Register
-                                    </Link>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="col-span-full py-12 text-center bg-white rounded-3xl border border-gray-100 p-8">
+                                <p className="text-gray-500 font-medium">New internship projects will be listed here soon.</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </section>

@@ -1,8 +1,15 @@
+'use client';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import React from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function Footer() {
+    const pathname = usePathname();
+
+    // Hide Footer on dashboard routes
+    if (pathname.startsWith('/dashboard')) return null;
+
     return (
         <footer className="bg-slate-950 text-slate-400 pt-20 pb-10 border-t border-slate-900">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

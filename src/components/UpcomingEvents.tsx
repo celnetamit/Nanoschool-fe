@@ -19,7 +19,19 @@ interface UpcomingEventsProps {
 
 export default function UpcomingEvents({ events }: UpcomingEventsProps) {
   if (!events || events.length === 0) {
-    return null;
+    return (
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+            <div className="bg-gray-50 rounded-[2.5rem] p-12 border border-dashed border-gray-200">
+                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6">🚀</div>
+                <h3 className="text-2xl font-black text-gray-900 mb-2">New Sessions Coming Soon</h3>
+                <p className="text-gray-500 max-w-md mx-auto font-medium">
+                    We are currently finalizing the schedules for our next batch of Biotechnology workshops. Stay tuned for official announcements!
+                </p>
+            </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -86,29 +98,56 @@ export default function UpcomingEvents({ events }: UpcomingEventsProps) {
                 {event.title}
               </h3>
 
-              <div className="space-y-3 mb-8 text-sm text-gray-500">
-                 <div className="flex items-center gap-2">
-                   <Clock className="w-4 h-4 text-blue-500" />
-                   <span>Year: {event.year || 'Latest Session'}</span>
+              <div className="space-y-4 mb-8 text-sm">
+                 {/* DATE - Primary Important Detail */}
+                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-blue-50/50 border border-blue-100/50 text-blue-700">
+                   <Calendar className="w-5 h-5 flex-shrink-0" />
+                   <div className="flex flex-col">
+                     <span className="text-[10px] font-bold uppercase tracking-wider opacity-70">Event Duration</span>
+                     <span className="font-bold">
+                       {(() => {
+                         if (!event.startDate && !event.endDate) return 'Upcoming Session';
+                         
+                         const formatDate = (d: Date) => d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+                         const formatYear = (d: Date) => d.toLocaleDateString('en-US', { year: 'numeric' });
+
+                         if (event.startDate && event.endDate) {
+                           return `${formatDate(event.startDate)} - ${formatDate(event.endDate)}, ${formatYear(event.endDate)}`;
+                         }
+                         
+                         return event.startDate 
+                           ? `${formatDate(event.startDate)}, ${formatYear(event.startDate)}`
+                           : `${formatDate(event.endDate!)}, ${formatYear(event.endDate!)}`;
+                       })()}
+                     </span>
+                   </div>
                  </div>
-                 <div className="flex items-center gap-2">
-                   <MapPin className="w-4 h-4 text-blue-500" />
-                   <span>NanoSchool Center / Online</span>
+
+                 {/* OTHER DETAILS */}
+                 <div className="grid grid-cols-2 gap-3">
+                   <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                     <Clock className="w-4 h-4 text-emerald-500" />
+                     <span className="text-[11px] font-medium">Session: {event.year || 'Latest'}</span>
+                   </div>
+                   <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                     <MapPin className="w-4 h-4 text-emerald-500" />
+                     <span className="text-[11px] font-medium">Online/Live</span>
+                   </div>
                  </div>
               </div>
 
               <div className="mt-auto pt-6 border-t border-gray-50 grid grid-cols-2 gap-4">
                 <Link 
                   href={`/workshops/${event.slug}`} 
-                  className="px-4 py-2.5 rounded-xl bg-gray-50 text-gray-700 font-bold text-sm text-center hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5"
+                  className="px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-700 font-bold text-sm text-center hover:bg-gray-50 transition-all flex items-center justify-center gap-1.5"
                 > 
                   Details
-                  <ArrowUpRight className="w-3 h-3" />
+                  <ArrowUpRight className="w-4 h-4" />
                 </Link>
                 <Link 
                   href={event.registerLink} 
                   target="_blank"
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm text-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30"
+                  className="px-4 py-3 rounded-2xl bg-blue-600 text-white font-bold text-sm text-center hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 flex items-center justify-center"
                 >
                   Register
                 </Link>

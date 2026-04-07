@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import NextImage from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { LayoutDashboard } from 'lucide-react';
 
 interface NavItem {
     label: string;
@@ -56,7 +57,23 @@ export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [mobileExpanded, setMobileExpanded] = useState<Record<string, boolean>>({});
+    const [userRole, setUserRole] = useState<string | null>(null);
     const pathname = usePathname();
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const res = await fetch('/api/auth/login');
+                const data = await res.json();
+                if (data.authenticated) {
+                    setUserRole(data.role);
+                }
+            } catch (err) {
+                console.error('Auth check failed', err);
+            }
+        };
+        checkAuth();
+    }, [pathname]);
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -204,6 +221,8 @@ export default function Navbar() {
         );
     };
 
+    if (pathname.startsWith('/dashboard')) return null;
+
     return (
         <>
             {/* Modern Glassmorphism Navbar */}
@@ -249,6 +268,30 @@ export default function Navbar() {
 
                         {/* Right Actions */}
                         <div className="hidden md:flex items-center gap-3">
+                            {userRole ? (
+                                <Link
+                                    href="/dashboard"
+                                    className="
+                                        flex items-center gap-2 px-6 py-2.5 rounded-xl
+                                        bg-slate-100 text-slate-700 text-sm font-bold 
+                                        hover:bg-blue-50 hover:text-blue-600 transition-all duration-300
+                                        border border-slate-200 hover:border-blue-200
+                                    "
+                                >
+                                    <LayoutDashboard size={18} />
+                                    Dashboard
+                                </Link>
+                            ) : (
+                                <Link
+                                    href="/dashboard/login"
+                                    className="
+                                        flex items-center gap-2 px-6 py-2.5 rounded-xl
+                                        text-slate-600 text-sm font-bold hover:text-blue-600 transition-all
+                                    "
+                                >
+                                    Sign In
+                                </Link>
+                            )}
                             <Link
                                 href="/contact-us"
                                 className="
@@ -309,7 +352,25 @@ export default function Navbar() {
                         ))}
                     </div>
 
-                    <div className="pt-6 mt-6 border-t border-slate-200">
+                    <div className="pt-6 mt-6 border-t border-slate-200 flex flex-col gap-3">
+                        {userRole ? (
+                            <Link
+                                href="/dashboard"
+                                onClick={() => setIsOpen(false)}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-slate-700 font-bold bg-slate-100 border border-slate-200 active:scale-95 transition-all"
+                            >
+                                <LayoutDashboard size={20} />
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <Link
+                                href="/dashboard/login"
+                                onClick={() => setIsOpen(false)}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-slate-700 font-bold bg-slate-100 border border-slate-200 active:scale-95 transition-all"
+                            >
+                                Sign In
+                            </Link>
+                        )}
                         <Link
                             href="/contact-us"
                             onClick={() => setIsOpen(false)}

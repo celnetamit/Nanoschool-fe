@@ -806,3 +806,62 @@ export async function getStoreProduct(slug: string): Promise<StoreProduct | null
     return null;
   }
 }
+
+export async function getFormEntries(formId: number): Promise<any[]> {
+  const WP_USER = process.env.WP_USER;
+  const WP_PASSWORD = process.env.WP_PASSWORD;
+  
+  if (!WP_USER || !WP_PASSWORD) {
+    console.error('Missing WP credentials for Formidable API');
+    return [];
+  }
+
+  const baseUrl = process.env.WP_INTERNAL_URL || 'https://nanoschool.in/wp-json/wp/v2';
+  const frmBaseUrl = baseUrl.replace('/wp/v2', '/frm/v2');
+  const url = `${frmBaseUrl}/entries?form_id=${formId}&page_size=500`;
+
+  const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json'
+      },
+      next: { revalidate: 300 } // Cache for 5 minutes
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Failed to fetch Formidable entries: ${response.status}`, errorText);
+        return [];
+    }
+    
+    const data = await response.json();
+    
+    // CRITICAL FIX: Formidable API v2 returns an OBJECT with entry IDs as keys (e.g., {"123": {...}, "124": {...}})
+    // We must convert this into a clean array of entry objects for the frontend.
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+        return Object.values(data);
+    }
+    
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching Formidable entries:', error);
+    return [];
+  }
+}
+
+export async function getEnrollmentsByEmail(email: string): Promise<any[]> {
+  const entries = await getFormEntries(673);
+  
+  // CRITICAL FIX: Formidable API returns machine-generated keys in the 'meta' object.
+  // 7yfjv corresponds to the 'email' input (Field ID: 9793).
+  return entries.filter((entry: any) => {
+    const meta = entry.meta || entry.item_meta;
+    if (!meta) return false;
+    const entryEmail = meta['7yfjv'] || meta['9793'];
+    return entryEmail?.toLowerCase() === email.toLowerCase();
+  });
+}

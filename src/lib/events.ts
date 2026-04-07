@@ -11,6 +11,7 @@ export interface UpcomingEvent {
   image?: string;
   date?: string;
   startDate?: Date | null;
+  endDate?: Date | null;
   slug?: string;
 }
 
@@ -30,11 +31,8 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
   try {
     const authString = Buffer.from(`${user}:${pass}`).toString('base64');
     
-    // API-side filtering for efficiency (Field 5715=Category, 4422=Status)
-    // Order by ID DESC to get the most recent entries first across all entries
+    // API-side filtering: Get 'Biotechnology' events marked for 'Show'
     const fetchUrl = `${url}&5715=Biotechnology&4422=Show&page_size=200&order_by=id&order=DESC`;
-
-    console.log(`Upcoming Events Fetch URL: ${fetchUrl}`);
 
     const response = await fetchWithTimeout(fetchUrl, {
       timeoutMs: 40000,
@@ -46,7 +44,6 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
     });
 
     if (!response.ok) {
-      console.error(`Failed to fetch upcoming events: ${response.status} ${response.statusText}`);
       return [];
     }
 
@@ -56,90 +53,82 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const results = entriesArray
-      .map((entry: any) => {
-        const meta = entry.meta || {};
-        const startDateStr = meta['1rme4']; 
-        let startDate: Date | null = null;
-        
-        if (startDateStr && typeof startDateStr === 'string' && startDateStr.trim() !== '') {
-          const parts = startDateStr.split('/');
-          if (parts.length === 3) {
-            const m = parseInt(parts[0], 10);
-            const d = parseInt(parts[1], 10);
-            const y = parseInt(parts[2], 10);
-            const fullYearNum = y < 100 ? 2000 + y : y;
-            const parsed = new Date(fullYearNum, m - 1, d);
-            if (!isNaN(parsed.getTime())) startDate = parsed;
-          } else {
-            const parsed = new Date(startDateStr);
-            if (!isNaN(parsed.getTime())) startDate = parsed;
-          }
-        }
+    const allEvents = entriesArray.map((entry: any) => {
+      const meta = entry.meta || {};
+      
+      const parseDate = (val: any): Date | null => {
+        if (!val) return null;
+        let str = Array.isArray(val) ? val[0] : String(val).trim();
+        if (!str || str === 'null' || str === 'undefined') return null;
 
-        const detailsLink = meta['z976q'] || '#';
-        let slug = '';
-        if (detailsLink && detailsLink !== '#') {
-          try {
-            const urlObj = new URL(detailsLink);
-            const pathParts = urlObj.pathname.split('/').filter((p: string) => p !== '');
-            slug = pathParts[pathParts.length - 1] || '';
-          } catch (e) {
-            const parts = detailsLink.split('/').filter((p: string) => p !== '');
-            slug = parts[parts.length - 1] || '';
-          }
+        const parts = str.split('/');
+        if (parts.length === 3) {
+          const m = parseInt(parts[0], 10);
+          const d = parseInt(parts[1], 10);
+          const y = parseInt(parts[2], 10);
+          const fullYearNum = y < 100 ? 2000 + y : y;
+          const parsed = new Date(fullYearNum, m - 1, d);
+          return isNaN(parsed.getTime()) ? null : parsed;
         }
+        const parsed = new Date(str);
+        return isNaN(parsed.getTime()) ? null : parsed;
+      };
 
-        const title = (meta['w1zd'] || 'New Program').toString().trim();
-        
-        // Fallback: Generate slug from title if extraction failed or is too generic
-        // Generic slugs like "workshop" lead to 404s
-        const genericSlugs = ['', 'biotechnology', 'nanoschool.in', 'workshop', 'workshops'];
-        if (!slug || genericSlugs.includes(slug.toLowerCase()) || slug.includes('?')) {
-          slug = title.toLowerCase()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/[\s_-]+/g, '-')
-            .replace(/^-+|-+$/g, '');
-        }
+      const startDate = parseDate(meta['1rme4']);
+      const endDate = parseDate(meta['9p93w']);
 
-        return {
-          id: entry.id,
-          title,
-          category: (meta['b3bbg'] || 'Biotechnology').toString(),
-          year: (meta['wt1je'] || '').toString(),
-          status: (meta['9f4wv'] || 'Show').toString(),
-          detailsLink,
-          registerLink: meta['5sfzh'] || '#',
-          image: meta['j8ch6'] || '',
-          startDate,
-          slug
-        };
-      })
-      .filter((event: any) => {
-        // Strictly show events with a confirmed future/today start date
-        if (event.startDate) {
-          return event.startDate >= today;
+      const detailsLink = meta['z976q'] || '#';
+      let slug = '';
+      if (detailsLink && detailsLink !== '#') {
+        try {
+          const urlObj = new URL(detailsLink);
+          const pathParts = urlObj.pathname.split('/').filter((p: string) => p !== '');
+          slug = pathParts[pathParts.length - 1] || '';
+        } catch (e) {
+          const parts = detailsLink.split('/').filter((p: string) => p !== '');
+          slug = parts[parts.length - 1] || '';
         }
-        
-        // Fallback: Only include events without a date IF they are from the CURRENT year (2026)
-        // This avoids showing "random" data from past 2025 sessions
-        return event.year === '26' || event.year === '2026';
+      }
+
+      const title = (meta['w1zd'] || 'New Program').toString().trim();
+      
+      const genericSlugs = ['', 'biotechnology', 'nanoschool.in', 'workshop', 'workshops'];
+      if (!slug || genericSlugs.includes(slug.toLowerCase()) || slug.includes('?')) {
+        slug = title.toLowerCase()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/[\s_-]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      }
+
+      return {
+        id: entry.id,
+        title,
+        category: (meta['b3bbg'] || 'Biotechnology').toString(),
+        year: (meta['wt1je'] || '').toString(),
+        status: (meta['9f4wv'] || 'Show').toString(),
+        detailsLink,
+        registerLink: meta['5sfzh'] || '#',
+        image: meta['j8ch6'] || '',
+        startDate,
+        endDate,
+        slug
+      } as UpcomingEvent;
+    });
+
+    // STRICT FILTERING: Only show upcoming (on or after today)
+    // Also include events with NO date if they are from the 2026 session (placeholder upcoming)
+    return allEvents
+      .filter(e => {
+        if (e.startDate) return e.startDate >= today;
+        return e.year === '26' || e.year === '2026'; // Session-based upcoming if date is TBD
       })
       .sort((a, b) => {
-        // Sort by date (ascending) so the closest event is first
-        if (a.startDate && b.startDate) {
-          return a.startDate.getTime() - b.startDate.getTime();
-        }
-        // If one has no date, push it to the end
+        if (a.startDate && b.startDate) return a.startDate.getTime() - b.startDate.getTime();
         if (a.startDate) return -1;
         if (b.startDate) return 1;
-        // Final fallback: ID DESC for non-dated ones
         return Number(b.id) - Number(a.id);
       })
       .slice(0, 6);
-
-    console.log(`Upcoming Events Debug: Fetched ${entriesArray.length}, Filtered ${results.length}`);
-    return results;
       
   } catch (error) {
     console.error('Error fetching upcoming events:', error);
