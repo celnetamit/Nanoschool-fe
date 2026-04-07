@@ -91,8 +91,11 @@ export async function getUpcomingEvents(): Promise<UpcomingEvent[]> {
         }
 
         const title = (meta['w1zd'] || 'New Program').toString().trim();
-        // Fallback: Generate slug from title if extraction failed
-        if (!slug || slug === 'biotechnology' || slug === 'nanoschool.in' || slug.includes('?')) {
+        
+        // Fallback: Generate slug from title if extraction failed or is too generic
+        // Generic slugs like "workshop" lead to 404s
+        const genericSlugs = ['', 'biotechnology', 'nanoschool.in', 'workshop', 'workshops'];
+        if (!slug || genericSlugs.includes(slug.toLowerCase()) || slug.includes('?')) {
           slug = title.toLowerCase()
             .replace(/[^\w\s-]/g, '')
             .replace(/[\s_-]+/g, '-')

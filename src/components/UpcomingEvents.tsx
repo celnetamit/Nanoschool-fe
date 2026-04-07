@@ -55,13 +55,13 @@ export default function UpcomingEvents({ events }: UpcomingEventsProps) {
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {events.map((event, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {events.map((event) => (
             <div 
               key={event.id} 
               className="group relative bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden flex flex-col h-full"
             >
-              {/* Image / Header Placeholder */}
+              {/* Image / Header */}
               <div className="relative h-48 mb-6 rounded-2xl overflow-hidden bg-gray-100">
                 {event.image ? (
                   <img 
@@ -99,12 +99,11 @@ export default function UpcomingEvents({ events }: UpcomingEventsProps) {
 
               <div className="mt-auto pt-6 border-t border-gray-50 grid grid-cols-2 gap-4">
                 <Link 
-                  href={event.slug ? `/workshops/${event.slug}` : event.detailsLink} 
-                  target={event.slug ? "_self" : "_blank"}
+                  href={`/workshops/${event.slug}`} 
                   className="px-4 py-2.5 rounded-xl bg-gray-50 text-gray-700 font-bold text-sm text-center hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5"
                 > 
                   Details
-                  <ExternalLink className="w-3 h-3" />
+                  <ArrowUpRight className="w-3 h-3" />
                 </Link>
                 <Link 
                   href={event.registerLink} 

@@ -392,9 +392,32 @@ export const getPostBySlug = cache(async function (type: string, slug: string): 
   })();
 
   // 3. Execute in parallel
-  const [wc, wpPost] = await Promise.all([wcPromise, wpPromise]);
+  let [wc, wpPost] = await Promise.all([wcPromise, wpPromise]);
 
-  // 4. Merge results (Prioritize WooCommerce for pricing/e-commerce meta)
+  // 4. IMPROVED FALLBACK: If not found by slug, search by "near-match" or title search
+  // This helps when the requested slug is slightly off (e.g., missing a -2 or -3 suffix)
+  if (!wc && !wpPost && ['workshops', 'courses', 'programs'].includes(type)) {
+    try {
+      let restBase = 'posts';
+      if (type === 'courses') restBase = 'product';
+      else if (type === 'programs') restBase = 'program';
+
+      // Replace hyphens with spaces for a better title-based search result
+      const searchTerms = slug.replace(/-/g, ' ');
+      const searchResponse = await fetchWP(`${BASE_URL}/${restBase}?search=${encodeURIComponent(searchTerms)}&per_page=1&_embed`);
+      
+      if (searchResponse.ok) {
+        const searchResults = await searchResponse.json();
+        if (searchResults && searchResults.length > 0) {
+          wpPost = searchResults[0];
+        }
+      }
+    } catch (err) {
+      console.error(`[WP Resolver] Fallback search failed for ${slug}:`, err);
+    }
+  }
+
+  // 5. Merge results (Prioritize WooCommerce for pricing/e-commerce meta)
   if (wc) {
     // Extract INR prices
     const inrRegularField = wc.meta_data.find((m: any) => m.key === '_regular_price_wmcp');
