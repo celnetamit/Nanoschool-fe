@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y curl wget && rm -rf /var/lib/apt/lists/
 
 # Install project dependencies
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Stage 2: Builder
 FROM node:22-bullseye AS builder
