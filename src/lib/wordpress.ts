@@ -138,7 +138,6 @@ async function fetchAllItems<T>(endpoint: string): Promise<T[]> {
   return allItems.map((item: any) => ({
     ...item,
     content: undefined, // Strip huge fields for catalog listings
-    excerpt: undefined
   }));
 }
 

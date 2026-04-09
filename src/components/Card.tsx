@@ -15,7 +15,9 @@ export default function Card({ post, type, listView = false }: CardProps) {
     const imageUrl = embeddedMedia?.source_url || '/images/course-card-bg.svg'; // Using local fallback
 
 
-    const sanitizedExcerpt = sanitizeWPContent(post.excerpt.rendered, true);
+    const sanitizedExcerpt = post.excerpt?.rendered 
+        ? sanitizeWPContent(post.excerpt.rendered, true) 
+        : "No description available.";
 
     if (listView) {
         return (
@@ -24,7 +26,7 @@ export default function Card({ post, type, listView = false }: CardProps) {
                     <Link href={`/${type}/${post.slug}`} className="block w-full h-full">
                         <Image
                             src={imageUrl}
-                            alt={post.title.rendered || 'Course Image'}
+                            alt={post.title?.rendered || 'Course Image'}
                             fill
                             className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                             sizes="(max-width: 768px) 100vw, 300px"
@@ -47,7 +49,7 @@ export default function Card({ post, type, listView = false }: CardProps) {
                         <Link href={`/${type}/${post.slug}`}>
                             <h3
                                 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 leading-tight group-hover:text-blue-600 transition-colors"
-                                dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+                                dangerouslySetInnerHTML={{ __html: post.title?.rendered || 'Untitled' }}
                             />
                         </Link>
                         <div className="text-gray-600 text-sm mb-4 line-clamp-2 md:line-clamp-3 leading-relaxed">
@@ -75,7 +77,7 @@ export default function Card({ post, type, listView = false }: CardProps) {
                     <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/10 transition-colors z-10"></div>
                     <Image
                         src={imageUrl}
-                        alt={post.title.rendered || 'Course Image'}
+                        alt={post.title?.rendered || 'Course Image'}
                         fill
                         className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -116,7 +118,7 @@ export default function Card({ post, type, listView = false }: CardProps) {
                 </div>
                 <h3
                     className="text-xl font-bold text-gray-900 mb-3 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2"
-                    dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+                    dangerouslySetInnerHTML={{ __html: post.title?.rendered || 'Untitled' }}
                 />
                 <div className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
                     {sanitizedExcerpt}
