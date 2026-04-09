@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -15,39 +16,40 @@ import {
   Bell,
   PieChart,
   Calendar,
-  Home
+  Home,
+  CreditCard,
+  Package,
+  Award
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   role: 'admin' | 'user';
   userEmail: string;
+  userName?: string;
+  userImage?: string;
 }
 
-export default function DashboardLayout({ children, role, userEmail }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, role, userEmail, userName, userImage }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
 
   const handleLogout = async () => {
-    await fetch('/api/auth/login', { method: 'DELETE' });
-    router.push('/dashboard/login');
-    router.refresh();
+    await signOut({ callbackUrl: '/dashboard/login' });
   };
 
   const menuItems = role === 'admin' ? [
     { icon: <Home size={20} />, label: 'Home', href: '/' },
     { icon: <PieChart size={20} />, label: 'Overview', href: '/dashboard' },
+    { icon: <CreditCard size={20} />, label: 'Payments', href: '/dashboard/payments' },
     { icon: <Users size={20} />, label: 'Registrations', href: '/dashboard/registrations' },
-    { icon: <BookOpen size={20} />, label: 'Courses', href: '/course' },
-    { icon: <Calendar size={20} />, label: 'Workshops', href: '/workshops' },
-    { icon: <Settings size={20} />, label: 'Settings', href: '/dashboard/settings' },
+    { icon: <Package size={20} />, label: 'All Products', href: '/dashboard/products' },
   ] : [
     { icon: <Home size={20} />, label: 'Home', href: '/' },
     { icon: <LayoutDashboard size={20} />, label: 'My Dashboard', href: '/dashboard' },
-    { icon: <BookOpen size={20} />, label: 'My Courses', href: '/dashboard/courses' },
-    { icon: <Calendar size={20} />, label: 'My Workshops', href: '/dashboard/workshops' },
-    { icon: <Settings size={20} />, label: 'Profile', href: '/dashboard/profile' },
+    { icon: <Package size={20} />, label: 'My Products', href: '/dashboard/products' },
+    { icon: <Award size={20} />, label: 'Certifications', href: '/dashboard/certificates' },
   ];
 
   return (
@@ -119,21 +121,21 @@ export default function DashboardLayout({ children, role, userEmail }: Dashboard
                 p-5 rounded-[2rem] bg-gradient-to-br from-white/[0.05] to-transparent border border-white/5 backdrop-blur-md transition-all duration-700 hover:border-white/10 hover:shadow-2xl hover:shadow-black/20
                 ${!isSidebarOpen && 'lg:scale-0 lg:h-0 lg:p-0 opacity-0 overflow-hidden'}
             `}>
-                <div className="flex items-center gap-4 mb-4">
+                <Link href="/dashboard/profile" className="flex items-center gap-4 mb-4 group/card">
                     <div className="relative group/avatar">
                         <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl blur-md opacity-20 group-hover/avatar:opacity-40 transition-opacity"></div>
-                        <div className="relative w-12 h-12 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center font-black text-blue-400 text-lg shadow-xl">
+                        <div className="relative w-12 h-12 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center font-black text-blue-400 text-lg shadow-xl group-hover/card:scale-105 transition-transform">
                             {userEmail.charAt(0).toUpperCase()}
                         </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-xs font-black text-white truncate leading-tight tracking-tight">{userEmail.split('@')[0]}</p>
+                        <p className="text-xs font-black text-white truncate leading-tight tracking-tight group-hover/card:text-blue-400 transition-colors">{userEmail.split('@')[0]}</p>
                         <div className="flex items-center gap-2">
                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
                              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{role}</p>
                         </div>
                     </div>
-                </div>
+                </Link>
                 <div className="h-px w-full bg-white/5 mb-4"></div>
                 <button 
                   onClick={handleLogout} 
@@ -146,9 +148,9 @@ export default function DashboardLayout({ children, role, userEmail }: Dashboard
             
             {!isSidebarOpen && (
                 <div className="space-y-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-blue-400 mx-auto">
+                    <Link href="/dashboard/profile" className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-blue-400 mx-auto hover:bg-white/10 transition-colors">
                         {userEmail.charAt(0).toUpperCase()}
-                    </div>
+                    </Link>
                     <button
                         onClick={handleLogout}
                         className="w-12 h-12 flex items-center justify-center rounded-2xl text-rose-500 hover:bg-rose-500 hover:text-white transition-all duration-300 mx-auto group shadow-lg"
@@ -205,15 +207,21 @@ export default function DashboardLayout({ children, role, userEmail }: Dashboard
              
              <div className="flex items-center gap-4 pl-2 pl-4">
                 <div className="hidden text-right lg:block">
-                    <p className="text-sm font-black text-slate-950 leading-tight">Amit Rai</p>
+                    <p className="text-sm font-black text-slate-950 leading-tight">{userName || userEmail.split('@')[0]}</p>
                     <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center justify-end gap-1.5">
                        <span className="w-1 h-1 bg-blue-600 rounded-full animate-pulse"></span>
-                       Academy CEO
+                       {role === 'admin' ? 'Academy Admin' : 'Academy Student'}
                     </p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-slate-950 shadow-[0_15px_30px_rgba(0,0,0,0.15)] flex items-center justify-center font-black text-white text-xl relative group overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/30 to-indigo-600/30 group-hover:opacity-100 opacity-0 transition-opacity"></div>
-                    <span className="relative z-10">{userEmail.substring(0, 1).toUpperCase()}</span>
+                    {userImage ? (
+                        <img src={userImage} alt={userName} className="w-full h-full object-cover" />
+                    ) : (
+                        <>
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/30 to-indigo-600/30 group-hover:opacity-100 opacity-0 transition-opacity"></div>
+                            <span className="relative z-10">{userEmail.substring(0, 1).toUpperCase()}</span>
+                        </>
+                    )}
                 </div>
              </div>
           </div>

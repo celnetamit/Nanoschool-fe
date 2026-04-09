@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getFormEntries } from '@/lib/wordpress';
-import { cookies } from 'next/headers';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const role = cookieStore.get('ns_role')?.value;
-  const user = cookieStore.get('ns_user')?.value;
+  const session = await getServerSession(authOptions);
 
-  if (!role || !user) {
+  if (!session || !session.user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
   }
+
+  const role = (session.user as any).role;
+  const user = session.user.email!;
 
   try {
     const entries = await getFormEntries(673);

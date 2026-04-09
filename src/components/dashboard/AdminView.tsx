@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { 
   Users, 
   CreditCard, 
@@ -23,6 +24,11 @@ interface Stats {
 export default function AdminView() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     fetch('/api/dashboard/stats')
@@ -109,17 +115,19 @@ export default function AdminView() {
           positive={true}
           color="blue"
         />
-        <StatCard 
-          icon={<CheckCircle2 size={24} />} 
-          label="Verified Payments" 
-          value={stats.paid} 
-          subValue={`${stats.total > 0 ? Math.round((stats.paid/stats.total)*100) : 0}% Yield Success`}
-          color="emerald"
-        />
+        <Link href="/dashboard/payments" className="contents">
+          <StatCard 
+            icon={<CheckCircle2 size={24} />} 
+            label="Verified Payments" 
+            value={stats.paid} 
+            subValue={`${stats.total > 0 ? Math.round((stats.paid/stats.total)*100) : 0}% Yield Success`}
+            color="emerald"
+          />
+        </Link>
         <StatCard 
           icon={<CreditCard size={24} />} 
           label="Gross Revenue" 
-          value={`₹${stats.revenue.toLocaleString()}`} 
+          value={mounted ? `₹${stats.revenue.toLocaleString()}` : '₹...'} 
           trend="+9.5%" 
           positive={true}
           color="indigo"
@@ -127,7 +135,7 @@ export default function AdminView() {
         <StatCard 
           icon={<ArrowUpRight size={24} />} 
           label="Average Ticket" 
-          value={`₹${stats.paid > 0 ? Math.round(stats.revenue/stats.paid).toLocaleString() : 0}`} 
+          value={mounted ? `₹${stats.paid > 0 ? Math.round(stats.revenue/stats.paid).toLocaleString() : 0}` : '₹...'} 
           subValue="Per successful conversion"
           color="amber"
         />
@@ -191,7 +199,7 @@ export default function AdminView() {
                       </div>
                     </td>
                     <td className="px-10 py-7 text-right">
-                      <span className="font-black text-slate-950 text-lg tracking-[ -0.05em]">₹{entry.amount.toLocaleString()}</span>
+                      <span className="font-black text-slate-950 text-xl tracking-[ -0.05em]">₹{mounted ? entry.amount.toLocaleString() : '...'}</span>
                     </td>
                   </tr>
                 ))}
@@ -224,7 +232,7 @@ export default function AdminView() {
                 </p>
                 <div className="mt-auto space-y-4">
                     <div className="flex justify-between items-end">
-                        <span className="text-4xl font-black tracking-tighter">₹4.8M</span>
+                        <span className="text-4xl font-black tracking-tighter">{mounted ? '₹4.8M' : '₹...'}</span>
                         <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1.5">Idx Opt 88.4%</span>
                     </div>
                     <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden p-1 border border-white/5 shadow-inner">
@@ -287,10 +295,10 @@ function StatCard({ icon, label, value, trend, positive, subValue, color }: any)
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">{label}</p>
         {subValue && (
             <div className="mt-6 pt-6 border-t border-slate-50/80">
-                <p className="text-[11px] font-black text-slate-500 tracking-tight flex items-center gap-2">
+                <div className="text-[11px] font-black text-slate-500 tracking-tight flex items-center gap-2">
                    <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
                    {subValue}
-                </p>
+                </div>
             </div>
         )}
       </div>

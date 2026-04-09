@@ -54,7 +54,7 @@ export interface Category {
 }
 
 // Helper function for consistent fetching
-async function fetchWP(url: string, useAuth: boolean = false): Promise<Response> {
+async function fetchWP(url: string, useAuth: boolean = false, cacheRedirect: RequestCache | 'no-store' = 'default'): Promise<Response> {
   const WP_USER = process.env.WP_USER;
   const WP_PASSWORD = process.env.WP_PASSWORD;
   const headers: Record<string, string> = {
@@ -69,10 +69,19 @@ async function fetchWP(url: string, useAuth: boolean = false): Promise<Response>
   }
 
   try {
+    const fetchOptions: RequestInit = {
+      headers,
+      next: { revalidate: 3600 }, // 1 hour cache by default
+    };
+
+    if (cacheRedirect === 'no-store') {
+        fetchOptions.cache = 'no-store';
+        delete fetchOptions.next;
+    }
+
     const response = await fetchWithTimeout(url, {
       timeoutMs: 30000, // 30s timeout for WP Content
-      next: { revalidate: 3600 }, // 1 hour cache
-      headers
+      ...fetchOptions
     });
 
     if (!response.ok) {
@@ -126,7 +135,11 @@ async function fetchAllItems<T>(endpoint: string): Promise<T[]> {
     });
   }
 
-  return allItems;
+  return allItems.map((item: any) => ({
+    ...item,
+    content: undefined, // Strip huge fields for catalog listings
+    excerpt: undefined
+  }));
 }
 
 export async function getCourses(): Promise<WordPressPost[]> {
@@ -147,7 +160,9 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
     url += `&categories=5088,5059,5085`;
   }
 
-  const response = await fetchWP(url);
+  // Use 'no-store' for large admin catalog requests to prevent cache overflow
+  const cacheMode = (perPage >= 100) ? 'no-store' : 'default';
+  const response = await fetchWP(url, false, cacheMode);
 
   if (!response.ok) {
     console.error(`Failed to fetch workshops: ${response.status}`);
@@ -864,4 +879,48 @@ export async function getEnrollmentsByEmail(email: string): Promise<any[]> {
     const entryEmail = meta['7yfjv'] || meta['9793'];
     return entryEmail?.toLowerCase() === email.toLowerCase();
   });
+}
+
+export async function searchNanoSchool(query: string) {
+  const perPage = 5;
+  
+  // 1. Search Courses
+  const coursesPromise = fetchWP(`${BASE_URL}/product?search=${encodeURIComponent(query)}&per_page=${perPage}&_embed`)
+    .then(res => res.ok ? res.json() : []);
+
+  // 2. Search Workshops
+  const workshopsPromise = fetchWP(`${BASE_URL}/posts?search=${encodeURIComponent(query)}&categories=5088,5059,5085&per_page=${perPage}&_embed`)
+    .then(res => res.ok ? res.json() : []);
+
+  // 3. Search Programs
+  const programsPromise = fetchWP(`${BASE_URL}/program?search=${encodeURIComponent(query)}&per_page=${perPage}&_embed`)
+    .then(res => res.ok ? res.json() : []);
+
+  const [courses, workshops, programs] = await Promise.all([coursesPromise, workshopsPromise, programsPromise]);
+
+  const results = [
+    ...courses.map((p: any) => ({ 
+      type: 'course', 
+      title: p.title?.rendered || 'Untitled Course', 
+      slug: p.slug, 
+      link: `/course/${p.slug}`,
+      description: p.excerpt?.rendered?.replace(/<[^>]*>?/gm, '').slice(0, 150) + '...'
+    })),
+    ...workshops.map((p: any) => ({ 
+      type: 'workshop', 
+      title: p.title?.rendered || 'Untitled Workshop', 
+      slug: p.slug, 
+      link: `/workshops/${p.slug}`,
+      description: p.excerpt?.rendered?.replace(/<[^>]*>?/gm, '').slice(0, 150) + '...'
+    })),
+    ...programs.map((p: any) => ({ 
+      type: 'program', 
+      title: p.title?.rendered || 'Untitled Program', 
+      slug: p.slug, 
+      link: `/programs/${p.slug}`,
+      description: p.excerpt?.rendered?.replace(/<[^>]*>?/gm, '').slice(0, 150) + '...'
+    }))
+  ];
+
+  return results;
 }

@@ -12,7 +12,7 @@ interface CardProps {
 export default function Card({ post, type, listView = false }: CardProps) {
     // Extract media from _embedded (fetched via &embed) to prevent N+1 API calls
     const embeddedMedia = post._embedded?.['wp:featuredmedia']?.[0];
-    const imageUrl = embeddedMedia?.source_url || 'https://via.placeholder.com/600x400?text=NanoSchool';
+    const imageUrl = embeddedMedia?.source_url || '/images/course-card-bg.svg'; // Using local fallback
 
 
     const sanitizedExcerpt = sanitizeWPContent(post.excerpt.rendered, true);

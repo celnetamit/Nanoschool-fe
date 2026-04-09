@@ -36,6 +36,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'commons.wikimedia.org',
       },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
     ],
   },
   staticPageGenerationTimeout: 120, // Increase timeout for slow WP API calls

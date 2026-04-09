@@ -23,6 +23,11 @@ interface Enrollment {
 export default function UserView({ userEmail }: { userEmail: string }) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     fetch('/api/dashboard/stats')
@@ -131,7 +136,7 @@ export default function UserView({ userEmail }: { userEmail: string }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {enrollments.length > 0 ? (
             enrollments.map((course, idx) => (
-              <CourseCard key={idx} course={course} />
+              <CourseCard key={idx} course={course} mounted={mounted} />
             ))
           ) : (
             <div className="col-span-full bg-white/80 backdrop-blur-sm border-2 border-dashed border-slate-200 rounded-[3rem] p-24 text-center group cursor-pointer hover:border-blue-200 transition-all">
@@ -190,7 +195,7 @@ export default function UserView({ userEmail }: { userEmail: string }) {
   );
 }
 
-function CourseCard({ course }: { course: Enrollment }) {
+function CourseCard({ course, mounted }: { course: Enrollment, mounted: boolean }) {
   return (
     <div className="bg-white/90 backdrop-blur-md rounded-[3rem] border border-slate-200/50 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] hover:shadow-2xl hover:shadow-slate-200/40 transition-all duration-700 group cursor-pointer hover:-translate-y-2 relative overflow-hidden">
         {/* Decorative Internal Glow */}
@@ -207,7 +212,7 @@ function CourseCard({ course }: { course: Enrollment }) {
                         {course.status}
                     </span>
                     <span className="text-[10px] font-black text-slate-400 tracking-tighter italic opacity-60">
-                        {new Date(course.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {mounted ? new Date(course.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '...'}
                     </span>
                 </div>
             </div>

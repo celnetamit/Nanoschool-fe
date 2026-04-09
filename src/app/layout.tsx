@@ -4,6 +4,8 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import JsonLd from "@/components/JsonLd";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,6 +66,8 @@ export const metadata: Metadata = {
   },
 };
 
+import Chatbot from "@/components/common/Chatbot";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -104,11 +108,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen flex flex-col`}
       >
-        <Navbar />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <Footer />
+        <AuthProvider>
+          <Navbar />
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Footer />
+          <Chatbot />
+          <Toaster position="top-center" />
+        </AuthProvider>
       </body>
     </html>
   );
