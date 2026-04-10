@@ -48,6 +48,7 @@ export default function DashboardLayout({ children, role, userEmail, userName, u
   ] : [
     { icon: <Home size={20} />, label: 'Home', href: '/' },
     { icon: <LayoutDashboard size={20} />, label: 'My Dashboard', href: '/dashboard' },
+    { icon: <CreditCard size={20} />, label: 'My Payments', href: '/dashboard/payments' },
     { icon: <Package size={20} />, label: 'My Products', href: '/dashboard/products' },
     { icon: <Award size={20} />, label: 'Certifications', href: '/dashboard/certificates' },
   ];
