@@ -10,8 +10,7 @@ export async function POST(req: Request) {
     const { messages } = await req.json();
     const lastMessage = messages[messages.length - 1].content;
     const logId = Math.random().toString(36).substring(7);
-    const fs = await import('fs');
-    const log = (msg: string) => fs.appendFileSync('DEBUG_CHAT.log', `[${new Date().toISOString()}] [${logId}] ${msg}\n`);
+    const log = (msg: string) => console.log(`[CHAT_DEBUG] [${logId}] ${msg}`);
     
     log(`Starting request: ${lastMessage}`);
 
