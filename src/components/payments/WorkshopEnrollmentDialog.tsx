@@ -2,9 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, MapPin, CheckCircle, ChevronDown, Search } from 'lucide-react';
+import { X, User, MapPin, CheckCircle, LayoutDashboard, Globe, CheckCircle2, ChevronDown, Search, Lock } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { countries } from '@/data/countries';
+import { useAuthAction } from '@/hooks/useAuthAction';
+import LoginRequiredModal from '../auth/LoginRequiredModal';
+
+import { calculateGST, TaxBreakdown } from '@/lib/tax';
+import { getCurrencyForCountry, formatPrice, getCurrencyName, getUniqueCurrencies, getCurrencyFlag } from '@/lib/currency';
 
 declare global {
   interface Window {
@@ -33,7 +38,11 @@ interface WorkshopEnrollmentDialogProps {
     regular?: string;
     sale?: string;
   };
-  initialCurrency?: 'USD' | 'INR';
+  pricesUSD?: {
+    regular?: string;
+    sale?: string;
+  };
+  initialCurrency?: string;
   initialSelection?: string;
 }
 
@@ -47,6 +56,7 @@ export default function WorkshopEnrollmentDialog({
   itemType = 'workshops',
   priceUSD,
   pricesINR,
+  pricesUSD,
   initialCurrency = 'INR',
   initialSelection = '',
 }: WorkshopEnrollmentDialogProps) {
@@ -55,8 +65,17 @@ export default function WorkshopEnrollmentDialog({
   const [payableAmount, setPayableAmount] = useState(courseFee);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  // Unique sequential PID fetched from the server when the dialog opens
-  const [uniquePid, setUniquePid] = useState('Loading...');
+  const [taxDetails, setTaxDetails] = useState<TaxBreakdown>({
+    baseAmount: 0,
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+    totalTax: 0,
+    grandTotal: 0,
+    taxStatus: 'Inclusive',
+    description: 'GST Inclusive'
+  });
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -77,13 +96,35 @@ export default function WorkshopEnrollmentDialog({
     learningMode: '',
     termsAgreed: false,
   });
-  const [currency, setCurrency] = useState<'USD' | 'INR'>(initialCurrency); // Sync with initialSelection from page
+  const [currency, setCurrency] = useState<string>(initialCurrency); // Sync with initialSelection from page
+  const [currencySymbol, setCurrencySymbol] = useState(initialCurrency === 'INR' ? '₹' : '$');
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [uniqueCurrencies, setUniqueCurrencies] = useState<{ code: string; symbol: string; name: string }[]>([]);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
+
+  // Unique sequential PID fetched from the server when the dialog opens
+  const [uniquePid, setUniquePid] = useState('Loading...');
+
+  // Helper to parse price string to number
+  const parsePrice = (str: string) => {
+    if (!str) return 0;
+    const clean = str.replace(/[^0-9.]/g, '');
+    return parseFloat(clean) || 0;
+  };
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Update taxes whenever amount, country or state changes
+  useEffect(() => {
+    const amount = parsePrice(payableAmount);
+    if (amount > 0) {
+      const breakdown = calculateGST(amount, formData.country, formData.state);
+      setTaxDetails(breakdown);
+    }
+  }, [payableAmount, formData.country, formData.state]);
 
   // AGGRESSIVE STATE SYNC: Sync currency and selection whenever dialog opens
   useEffect(() => {
@@ -167,16 +208,30 @@ export default function WorkshopEnrollmentDialog({
           // Hard conversion fallback if no INR found
           const usdVal = parsePrice(baseFee);
           if (usdVal > 0) {
-            setPayableAmount(`₹${Math.round(usdVal * 84).toLocaleString()}`);
+            setPayableAmount(`₹${Math.round(usdVal * (exchangeRates['INR'] || 84)).toLocaleString()}`);
           }
         }
       }
-    } else {
+    } else if (currency === 'USD') {
       // USD mode
-      // Prioritize parsed USD fee from the profession matching
-      if (professionFeeUSD) {
+      // Case 1: Prioritize extracted USD price from WooCommerce meta
+      if (pricesUSD?.sale) {
+        const baseUSDVal = parseFloat(pricesUSD.sale);
+        if (itemType === 'courses' && selectedOption) {
+            let multiplier = 1;
+            if (selectedOption.includes('Live')) multiplier = 2.5;
+            else if (selectedOption.includes('Video')) multiplier = 1.5;
+            const calculated = Math.round(baseUSDVal * multiplier);
+            setPayableAmount(`$${calculated.toLocaleString()}`);
+        } else {
+            setPayableAmount(`$${baseUSDVal.toLocaleString()}`);
+        }
+      }
+      // Case 2: Prioritize parsed USD fee from the profession matching (for manual entries)
+      else if (professionFeeUSD) {
         setPayableAmount(professionFeeUSD);
-      } else if (priceUSD && !priceUSD.includes('₹') && !selectedOption) {
+      } 
+      else if (priceUSD && !priceUSD.includes('₹') && !selectedOption) {
          setPayableAmount(`$${parsePrice(priceUSD).toLocaleString() || priceUSD}`);
       } else {
         const usdMatch = baseFee.match(/\$\s?([0-9,]+)/);
@@ -186,14 +241,23 @@ export default function WorkshopEnrollmentDialog({
            // Fallback to conversion if it looks like INR, or just return original
            const val = parsePrice(baseFee);
            if (baseFee.includes('₹') && val > 0) {
-              setPayableAmount(`$${Math.round(val / 84).toLocaleString()}`);
+              setPayableAmount(`$${Math.round(val / (exchangeRates['INR'] || 84)).toLocaleString()}`);
            } else {
               setPayableAmount(baseFee);
            }
         }
       }
+    } else {
+      // Any other international currency
+      const usdVal = parsePrice(pricesUSD?.sale || (baseFee.includes('$') ? baseFee : '0'));
+      const fallbackUsdVal = usdVal || (baseFee.includes('₹') ? parsePrice(baseFee) / (exchangeRates['INR'] || 84) : parsePrice(baseFee));
+      
+      const rate = exchangeRates[currency] || 1;
+      const convertedAmount = Math.round(fallbackUsdVal * rate);
+      
+      setPayableAmount(formatPrice(convertedAmount, currency, currencySymbol));
     }
-  }, [currency, formData.profession, formData.learningMode, isOpen, priceUSD, pricesINR, professionFees, courseFee, itemType]);
+  }, [currency, currencySymbol, exchangeRates, formData.profession, formData.learningMode, isOpen, priceUSD, pricesINR, pricesUSD, professionFees, courseFee, itemType]);
 
   // Fetch the next sequential PID whenever the dialog opens
   useEffect(() => {
@@ -209,6 +273,18 @@ export default function WorkshopEnrollmentDialog({
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
     document.body.appendChild(script);
+
+    // Fetch exchange rates
+    fetch('/api/currency/rates')
+      .then(res => res.json())
+      .then(data => {
+        if (data.rates) setExchangeRates(data.rates);
+      })
+      .catch(err => console.error('Failed to fetch rates:', err));
+
+    // Fetch unique currencies
+    const currenciesList = getUniqueCurrencies();
+    setUniqueCurrencies(currenciesList);
 
     return () => {
       document.body.removeChild(script);
@@ -239,8 +315,52 @@ export default function WorkshopEnrollmentDialog({
       if (name === 'country') {
         if (value === 'India') {
           setCurrency('INR');
+          setCurrencySymbol('₹');
         } else {
-          setCurrency('USD');
+          // International country selected
+          if (formData.otherCurrency === 'yes') {
+            const selectedCountry = countries.find(c => c.name === value);
+            if (selectedCountry) {
+              const { code, symbol } = getCurrencyForCountry(selectedCountry.code);
+              setCurrency(code);
+              setCurrencySymbol(symbol);
+            }
+          } else {
+            // Default to USD for all other countries unless 'Other Currency' is 'Yes'
+            setCurrency('USD');
+            setCurrencySymbol('$');
+          }
+        }
+      }
+
+      // Handle Other Currency Toggle
+      if (name === 'otherCurrency') {
+        if (value === 'no') {
+          // Revert to country-based default rule
+          if (formData.country === 'India') {
+            setCurrency('INR');
+            setCurrencySymbol('₹');
+          } else {
+            setCurrency('USD');
+            setCurrencySymbol('$');
+          }
+        } else {
+          // Switching to 'yes' - try to use country's local currency
+          const selectedCountry = countries.find(c => c.name === formData.country);
+          if (selectedCountry) {
+            const { code, symbol } = getCurrencyForCountry(selectedCountry.code);
+            setCurrency(code);
+            setCurrencySymbol(symbol);
+          }
+        }
+      }
+
+      // Handle Manual Currency Selection
+      if (name === 'selectedCurrency') {
+        const selected = uniqueCurrencies.find(c => c.code === value);
+        if (selected) {
+          setCurrency(selected.code);
+          setCurrencySymbol(selected.symbol);
         }
       }
     }
@@ -274,7 +394,12 @@ export default function WorkshopEnrollmentDialog({
           itemType,
           category: itemType === 'courses' ? 'Course' : 'Workshop',
           currency,               // Added the selected currency
-          otherCurrency: currency === 'INR' ? 'yes' : 'no' // Map to legacy field if needed
+          currencySymbol,         // Added the selected currency symbol
+          payableFeeAmount: payableAmount, // Explicit field for IMS
+          taxStatus: taxDetails.taxStatus, // Added tax status
+          taxAmount: taxDetails.totalTax.toFixed(2), // Added tax amount
+          taxDescription: taxDetails.description, // Added tax description
+          otherCurrency: formData.otherCurrency === 'yes' ? 'yes' : 'no' 
         }),
       });
 
@@ -395,6 +520,15 @@ export default function WorkshopEnrollmentDialog({
     }
   };
 
+  const { performAction, showLoginModal, closeLoginModal, currentPath } = useAuthAction();
+
+  const handleProtectedSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    performAction(() => {
+        handleEnrollSubmit(e);
+    });
+  };
+
   if (!isOpen || !isMounted) return null;
 
   const dialogContent = (
@@ -425,7 +559,7 @@ export default function WorkshopEnrollmentDialog({
           </button>
         </div>
 
-        <form onSubmit={handleEnrollSubmit} className="p-8 space-y-8">
+        <form onSubmit={handleProtectedSubmit} className="p-8 space-y-8">
           
           {/* Workshop Info (Readonly) */}
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -654,7 +788,17 @@ export default function WorkshopEnrollmentDialog({
                               key={c.code}
                               onClick={() => {
                                 setFormData(prev => ({ ...prev, country: c.name }));
-                                setCurrency(c.name === 'India' ? 'INR' : 'USD');
+                                if (c.name === 'India') {
+                                  setCurrency('INR');
+                                  setCurrencySymbol('₹');
+                                } else if (formData.otherCurrency === 'yes') {
+                                  const { code, symbol } = getCurrencyForCountry(c.code);
+                                  setCurrency(code);
+                                  setCurrencySymbol(symbol);
+                                } else {
+                                  setCurrency('USD');
+                                  setCurrencySymbol('$');
+                                }
                                 setIsCountryDropdownOpen(false);
                                 setCountrySearch('');
                               }}
@@ -758,17 +902,118 @@ export default function WorkshopEnrollmentDialog({
                     </div>
                   )}
                 </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <label className="block text-sm font-bold text-slate-700">Other Currency</label>
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-medium mb-3">Do you want to pay Other than USD?</p>
+                  <div className="flex gap-4 mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="otherCurrency" 
+                        value="yes"
+                        checked={formData.otherCurrency === 'yes'}
+                        onChange={handleChange}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm font-medium">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="otherCurrency" 
+                        value="no"
+                        checked={formData.otherCurrency === 'no'}
+                        onChange={handleChange}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm font-medium">No</span>
+                    </label>
+                  </div>
+
+                  {formData.otherCurrency === 'yes' && (
+                    <div className="animate-in fade-in slide-in-from-top-2">
+                       <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Select Currency</label>
+                       <select 
+                         name="selectedCurrency"
+                         value={currency}
+                         onChange={handleChange}
+                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 transition-all font-medium"
+                       >
+                         {uniqueCurrencies.map(c => (
+                           <option key={c.code} value={c.code}>
+                             {c.name} ({c.symbol})
+                           </option>
+                         ))}
+                       </select>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-6">
+                {taxDetails.totalTax > 0 && (
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-4">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500 font-medium">Net Service Value:</span>
+                      <span className="text-slate-900 font-bold">₹{taxDetails.baseAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    {taxDetails.cgst > 0 ? (
+                      <>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-slate-500 font-medium">CGST (9%):</span>
+                          <span className="text-slate-900 font-bold">₹{taxDetails.cgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-slate-500 font-medium">SGST (9%):</span>
+                          <span className="text-slate-900 font-bold">₹{taxDetails.sgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500 font-medium">IGST (18%):</span>
+                        <span className="text-slate-900 font-bold">₹{taxDetails.igst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                    <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs font-black text-blue-600 uppercase tracking-widest">
+                      <span>Total Inclusive Tax:</span>
+                      <span>₹{taxDetails.totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                )}
+
+                {taxDetails.taxStatus === 'Exempt' && (
+                  <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100/50 shadow-sm flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                          <CheckCircle2 size={20} />
+                      </div>
+                      <div>
+                          <h4 className="text-sm font-black text-emerald-950 tracking-tight">Export Exemption Applied</h4>
+                          <p className="text-[10px] font-bold text-emerald-600/80 uppercase tracking-widest leading-none mt-1">International Registration (0% GST)</p>
+                      </div>
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Payable Amount</label>
-                  <input 
-                    type="text" 
-                    value={payableAmount} 
-                    readOnly 
-                    className="w-full px-4 py-3 bg-slate-900 border border-slate-900 rounded-xl text-white font-bold text-lg focus:outline-none shadow-inner"
-                  />
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
+                    Payable Amount {taxDetails.taxStatus === 'Exempt' ? '(Exempted)' : '(Inclusive of GST)'}
+                  </label>
+                  <div className="relative group">
+                    <input 
+                      type="text" 
+                      value={payableAmount} 
+                      readOnly 
+                      className={`w-full px-4 py-3 bg-slate-900 border border-slate-900 rounded-xl text-white font-bold text-lg focus:outline-none shadow-inner ${taxDetails.taxStatus === 'Exempt' ? 'ring-2 ring-emerald-500/20' : ''}`}
+                    />
+                    {taxDetails.taxStatus === 'Exempt' && (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+                         Tax Free
+                      </div>
+                    )}
+                  </div>
                   {Object.keys(professionFees).length > 0 && (
                     <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
                       <span>💡</span>
@@ -787,12 +1032,12 @@ export default function WorkshopEnrollmentDialog({
                   
                   <div className="mt-2 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-right-4">
                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm border border-blue-100">
-                      {currency === 'INR' ? '🇮🇳' : '🌎'}
+                      {getCurrencyFlag(currency)}
                     </div>
                     <div>
                       <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-0.5">Payment In</div>
                       <div className="font-black text-blue-900 text-lg leading-tight">
-                        {currency === 'INR' ? 'Indian Rupee (₹)' : 'US Dollar ($)'}
+                        {getCurrencyName(currency)} ({currencySymbol})
                       </div>
                       <p className="text-[10px] text-blue-500 font-medium leading-tight mt-1">
                         Selected based on country: <span className="underline decoration-blue-300">{formData.country || 'Not Selected'}</span>
@@ -923,9 +1168,17 @@ export default function WorkshopEnrollmentDialog({
           </button>
         </div>
       )}
+      </div>
+      
+      <LoginRequiredModal 
+        isOpen={showLoginModal} 
+        onClose={closeLoginModal} 
+        title="Account Required"
+        message="Please sign in to your NanoSchool account to complete your enrollment. This ensures your course progress and certificates are correctly linked to your profile."
+        callbackUrl={currentPath}
+      />
     </div>
-  </div>
-);
+  );
 
-return createPortal(dialogContent, document.body);
+  return isMounted ? createPortal(dialogContent, document.body) : null;
 }

@@ -2,8 +2,46 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, Send, X, Bot, User, Loader2, RotateCcw } from 'lucide-react';
+import { MessageCircle, Send, X, Bot, User, Loader2, RotateCcw, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import Link from 'next/link';
+import Image from 'next/image';
+
+interface MentorData {
+  id: string;
+  name: string;
+  image: string;
+  bio: string;
+}
+
+function MentorCard({ id, name, image, bio }: MentorData) {
+  return (
+    <div className="bg-white/40 backdrop-blur-md rounded-2xl border border-white/40 overflow-hidden shadow-sm hover:shadow-md transition-all group my-2 w-full max-w-full">
+      <div className="flex p-3 gap-3">
+        <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-white/20">
+          <Image 
+            src={image} 
+            alt={name} 
+            fill 
+            className="object-cover"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-slate-900 text-[14px] truncate">{name}</h4>
+          <p className="text-[11px] text-slate-500 line-clamp-2 leading-snug mt-0.5">{bio}</p>
+        </div>
+      </div>
+      <Link 
+        href={`/mentors/${id}`} 
+        target="_blank"
+        className="flex items-center justify-between px-3 py-2 bg-blue-600/5 hover:bg-blue-600/10 text-blue-600 text-[11px] font-black uppercase tracking-widest transition-colors border-t border-white/20"
+      >
+        <span>View Full Profile</span>
+        <ExternalLink size={12} />
+      </Link>
+    </div>
+  );
+}
 
 interface Message {
   role: 'user' | 'assistant';
@@ -72,10 +110,11 @@ export default function Chatbot() {
       });
 
       const data = await res.json();
-      if (data.content) {
+      if (data.content !== undefined && data.content !== null) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting. Please check your API key." }]);
+        const errorMsg = data.error || "I'm having trouble connecting. Please try again later.";
+        setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
       }
     } catch (error) {
       setMessages(prev => [...prev, { role: 'assistant', content: "Something went wrong. Please try again later." }]);
@@ -139,11 +178,11 @@ export default function Chatbot() {
           >
             {messages.map((ms, i) => (
               <div key={i} className={`flex ${ms.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`flex gap-3 max-w-[85%] ${ms.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`flex gap-3 max-w-[85%] min-w-0 ${ms.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center shadow-sm ${ms.role === 'user' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
                     {ms.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                   </div>
-                  <div className={`px-4 py-3 rounded-2xl text-[13px] leading-relaxed shadow-sm font-medium ${
+                  <div className={`px-4 py-3 rounded-2xl text-[13px] leading-relaxed shadow-sm font-medium overflow-hidden break-words w-full ${
                     ms.role === 'user' 
                     ? 'bg-blue-600 text-white rounded-tr-none' 
                     : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
@@ -159,7 +198,20 @@ export default function Chatbot() {
                         p: ({node, ...props}) => <p {...props} className="mb-2 last:mb-0" />,
                         ul: ({node, ...props}) => <ul {...props} className="list-disc ml-4 mb-2" />,
                         li: ({node, ...props}) => <li {...props} className="mb-1" />,
-                        strong: ({node, ...props}) => <strong {...props} className="font-bold text-inherit" />
+                        strong: ({node, ...props}) => <strong {...props} className="font-bold text-inherit" />,
+                        pre: ({node, ...props}) => <pre {...props} className="bg-transparent p-0 m-0 overflow-visible whitespace-pre-wrap flex w-full" />,
+                        code: ({node, inline, className, children, ...props}: any) => {
+                          const match = /language-mentor/.exec(className || '');
+                          if (!inline && match) {
+                            try {
+                              const data = JSON.parse(String(children).replace(/\n/g, ""));
+                              return <div className="w-full overflow-hidden"><MentorCard {...data} /></div>;
+                            } catch (e) {
+                              return <code className={className} {...props}>{children}</code>;
+                            }
+                          }
+                          return <code className={`${className} whitespace-pre-wrap break-words`} {...props}>{children}</code>;
+                        }
                       }}
                     >
                       {ms.content}

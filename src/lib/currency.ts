@@ -1,0 +1,265 @@
+/**
+ * Mapping of Country ISO codes to Currency codes and symbols
+ */
+export const countryToCurrency: Record<string, { code: string; symbol: string }> = {
+  AF: { code: 'AFN', symbol: '؋' },
+  AL: { code: 'ALL', symbol: 'L' },
+  DZ: { code: 'DZD', symbol: 'د.ج' },
+  AD: { code: 'EUR', symbol: '€' },
+  AO: { code: 'AOA', symbol: 'Kz' },
+  AG: { code: 'XCD', symbol: '$' },
+  AR: { code: 'ARS', symbol: '$' },
+  AM: { code: 'AMD', symbol: '֏' },
+  AU: { code: 'AUD', symbol: '$' },
+  AT: { code: 'EUR', symbol: '€' },
+  AZ: { code: 'AZN', symbol: '₼' },
+  BS: { code: 'BSD', symbol: '$' },
+  BH: { code: 'BHD', symbol: '.د.ب' },
+  BD: { code: 'BDT', symbol: '৳' },
+  BB: { code: 'BBD', symbol: '$' },
+  BY: { code: 'BYN', symbol: 'Br' },
+  BE: { code: 'EUR', symbol: '€' },
+  BZ: { code: 'BZD', symbol: '$' },
+  BJ: { code: 'XOF', symbol: 'Fr' },
+  BT: { code: 'BTN', symbol: 'Nu.' },
+  BO: { code: 'BOB', symbol: 'Bs.' },
+  BA: { code: 'BAM', symbol: 'KM' },
+  BW: { code: 'BWP', symbol: 'P' },
+  BR: { code: 'BRL', symbol: 'R$' },
+  BN: { code: 'BND', symbol: '$' },
+  BG: { code: 'BGN', symbol: 'лв' },
+  BF: { code: 'XOF', symbol: 'Fr' },
+  BI: { code: 'BIF', symbol: 'Fr' },
+  KH: { code: 'KHR', symbol: '៛' },
+  CM: { code: 'XAF', symbol: 'Fr' },
+  CA: { code: 'CAD', symbol: '$' },
+  CV: { code: 'CVE', symbol: 'Esc' },
+  CF: { code: 'XAF', symbol: 'Fr' },
+  TD: { code: 'XAF', symbol: 'Fr' },
+  CL: { code: 'CLP', symbol: '$' },
+  CN: { code: 'CNY', symbol: '¥' },
+  CO: { code: 'COP', symbol: '$' },
+  KM: { code: 'KMF', symbol: 'Fr' },
+  CG: { code: 'XAF', symbol: 'Fr' },
+  CD: { code: 'CDF', symbol: 'Fr' },
+  CR: { code: 'CRC', symbol: '₡' },
+  HR: { code: 'EUR', symbol: '€' },
+  CU: { code: 'CUP', symbol: '$' },
+  CY: { code: 'EUR', symbol: '€' },
+  CZ: { code: 'CZK', symbol: 'Kč' },
+  DK: { code: 'DKK', symbol: 'kr' },
+  DJ: { code: 'DJF', symbol: 'Fr' },
+  DM: { code: 'XCD', symbol: '$' },
+  DO: { code: 'DOP', symbol: '$' },
+  EC: { code: 'USD', symbol: '$' },
+  EG: { code: 'EGP', symbol: '£' },
+  SV: { code: 'USD', symbol: '$' },
+  GQ: { code: 'XAF', symbol: 'Fr' },
+  ER: { code: 'ERN', symbol: 'Nfk' },
+  EE: { code: 'EUR', symbol: '€' },
+  ET: { code: 'ETB', symbol: 'Br' },
+  FJ: { code: 'FJD', symbol: '$' },
+  FI: { code: 'EUR', symbol: '€' },
+  FR: { code: 'EUR', symbol: '€' },
+  GA: { code: 'XAF', symbol: 'Fr' },
+  GM: { code: 'GMD', symbol: 'D' },
+  GE: { code: 'GEL', symbol: '₾' },
+  DE: { code: 'EUR', symbol: '€' },
+  GH: { code: 'GHS', symbol: '₵' },
+  GR: { code: 'EUR', symbol: '€' },
+  GD: { code: 'XCD', symbol: '$' },
+  GT: { code: 'GTQ', symbol: 'Q' },
+  GN: { code: 'GNF', symbol: 'Fr' },
+  GW: { code: 'XOF', symbol: 'Fr' },
+  GY: { code: 'GYD', symbol: '$' },
+  HT: { code: 'HTG', symbol: 'G' },
+  HN: { code: 'HNL', symbol: 'L' },
+  HU: { code: 'HUF', symbol: 'Ft' },
+  IS: { code: 'ISK', symbol: 'kr' },
+  IN: { code: 'INR', symbol: '₹' },
+  ID: { code: 'IDR', symbol: 'Rp' },
+  IR: { code: 'IRR', symbol: '﷼' },
+  IQ: { code: 'IQD', symbol: 'ع.د' },
+  IE: { code: 'EUR', symbol: '€' },
+  IL: { code: 'ILS', symbol: '₪' },
+  IT: { code: 'EUR', symbol: '€' },
+  CI: { code: 'XOF', symbol: 'Fr' },
+  JM: { code: 'JMD', symbol: '$' },
+  JP: { code: 'JPY', symbol: '¥' },
+  JO: { code: 'JOD', symbol: 'د.ا' },
+  KZ: { code: 'KZT', symbol: '₸' },
+  KE: { code: 'KES', symbol: 'Sh' },
+  KI: { code: 'AUD', symbol: '$' },
+  KW: { code: 'KWD', symbol: 'د.ك' },
+  KG: { code: 'KGS', symbol: 'с' },
+  LA: { code: 'LAK', symbol: '₭' },
+  LV: { code: 'EUR', symbol: '€' },
+  LB: { code: 'LBP', symbol: 'ل.ل' },
+  LS: { code: 'LSL', symbol: 'L' },
+  LR: { code: 'LRD', symbol: '$' },
+  LY: { code: 'LYD', symbol: 'ل.د' },
+  LI: { code: 'CHF', symbol: 'Fr' },
+  LT: { code: 'EUR', symbol: '€' },
+  LU: { code: 'EUR', symbol: '€' },
+  MK: { code: 'MKD', symbol: 'ден' },
+  MG: { code: 'MGA', symbol: 'Ar' },
+  MW: { code: 'MWK', symbol: 'MK' },
+  MY: { code: 'MYR', symbol: 'RM' },
+  MV: { code: 'MVR', symbol: '.ރ' },
+  ML: { code: 'XOF', symbol: 'Fr' },
+  MT: { code: 'EUR', symbol: '€' },
+  MH: { code: 'USD', symbol: '$' },
+  MR: { code: 'MRU', symbol: 'UM' },
+  MU: { code: 'MUR', symbol: '₨' },
+  MX: { code: 'MXN', symbol: '$' },
+  FM: { code: 'USD', symbol: '$' },
+  MD: { code: 'MDL', symbol: 'L' },
+  MC: { code: 'EUR', symbol: '€' },
+  MN: { code: 'MNT', symbol: '₮' },
+  ME: { code: 'EUR', symbol: '€' },
+  MA: { code: 'MAD', symbol: 'د.م.' },
+  MZ: { code: 'MZN', symbol: 'MT' },
+  MM: { code: 'MMK', symbol: 'Ks' },
+  NA: { code: 'NAD', symbol: '$' },
+  NR: { code: 'AUD', symbol: '$' },
+  NP: { code: 'NPR', symbol: '₨' },
+  NL: { code: 'EUR', symbol: '€' },
+  NZ: { code: 'NZD', symbol: '$' },
+  NI: { code: 'NIO', symbol: 'C$' },
+  NE: { code: 'XOF', symbol: 'Fr' },
+  NG: { code: 'NGN', symbol: '₦' },
+  KP: { code: 'KPW', symbol: '₩' },
+  NO: { code: 'NOK', symbol: 'kr' },
+  OM: { code: 'OMR', symbol: 'ر.ع.' },
+  PK: { code: 'PKR', symbol: '₨' },
+  PW: { code: 'USD', symbol: '$' },
+  PA: { code: 'PAB', symbol: 'B/.' },
+  PG: { code: 'PGK', symbol: 'K' },
+  PY: { code: 'PYG', symbol: '₲' },
+  PE: { code: 'PEN', symbol: 'S/.' },
+  PH: { code: 'PHP', symbol: '₱' },
+  PL: { code: 'PLN', symbol: 'zł' },
+  PT: { code: 'EUR', symbol: '€' },
+  QA: { code: 'QAR', symbol: 'ر.ق' },
+  RO: { code: 'RON', symbol: 'lei' },
+  RU: { code: 'RUB', symbol: '₽' },
+  RW: { code: 'RWF', symbol: 'Fr' },
+  KN: { code: 'XCD', symbol: '$' },
+  LC: { code: 'XCD', symbol: '$' },
+  VC: { code: 'XCD', symbol: '$' },
+  WS: { code: 'WST', symbol: 'T' },
+  SM: { code: 'EUR', symbol: '€' },
+  ST: { code: 'STN', symbol: 'Db' },
+  SA: { code: 'SAR', symbol: 'ر.س' },
+  SN: { code: 'XOF', symbol: 'Fr' },
+  RS: { code: 'RSD', symbol: 'дин.' },
+  SC: { code: 'SCR', symbol: '₨' },
+  SL: { code: 'SLL', symbol: 'Le' },
+  SG: { code: 'SGD', symbol: '$' },
+  SK: { code: 'EUR', symbol: '€' },
+  SI: { code: 'EUR', symbol: '€' },
+  SB: { code: 'SBD', symbol: '$' },
+  SO: { code: 'SOS', symbol: 'Sh' },
+  ZA: { code: 'ZAR', symbol: 'R' },
+  KR: { code: 'KRW', symbol: '₩' },
+  SS: { code: 'SSP', symbol: '£' },
+  ES: { code: 'EUR', symbol: '€' },
+  LK: { code: 'LKR', symbol: 'Rs' },
+  SD: { code: 'SDG', symbol: '£' },
+  SR: { code: 'SRD', symbol: '$' },
+  SZ: { code: 'SZL', symbol: 'L' },
+  SE: { code: 'SEK', symbol: 'kr' },
+  CH: { code: 'CHF', symbol: 'Fr' },
+  SY: { code: 'SYP', symbol: '£' },
+  TW: { code: 'TWD', symbol: 'NT$' },
+  TJ: { code: 'TJS', symbol: 'ЅМ' },
+  TZ: { code: 'TZS', symbol: 'Sh' },
+  TH: { code: 'THB', symbol: '฿' },
+  TL: { code: 'USD', symbol: '$' },
+  TG: { code: 'XOF', symbol: 'Fr' },
+  TO: { code: 'TOP', symbol: 'T$' },
+  TT: { code: 'TTD', symbol: '$' },
+  TN: { code: 'TND', symbol: 'د.ت' },
+  TR: { code: 'TRY', symbol: '₺' },
+  TM: { code: 'TMT', symbol: 'm' },
+  TV: { code: 'AUD', symbol: '$' },
+  UG: { code: 'UGX', symbol: 'Sh' },
+  UA: { code: 'UAH', symbol: '₴' },
+  AE: { code: 'AED', symbol: 'د.إ' },
+  GB: { code: 'GBP', symbol: '£' },
+  US: { code: 'USD', symbol: '$' },
+  UY: { code: 'UYU', symbol: '$' },
+  UZ: { code: 'UZS', symbol: 'so\'m' },
+  VU: { code: 'VUV', symbol: 'Vt' },
+  VA: { code: 'EUR', symbol: '€' },
+  VE: { code: 'VES', symbol: 'Bs.' },
+  VN: { code: 'VND', symbol: '₫' },
+  YE: { code: 'YER', symbol: '﷼' },
+  ZM: { code: 'ZMW', symbol: 'ZK' },
+  ZW: { code: 'ZWL', symbol: '$' },
+};
+
+export function getCurrencyForCountry(countryCode: string) {
+  return countryToCurrency[countryCode] || { code: 'USD', symbol: '$' };
+}
+
+export function getCurrencySymbol(currencyCode: string) {
+  const match = Object.values(countryToCurrency).find(cur => cur.code === currencyCode);
+  return match?.symbol || currencyCode;
+}
+
+export function formatPrice(amount: number, currencyCode: string, currencySymbol: string) {
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode,
+      currencyDisplay: 'narrowSymbol',
+    }).format(amount).replace(/[a-zA-Z]+/, currencySymbol);
+  } catch (e) {
+    return `${currencySymbol}${amount.toLocaleString()}`;
+  }
+}
+
+export function getCurrencyName(currencyCode: string) {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'currency' }).of(currencyCode) || currencyCode;
+  } catch (e) {
+    return currencyCode;
+  }
+}
+
+export function getUniqueCurrencies() {
+  const unique = new Map<string, { code: string; symbol: string; name: string }>();
+  
+  Object.values(countryToCurrency).forEach(curr => {
+    if (!unique.has(curr.code)) {
+      unique.set(curr.code, {
+        code: curr.code,
+        symbol: curr.symbol,
+        name: getCurrencyName(curr.code)
+      });
+    }
+  });
+
+  return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function getCurrencyFlag(currencyCode: string) {
+  const currencyToFlag: Record<string, string> = {
+    USD: '🇺🇸',
+    INR: '🇮🇳',
+    EUR: '🇪🇺',
+    GBP: '🇬🇧',
+    JPY: '🇯🇵',
+    AUD: '🇦🇺',
+    CAD: '🇨🇦',
+    SGD: '🇸🇬',
+    AED: '🇦🇪',
+    CNY: '🇨🇳',
+    CHF: '🇨🇭',
+    NZD: '🇳🇿',
+    HKD: '🇭🇰',
+  };
+
+  return currencyToFlag[currencyCode] || '🌎';
+}

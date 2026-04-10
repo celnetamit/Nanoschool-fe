@@ -12,6 +12,8 @@ import {
     Send, 
     Loader2
 } from 'lucide-react';
+import { useAuthAction } from '@/hooks/useAuthAction';
+import LoginRequiredModal from './auth/LoginRequiredModal';
 
 /**
  * Custom Contact Form component with Pro UI/UX design.
@@ -22,6 +24,8 @@ export function ContactForm() {
         success: false,
         message: "",
     });
+
+    const { performAction, showLoginModal, closeLoginModal, currentPath } = useAuthAction();
 
     const [pageUrl, setPageUrl] = React.useState('');
 
@@ -61,6 +65,14 @@ export function ContactForm() {
         "Other"
     ];
 
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        performAction(() => {
+            formAction(formData);
+        });
+    };
+
 
     return (
         <div className="relative group">
@@ -73,7 +85,7 @@ export function ContactForm() {
                 <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                <form action={formAction} className="space-y-8 relative z-10">
+                <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                         
@@ -202,6 +214,14 @@ export function ContactForm() {
                     </div>
                 </form>
             </div>
+
+            <LoginRequiredModal 
+                isOpen={showLoginModal} 
+                onClose={closeLoginModal} 
+                title="Sign In Required"
+                message="To ensure we can track your request and provide expert assistance, please sign in before submitting the contact form."
+                callbackUrl={currentPath}
+            />
         </div>
     );
 }

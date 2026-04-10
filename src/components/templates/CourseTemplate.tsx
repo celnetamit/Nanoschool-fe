@@ -31,24 +31,28 @@ export default function CourseTemplate({ post, storeProduct, feedbacks }: Course
     const [selectedVariation, setSelectedVariation] = useState(variations[0]);
 
     // Price Calculation
-    // Use the real price from WooCommerce (wc/v3) if available on the post object
-    const basePriceUSD = post.price ? parseFloat(post.price) : (storeProduct ? parseFloat(storeProduct.prices.price) / 100 : 99);
-    const regularPriceUSD = post.regular_price ? parseFloat(post.regular_price) : (storeProduct ? parseFloat(storeProduct.prices.regular_price) / 100 : basePriceUSD * 1.5);
+    // Use the real prices from WooCommerce multi-currency meta if available
+    const basePriceUSD = post.prices_usd?.sale ? parseFloat(post.prices_usd.sale) : 
+                        (post.prices_usd?.regular ? parseFloat(post.prices_usd.regular) : 
+                        (post.price ? parseFloat(post.price) / 84 : 59));
 
-    // Use the real INR price from WooCommerce meta if available
-    const basePriceINR = post.prices_inr?.sale ? parseFloat(post.prices_inr.sale) : (basePriceUSD * 84);
-    const regularPriceINR = post.prices_inr?.regular ? parseFloat(post.prices_inr.regular) : (regularPriceUSD * 84);
+    const regularPriceUSD = post.prices_usd?.regular ? parseFloat(post.prices_usd.regular) : 
+                          (post.regular_price ? parseFloat(post.regular_price) / 84 : 112);
 
-    const currentPrice = currency === 'USD'
-        ? basePriceUSD * selectedVariation.priceMultiplier
-        : (basePriceINR * selectedVariation.priceMultiplier);
+    const basePriceINR = post.prices_inr?.sale ? parseFloat(post.prices_inr.sale) : 
+                        (post.prices_inr?.regular ? parseFloat(post.prices_inr.regular) : 
+                        parseFloat(post.price || '5499'));
+    
+    const regularPriceINR = post.prices_inr?.regular ? parseFloat(post.prices_inr.regular) : 
+                          (post.regular_price ? parseFloat(post.regular_price) : 11000);
 
-    const originalPrice = currency === 'USD'
-        ? regularPriceUSD * selectedVariation.priceMultiplier
-        : (regularPriceINR * selectedVariation.priceMultiplier);
+    const currentPrice = (currency === 'USD' ? basePriceUSD : basePriceINR) * selectedVariation.priceMultiplier;
+    const originalPrice = (currency === 'USD' ? regularPriceUSD : regularPriceINR) * selectedVariation.priceMultiplier;
 
     const formatPrice = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
+        // Force specific locales to guarantee correct currency symbols (₹ for INR, $ for USD)
+        const locale = currency === 'INR' ? 'en-IN' : 'en-US';
+        return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: currency,
             maximumFractionDigits: 0

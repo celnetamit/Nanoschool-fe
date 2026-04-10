@@ -329,6 +329,7 @@ export default async function DetailView({ params, type, initialPost }: { params
                                             professionFees={professionFeeMap}
                                             courseFee={post.price || baseCourseFee}
                                             pricesInr={post.prices_inr}
+                                            pricesUsd={post.prices_usd}
                                             className="w-full py-4 bg-white text-slate-900 font-bold uppercase tracking-widest text-sm rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-black/20 flex items-center justify-center gap-2 group-hover:shadow-red-500/20"
                                         >
                                             <span>Secure Seat</span>
@@ -532,6 +533,7 @@ export default async function DetailView({ params, type, initialPost }: { params
                                             professionFees={type === 'courses' ? learningModeFeeMap : professionFeeMap}
                                             courseFee={post.price || baseCourseFee}
                                             pricesInr={post.prices_inr}
+                                            pricesUsd={post.prices_usd}
                                             className={`flex items-center justify-center w-full py-5 bg-gradient-to-r ${branding.from} ${branding.to} text-white font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-brand-accent/20 hover:shadow-2xl hover:shadow-brand-accent/40 transition-all duration-300 hover:-translate-y-1 active:scale-95 text-sm relative overflow-hidden`}
                                         >
                                             <span className="relative z-10">Enroll Now</span>

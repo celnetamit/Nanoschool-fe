@@ -27,8 +27,11 @@ interface Payment {
   course: string;
   status: 'Paid' | 'Unpaid';
   amount: number;
+  formattedAmount?: string;
   transactionId: string;
   date: string;
+  state: string;
+  country: string;
 }
 
 export default function AdminPaymentsView() {
@@ -116,7 +119,7 @@ export default function AdminPaymentsView() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         <div className="bg-white/80 backdrop-blur-md p-10 rounded-[3rem] border border-slate-200/50 shadow-xl hover:shadow-2xl transition-all duration-700 group overflow-hidden relative">
             <div className="relative z-10">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4">Cumulative Revenue</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4">Cumulative Revenue (INR Base)</p>
                 <h4 className="text-4xl font-black text-slate-950 mb-1.5 tracking-[-0.06em]">₹{mounted ? totalRevenue.toLocaleString() : '...'}</h4>
                 <div className="flex items-center gap-2 text-emerald-600">
                     <TrendingUp size={14} />
@@ -229,7 +232,15 @@ export default function AdminPaymentsView() {
                         </span>
                     </td>
                     <td className="px-10 py-7 text-right">
-                      <span className="font-black text-slate-950 text-xl tracking-tighter">₹{mounted ? payment.amount.toLocaleString() : '...'}</span>
+                      <span className="font-black text-slate-950 text-xl tracking-tighter">
+                        {payment.formattedAmount && payment.formattedAmount !== '0' ? (
+                          payment.formattedAmount.includes('₹') || payment.formattedAmount.includes('$') || payment.formattedAmount.match(/[A-Z]{3}/) || payment.formattedAmount.match(/[^0-9., ]/)
+                            ? payment.formattedAmount 
+                            : `₹${payment.amount.toLocaleString()}`
+                        ) : (
+                          payment.amount > 0 ? `₹${payment.amount.toLocaleString()}` : '--'
+                        )}
+                      </span>
                     </td>
                     <td className="px-10 py-7">
                         <div className="flex justify-center">

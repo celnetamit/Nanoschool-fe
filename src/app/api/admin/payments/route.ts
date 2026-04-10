@@ -15,8 +15,9 @@ export async function GET() {
     
     const payments = entries.map((e: any) => {
       const meta = e.meta || e.item_meta || {};
-      const amountStr = String(meta['ijpy8'] || meta['9810'] || '0').replace(/[^0-9.]/g, '');
-      const amount = parseFloat(amountStr) || 0;
+      const formattedAmount = String(meta['ijpy8'] || meta['9810'] || '0');
+      const amountRaw = formattedAmount.replace(/[^0-9.]/g, '');
+      const amount = parseFloat(amountRaw) || 0;
       const status = (meta['2dnu4'] === 'payment_success' || meta['9817'] === 'payment_success') ? 'Paid' : 'Unpaid';
       
       // Attempt to extract transaction ID if available (needs verification of field ID)
@@ -29,7 +30,10 @@ export async function GET() {
         course: meta['mlsd4'] || meta['9789'] || 'Generic Enrollment',
         status,
         amount,
+        formattedAmount,
         transactionId,
+        state: meta['9801'] || meta['state'] || '',
+        country: meta['9802'] || meta['country'] || '',
         date: e.created_at
       };
     });

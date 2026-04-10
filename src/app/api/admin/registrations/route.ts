@@ -102,9 +102,13 @@ function normalizeEntry(e: any, defaultType: string) {
   // Status & Logic Evaluation
   const rawStatus = meta['2dnu4'] || meta['9127'] || meta['9817'] || meta['9777'] || '';
   
-  // Check for pricing data or payment success
-  const amountRaw = String(meta['ijpy8'] || meta['9810'] || meta['p30ad'] || '0').replace(/[^0-9.]/g, '');
+  // High-Resolution Pricing Logic
+  const formattedAmount = String(meta['9810'] || meta['ijpy8'] || meta['p30ad'] || '0');
+  const amountRaw = formattedAmount.replace(/[^0-9.]/g, '');
   const amount = parseFloat(amountRaw) || 0;
+  
+  // Extract currency if possible (fallback to INR if symbol is ₹ or if no symbol and not a lead)
+  const currency = formattedAmount.includes('$') ? 'USD' : (formattedAmount.includes('₹') ? 'INR' : (formattedAmount.match(/[A-Z]{3}/)?.[0] || 'INR'));
   
   // If payment status is explicit success, or if it is a Form 554 application which is inherently active
   // but if the user specifically asked "if data has pricing data then show success or lead as per demand"
@@ -142,6 +146,8 @@ function normalizeEntry(e: any, defaultType: string) {
     product,
     status,
     amount,
+    formattedAmount,
+    currency,
     date: e.created_at,
     isLead
   };

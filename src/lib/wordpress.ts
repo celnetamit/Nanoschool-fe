@@ -27,6 +27,10 @@ export interface WordPressPost {
     regular?: string;
     sale?: string;
   };
+  prices_usd?: {
+    regular?: string;
+    sale?: string;
+  };
 }
 
 export interface WooCommerceProduct {
@@ -141,9 +145,110 @@ async function fetchAllItems<T>(endpoint: string): Promise<T[]> {
   }));
 }
 
+/**
+ * Enrichment: Batch fetch WooCommerce pricing for a list of WordPress posts
+ * This prevents N+1 API calls and ensures pricing is always live.
+ */
+async function enrichWithWooCommercePrices(posts: WordPressPost[]) {
+  const WP_USER = process.env.WP_USER;
+  const WP_PASSWORD = process.env.WP_PASSWORD;
+
+  if (!WP_USER || !WP_PASSWORD || posts.length === 0) return posts;
+
+  const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
+  const baseUrl = process.env.WP_INTERNAL_URL || BASE_URL;
+  const wcBaseUrl = baseUrl.replace('/wp/v2', '/wc/v3');
+
+  const chunkSize = 10;
+  for (let i = 0; i < posts.length; i += chunkSize) {
+    const chunk = posts.slice(i, i + chunkSize);
+    
+    await Promise.allSettled(chunk.map(async (post) => {
+      try {
+        const wcUrl = `${wcBaseUrl}/products?slug=${post.slug}`;
+        const res = await fetchWithTimeout(wcUrl, {
+          timeoutMs: 8000,
+          headers: { 'Authorization': authHeader },
+          next: { revalidate: 3600 }
+        });
+
+        if (res.ok) {
+          const products: WooCommerceProduct[] = await res.json();
+          if (products.length > 0) {
+            const product = products[0];
+            post.price = product.price;
+            post.regular_price = product.regular_price;
+            post.sale_price = product.sale_price;
+            post.on_sale = product.on_sale;
+
+            // Extract INR prices from nested meta
+            const inrRegularField = product.meta_data.find((m: any) => m.key === '_regular_price_wmcp');
+            const inrSaleField = product.meta_data.find((m: any) => m.key === '_sale_price_wmcp');
+
+            let inrRegular = '';
+            let inrSale = '';
+            let usdRegular = '';
+            let usdSale = '';
+
+            try {
+              if (inrRegularField?.value) {
+                const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
+                inrRegular = (parsed.INR || '').toString();
+                usdRegular = (parsed.USD || '').toString();
+              }
+              if (inrSaleField?.value) {
+                const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
+                inrSale = (parsed.INR || '').toString();
+                usdSale = (parsed.USD || '').toString();
+              }
+            } catch (e) {}
+
+            // FALLBACK: If INR is missing but price is large, assume base price is INR
+            if (!inrSale && product.price && parseFloat(product.price) > 500) {
+              inrSale = product.price;
+            }
+            if (!inrRegular && product.regular_price && parseFloat(product.regular_price) > 500) {
+              inrRegular = product.regular_price;
+            }
+
+            post.prices_inr = { regular: inrRegular, sale: inrSale };
+            post.prices_usd = { regular: usdRegular, sale: usdSale };
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to fetch price for ${post.slug}:`, err);
+      }
+    }));
+  }
+
+  return posts;
+}
+
+export async function getPagedCourses({ page = 1, perPage = 12 }: { page?: number, perPage?: number } = {}): Promise<{ posts: WordPressPost[], totalPages: number, totalItems: number }> {
+  try {
+    const response = await fetchWP(`${BASE_URL}/ai_course?per_page=${perPage}&page=${page}&_embed`);
+    
+    if (!response.ok) {
+      return { posts: [], totalPages: 0, totalItems: 0 };
+    }
+
+    const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
+    const totalItems = parseInt(response.headers.get('X-WP-Total') || '0', 10);
+    const posts: WordPressPost[] = await response.json();
+
+    // Enrich with live pricing
+    await enrichWithWooCommercePrices(posts);
+
+    return { posts, totalPages, totalItems };
+  } catch (err) {
+    console.error('Failed to fetch paged courses:', err);
+    return { posts: [], totalPages: 0, totalItems: 0 };
+  }
+}
+
 export async function getCourses(): Promise<WordPressPost[]> {
-  // Assuming 'ai_course' might eventually need pagination too
-  return fetchAllItems<WordPressPost>('ai_course');
+  const items = await fetchAllItems<WordPressPost>('ai_course');
+  return enrichWithWooCommercePrices(items);
 }
 
 export async function getPrograms(): Promise<WordPressPost[]> {
@@ -171,50 +276,8 @@ export async function getWorkshops({ page = 1, perPage = 9, category = 0 }: { pa
   const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '0', 10);
   const posts: WordPressPost[] = await response.json();
 
-  // PREVENT DDOS: Chunked WooCommerce Pricing Fetch (Max 3 concurrent)
-  // Instead of Promise.all on ALL posts at once, we batch them to avoid triggering WordPress/Cloudflare rate-limits.
-  const WP_USER = process.env.WP_USER;
-  const WP_PASSWORD = process.env.WP_PASSWORD;
-
-  if (WP_USER && WP_PASSWORD && posts.length > 0) {
-    const authHeader = `Basic ${Buffer.from(`${WP_USER}:${WP_PASSWORD}`).toString('base64')}`;
-    const baseUrl = process.env.WP_INTERNAL_URL || BASE_URL;
-    const wcBaseUrl = baseUrl.replace('/wp/v2', '/wc/v3');
-
-    const chunkSize = 3;
-    for (let i = 0; i < posts.length; i += chunkSize) {
-      const chunk = posts.slice(i, i + chunkSize);
-      
-      await Promise.all(chunk.map(async (post) => {
-        try {
-          const wcUrl = `${wcBaseUrl}/products?slug=${post.slug}`;
-          const res = await fetchWithTimeout(wcUrl, {
-            timeoutMs: 8000, // Increased to 8s for WC pricing
-            headers: { 'Authorization': authHeader },
-            next: { revalidate: 3600 }
-          });
-
-          if (res.ok) {
-            const products = await res.json();
-            if (products.length > 0) {
-              const product = products[0];
-              post.price = product.price;
-              post.regular_price = product.regular_price;
-              post.sale_price = product.sale_price;
-              post.on_sale = product.on_sale;
-            }
-          }
-        } catch (err) {
-          console.error(`Failed to fetch price for workshop ${post.slug}:`, err);
-        }
-      }));
-      
-      // Add a tiny artificial delay between chunks to let the WP database breathe
-      if (i + chunkSize < posts.length) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
-  }
+  // Unified batch pricing fetch
+  await enrichWithWooCommercePrices(posts);
 
   return { posts, totalPages };
 }
@@ -275,18 +338,30 @@ export async function getWooCommerceProducts({ perPage = 40, page = 1, categoryI
 
       let inrRegular = '';
       let inrSale = '';
+      let usdRegular = '';
+      let usdSale = '';
 
       try {
         if (inrRegularField?.value) {
           const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
-          inrRegular = parsed.INR || '';
+          inrRegular = (parsed.INR || '').toString();
+          usdRegular = (parsed.USD || '').toString();
         }
         if (inrSaleField?.value) {
           const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
-          inrSale = parsed.INR || '';
+          inrSale = (parsed.INR || '').toString();
+          usdSale = (parsed.USD || '').toString();
         }
       } catch (e) {
-        console.warn('Failed to parse INR prices for product:', wc.id);
+        console.warn('Failed to parse multi-currency prices for product:', wc.id);
+      }
+
+      // Fallback for missing INR meta
+      if (!inrSale && wc.price && parseFloat(wc.price) > 500) {
+        inrSale = wc.price;
+      }
+      if (!inrRegular && wc.regular_price && parseFloat(wc.regular_price) > 500) {
+        inrRegular = wc.regular_price;
       }
 
       return {
@@ -321,10 +396,8 @@ export async function getWooCommerceProducts({ perPage = 40, page = 1, categoryI
         regular_price: wc.regular_price,
         sale_price: wc.sale_price,
         on_sale: wc.on_sale,
-        prices_inr: {
-          regular: inrRegular,
-          sale: inrSale
-        }
+        prices_inr: { regular: inrRegular, sale: inrSale },
+        prices_usd: { regular: usdRegular, sale: usdSale }
       };
     });
   } catch (error) {
@@ -384,7 +457,7 @@ export const getPostBySlug = cache(async function (type: string, slug: string): 
   const wpPromise = (async () => {
     let restBase = 'posts';
     if (type === 'courses') {
-      restBase = 'product';
+      restBase = 'ai_course';
     } else if (type === 'pages') {
       restBase = 'pages';
     } else if (type === 'programs') {
@@ -439,18 +512,30 @@ export const getPostBySlug = cache(async function (type: string, slug: string): 
 
     let inrRegular = '';
     let inrSale = '';
+    let usdRegular = '';
+    let usdSale = '';
 
     try {
       if (inrRegularField?.value) {
         const parsed = typeof inrRegularField.value === 'string' ? JSON.parse(inrRegularField.value) : inrRegularField.value;
-        inrRegular = parsed.INR || '';
+        inrRegular = (parsed.INR || '').toString();
+        usdRegular = (parsed.USD || '').toString();
       }
       if (inrSaleField?.value) {
         const parsed = typeof inrSaleField.value === 'string' ? JSON.parse(inrSaleField.value) : inrSaleField.value;
-        inrSale = parsed.INR || '';
+        inrSale = (parsed.INR || '').toString();
+        usdSale = (parsed.USD || '').toString();
       }
     } catch (e) {
-      console.warn('Failed to parse INR prices for product slug:', slug);
+      console.warn('Failed to parse multi-currency prices for product slug:', slug);
+    }
+
+    // FALLBACK: If INR is missing but price is large, assume base price is INR
+    if (!inrSale && wc.price && parseFloat(wc.price) > 500) {
+      inrSale = wc.price;
+    }
+    if (!inrRegular && wc.regular_price && parseFloat(wc.regular_price) > 500) {
+      inrRegular = wc.regular_price;
     }
 
     return {
@@ -471,10 +556,8 @@ export const getPostBySlug = cache(async function (type: string, slug: string): 
       regular_price: wc.regular_price,
       sale_price: wc.sale_price,
       on_sale: wc.on_sale,
-      prices_inr: {
-        regular: inrRegular,
-        sale: inrSale
-      }
+      prices_inr: { regular: inrRegular, sale: inrSale },
+      prices_usd: { regular: usdRegular, sale: usdSale }
     };
   }
 

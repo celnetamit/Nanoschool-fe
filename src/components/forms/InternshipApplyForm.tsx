@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Internship } from '@/lib/internships';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuthAction } from '@/hooks/useAuthAction';
+import LoginRequiredModal from '../auth/LoginRequiredModal';
 
 import { countries } from '@/data/countries';
 
@@ -17,6 +19,7 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
+    const { performAction, showLoginModal, closeLoginModal, currentPath } = useAuthAction();
 
     const [formData, setFormData] = useState({
         internshipId: internship.code,
@@ -49,44 +52,46 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (!formData.declaration) {
-            setErrorMessage('Please agree to the Terms & Conditions to proceed.');
-            setSubmitStatus('error');
-            return;
-        }
-
-        setIsSubmitting(true);
-        setSubmitStatus('idle');
-
-        try {
-            const response = await fetch('/api/formidable/internship-apply', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                setSubmitStatus('success');
-                // Scroll to top of form
-                window.scrollTo({ top: 300, behavior: 'smooth' });
-            } else {
-                // Handle object errors (validation errors) or string errors
-                let msg = result.error || 'Something went wrong. Please try again.';
-                if (typeof msg === 'object') {
-                    msg = Object.values(msg).join(' ');
-                }
-                setErrorMessage(msg);
+        performAction(async () => {
+            if (!formData.declaration) {
+                setErrorMessage('Please agree to the Terms & Conditions to proceed.');
                 setSubmitStatus('error');
+                return;
             }
-        } catch (error) {
-            console.error('Submission Error:', error);
-            setErrorMessage('Network error. Please check your connection and try again.');
-            setSubmitStatus('error');
-        } finally {
-            setIsSubmitting(false);
-        }
+
+            setIsSubmitting(true);
+            setSubmitStatus('idle');
+
+            try {
+                const response = await fetch('/api/formidable/internship-apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    setSubmitStatus('success');
+                    // Scroll to top of form
+                    window.scrollTo({ top: 300, behavior: 'smooth' });
+                } else {
+                    // Handle object errors (validation errors) or string errors
+                    let msg = result.error || 'Something went wrong. Please try again.';
+                    if (typeof msg === 'object') {
+                        msg = Object.values(msg).join(' ');
+                    }
+                    setErrorMessage(msg);
+                    setSubmitStatus('error');
+                }
+            } catch (error) {
+                console.error('Submission Error:', error);
+                setErrorMessage('Network error. Please check your connection and try again.');
+                setSubmitStatus('error');
+            } finally {
+                setIsSubmitting(false);
+            }
+        });
     };
 
     const closeModal = () => {
@@ -98,6 +103,7 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
     };
 
     return (
+        <>
         <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 relative">
             {/* Status Popup Modal */}
             {submitStatus !== 'idle' && (
@@ -354,5 +360,14 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
                 </button>
             </div>
         </form>
+
+        <LoginRequiredModal 
+            isOpen={showLoginModal} 
+            onClose={closeLoginModal} 
+            title="Authentication Needed"
+            message="To process your internship application and link it to your profile, please sign in before completing the form."
+            callbackUrl={currentPath}
+        />
+        </>
     );
 }

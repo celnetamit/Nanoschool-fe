@@ -10,28 +10,46 @@ import {
   Award,
   Video,
   MapPin,
+  ChevronLeft,
   ChevronRight,
   Eye,
   Info
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface ProductsViewProps {
   initialCourses: any[];
   initialWorkshops: any[];
   isAdmin?: boolean;
+  currentPage?: number;
+  totalPages?: number;
 }
 
-export default function ProductsView({ initialCourses, initialWorkshops, isAdmin = false }: ProductsViewProps) {
+export default function ProductsView({ 
+    initialCourses, 
+    initialWorkshops, 
+    isAdmin = false,
+    currentPage = 1,
+    totalPages = 1
+}: ProductsViewProps) {
   const [activeTab, setActiveTab] = useState<'courses' | 'workshops'>('courses');
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', newPage.toString());
+    router.push(`/dashboard/products?${params.toString()}`);
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20">
       {/* Premium Tab Switcher */}
       <div className="flex p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl w-fit border border-slate-200 shadow-inner">
         <button
@@ -45,8 +63,8 @@ export default function ProductsView({ initialCourses, initialWorkshops, isAdmin
         >
           <BookOpen size={18} className={activeTab === 'courses' ? 'text-blue-600' : 'text-slate-400'} />
           Technical Courses
-          {initialCourses.length > 0 && (
-            <span className={`ml-1 px-2 py-0.5 rounded-md text-[10px] ${activeTab === 'courses' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
+          {initialCourses.length > 0 && activeTab === 'courses' && (
+            <span className="ml-1 px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-blue-600">
               {initialCourses.length}
             </span>
           )}
@@ -62,8 +80,8 @@ export default function ProductsView({ initialCourses, initialWorkshops, isAdmin
         >
           <Calendar size={18} className={activeTab === 'workshops' ? 'text-blue-600' : 'text-slate-400'} />
           Live Workshops
-          {initialWorkshops.length > 0 && (
-            <span className={`ml-1 px-2 py-0.5 rounded-md text-[10px] ${activeTab === 'workshops' ? 'bg-blue-50 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
+          {initialWorkshops.length > 0 && activeTab === 'workshops' && (
+            <span className="ml-1 px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-blue-600">
               {initialWorkshops.length}
             </span>
           )}
@@ -211,6 +229,52 @@ export default function ProductsView({ initialCourses, initialWorkshops, isAdmin
           )
         )}
       </div>
+
+      {/* Modern Pagination System */}
+      {isAdmin && totalPages > 1 && (
+          <div className="mt-20 flex flex-col sm:flex-row items-center justify-between gap-8 px-8 py-10 bg-white/50 backdrop-blur-md rounded-[2.5rem] border border-slate-200/60 shadow-xl shadow-slate-200/20">
+             <div className="text-sm font-bold text-slate-400">
+                Displaying Page <span className="text-slate-900">{currentPage}</span> of <span className="text-slate-900">{totalPages}</span>
+             </div>
+             
+             <div className="flex items-center gap-4">
+                <button
+                    disabled={currentPage <= 1}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs font-black uppercase tracking-widest hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm"
+                >
+                    <ChevronLeft size={18} className="stroke-[3]" />
+                    Previous
+                </button>
+                
+                <div className="flex items-center gap-2">
+                    {[...Array(totalPages)].map((_, i) => (
+                        <button
+                            key={i}
+                            onClick={() => handlePageChange(i + 1)}
+                            className={`
+                                w-11 h-11 rounded-xl flex items-center justify-center text-xs font-black transition-all
+                                ${currentPage === i + 1 
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
+                                    : 'bg-white border border-slate-200 text-slate-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50'}
+                            `}
+                        >
+                            {i + 1}
+                        </button>
+                    )).slice(Math.max(0, currentPage - 3), Math.min(totalPages, currentPage + 2))}
+                </div>
+
+                <button
+                    disabled={currentPage >= totalPages}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs font-black uppercase tracking-widest hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm"
+                >
+                    Next
+                    <ChevronRight size={18} className="stroke-[3]" />
+                </button>
+             </div>
+          </div>
+      )}
     </div>
   );
 }

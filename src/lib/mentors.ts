@@ -39,7 +39,7 @@ export interface MentorFilter {
   experience?: string;
 }
 
-export const getMentors = cache(async function(page: number = 1, pageSize: number = 10, filters?: MentorFilter): Promise<MentorsResponse> {
+export const getMentors = cache(async function(page: number = 1, pageSize: number = 10, filters?: MentorFilter, fetchPageSize: number = 500): Promise<MentorsResponse> {
   const url = process.env.MENTOR_API_URL;
   const user = process.env.WP_USER;
   const pass = process.env.WP_PASSWORD;
@@ -49,20 +49,26 @@ export const getMentors = cache(async function(page: number = 1, pageSize: numbe
     return { mentors: [], totalCount: 0, totalApprovedCount: 0 };
   }
 
+  // Implement a strict 10-second timeout for the external API fetch
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
     const authString = Buffer.from(`${user}:${pass}`).toString('base64');
     
-    // Fetch a large page_size to allow robust local sorting and filtering of all mentors
-    // This payload is heavily cached for 1 hour to prevent crashing the external WordPress API.
-    const fetchUrl = `${url}&page_size=500`;
+    // Use the configurable fetchPageSize to optimize performance for live chat
+    const fetchUrl = `${url}&page_size=${fetchPageSize}`;
 
     const response = await fetch(fetchUrl, {
       next: { revalidate: 60 * 60 }, // Cache for 1 hour
+      signal: controller.signal,
       headers: {
         'Authorization': `Basic ${authString}`,
         'Content-Type': 'application/json',
       },
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error('Failed to fetch mentors', response.statusText);

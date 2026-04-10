@@ -36,6 +36,8 @@ interface Registration {
   product: string;
   status: string;
   amount: number;
+  formattedAmount?: string;
+  currency?: string;
   date: string;
   isLead: boolean;
 }
@@ -266,7 +268,13 @@ export default function RegistrationsView() {
                                 <td className="px-6 py-6 text-right">
                                     <div className="flex flex-col items-end gap-0.5">
                                         <span className="text-lg font-black text-slate-950 tracking-tighter">
-                                            {reg.amount > 0 ? `₹${reg.amount.toLocaleString()}` : <span className="text-slate-300">--</span>}
+                                            {reg.formattedAmount && reg.formattedAmount !== '0' ? (
+                                              reg.formattedAmount.includes('₹') || reg.formattedAmount.includes('$') || reg.formattedAmount.match(/[A-Z]{3}/) || reg.formattedAmount.match(/[^0-9.,]/)
+                                                ? reg.formattedAmount 
+                                                : `₹${reg.amount.toLocaleString()}`
+                                            ) : (
+                                              reg.amount > 0 ? `₹${reg.amount.toLocaleString()}` : <span className="text-slate-300">--</span>
+                                            )}
                                         </span>
                                         <div className="flex items-center gap-1 text-slate-400">
                                             <Calendar size={10} />

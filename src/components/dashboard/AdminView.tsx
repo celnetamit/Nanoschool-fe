@@ -131,6 +131,7 @@ export default function AdminView() {
           trend="+9.5%" 
           positive={true}
           color="indigo"
+          subValue={stats.recent.some(r => r.formattedAmount?.includes('$')) ? 'Includes Intl Revenue' : undefined}
         />
         <StatCard 
           icon={<ArrowUpRight size={24} />} 
@@ -138,6 +139,7 @@ export default function AdminView() {
           value={mounted ? `₹${stats.paid > 0 ? Math.round(stats.revenue/stats.paid).toLocaleString() : 0}` : '₹...'} 
           subValue="Per successful conversion"
           color="amber"
+          indicator={stats.recent.some(r => r.formattedAmount?.includes('$')) ? 'Mixed Currencies' : undefined}
         />
       </div>
 
@@ -157,10 +159,9 @@ export default function AdminView() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/10">
-                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50/50">Entity Identity</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50/50 text-center">Module Core</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50/50">Network Status</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50/50 text-right">Value Asset</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] border-b border-slate-50/50">Entity Identity</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] border-b border-slate-50/50 text-center">Module Core</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] border-b border-slate-50/50 text-right">Yield</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50/60">
@@ -170,7 +171,7 @@ export default function AdminView() {
                       <div className="flex items-center gap-5">
                         <div className="relative">
                             <div className="absolute -inset-1 bg-slate-950/5 rounded-2xl blur-sm group-hover:bg-blue-500/10 transition-colors"></div>
-                            <div className="relative w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-400 text-sm shadow-inner group-hover:scale-105 transition-transform duration-500">
+                            <div className="relative w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center font-black text-slate-400 text-sm shadow-inner group-hover:scale-110 transition-transform duration-500">
                                 {entry.name.charAt(0)}
                             </div>
                         </div>
@@ -182,24 +183,21 @@ export default function AdminView() {
                     </td>
                     <td className="px-10 py-7">
                       <div className="flex justify-center">
-                          <div className="bg-slate-50/80 px-4 py-2 rounded-xl border border-slate-100 inline-flex items-center gap-2 group-hover:border-blue-100 transition-colors">
-                            <span className="text-[11px] font-black text-slate-600 truncate block uppercase tracking-tight">{entry.course}</span>
+                          <div className="bg-slate-50/80 px-5 py-2.5 rounded-xl border border-slate-100 inline-flex items-center gap-2 group-hover:bg-white group-hover:border-blue-100 transition-all duration-300 shadow-sm max-w-[400px]">
+                          <span className="text-[11px] font-black text-slate-600 line-clamp-1 block uppercase tracking-tight">{entry.course}</span>
                           </div>
                       </div>
                     </td>
-                    <td className="px-10 py-7">
-                      <div className={`
-                        inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border
-                        ${entry.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}
-                      `}>
-                        <div className={`relative w-2 h-2 rounded-full ${entry.status === 'Paid' ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-                            <div className={`absolute inset-0 rounded-full ${entry.status === 'Paid' ? 'bg-emerald-500' : 'bg-rose-500'} animate-ping opacity-60`}></div>
-                        </div>
-                        {entry.status}
-                      </div>
-                    </td>
                     <td className="px-10 py-7 text-right">
-                      <span className="font-black text-slate-950 text-xl tracking-[ -0.05em]">₹{mounted ? entry.amount.toLocaleString() : '...'}</span>
+                      <span className="font-black text-slate-950 text-sm tracking-tight">
+                        {entry.formattedAmount && entry.formattedAmount !== '0' ? (
+                          entry.formattedAmount.includes('₹') || entry.formattedAmount.includes('$') || entry.formattedAmount.match(/[A-Z]{3}/) || entry.formattedAmount.match(/[^0-9., ]/)
+                            ? entry.formattedAmount 
+                            : `₹${entry.amount.toLocaleString()}`
+                        ) : (
+                          entry.amount > 0 ? `₹${entry.amount.toLocaleString()}` : '--'
+                        )}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -267,7 +265,7 @@ export default function AdminView() {
   );
 }
 
-function StatCard({ icon, label, value, trend, positive, subValue, color }: any) {
+function StatCard({ icon, label, value, trend, positive, subValue, indicator, color }: any) {
   const colorMap: Record<string, string> = {
     blue: 'bg-blue-50 text-blue-600 border-blue-100 shadow-blue-100/20',
     emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-emerald-100/20',
@@ -284,11 +282,18 @@ function StatCard({ icon, label, value, trend, positive, subValue, color }: any)
         <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center transition-all duration-700 group-hover:scale-110 group-hover:rotate-6 border shadow-lg ${colorMap[color]}`}>
           {icon}
         </div>
-        {trend && (
-          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1.5 border ${positive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-            {trend} <ArrowUpRight size={14} className="stroke-[3]" />
-          </div>
-        )}
+        <div className="flex flex-col items-end gap-2">
+          {trend && (
+            <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1.5 border ${positive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+              {trend} <ArrowUpRight size={14} className="stroke-[3]" />
+            </div>
+          )}
+          {indicator && (
+            <div className="px-2 py-0.5 rounded-md bg-slate-900/5 text-slate-500 text-[8px] font-black uppercase tracking-tighter border border-slate-200">
+               {indicator}
+            </div>
+          )}
+        </div>
       </div>
       <div className="relative z-10 transition-all duration-700 group-hover:translate-x-1">
         <h4 className="text-4xl font-black text-slate-950 mb-1.5 tracking-[ -0.06em] tabular-nums leading-none">{value}</h4>

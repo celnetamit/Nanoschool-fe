@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getCurrencySymbol } from '@/lib/currency';
 
 export async function POST(request: Request) {
   try {
@@ -131,22 +132,28 @@ export async function POST(request: Request) {
 
     const newEntryId = result.id;
 
-    // NO LONGER STRIPPING SYMBOLS (Preserve ₹ and $ for WordPress and IMS)
     const cleanCourseFee = body.courseFee?.toString() || '0';
     const cleanPayableAmount = body.payableAmount?.toString() || '0';
+    const currencyCode = body.currency || 'USD';
+    const currencySymbol = body.currencySymbol || (cleanPayableAmount.includes('₹') ? '₹' : '$');
 
     // Determine initial status based on payment requirement
     const amountVal = parseFloat(cleanPayableAmount.replace(/[^0-9.]/g, '') || cleanCourseFee.replace(/[^0-9.]/g, '') || '0');
     const isFree = isNaN(amountVal) || amountVal <= 0;
     const paymentStatus = isFree ? 'SUCCESS' : (body.payment_status || 'PENDING');
 
+    // Verbose amount format for WordPress (e.g., "$59")
+    const finalSymbol = getCurrencySymbol(currencyCode);
+    const verboseCourseFee = `${finalSymbol}${cleanCourseFee.replace(/[^0-9.]/g, '')}`;
+    const verbosePayableAmount = `${finalSymbol}${cleanPayableAmount.replace(/[^0-9.]/g, '')}`;
+
     const restrictedMeta = {
       '9817': paymentStatus,
       '9816': body.razorpay_order_id || '',
       '9819': body.razorpay_payment_id || '',
       '9821': body.razorpay_signature || '',
-      '9809': cleanCourseFee,
-      '9810': cleanPayableAmount,
+      '9809': verboseCourseFee,
+      '9810': verbosePayableAmount,
       '9800': body.address || '',
       '9801': body.state || '',
       '9802': body.country || '',
@@ -182,10 +189,11 @@ export async function POST(request: Request) {
         brandId: "fbb632ae",
         ...body, // Capture all named frontend keys (name, email, profession, etc.)
         ...mergedItemMeta, // Capture all Formidable numeric IDs
-        courseFee: cleanCourseFee,
-        payableAmount: cleanPayableAmount,
-        payableFeeAmount: cleanPayableAmount, // User's specific naming request
-        currency: body.currency || (cleanPayableAmount.includes('₹') ? 'INR' : 'USD'),
+        courseFee: verboseCourseFee,
+        payableAmount: verbosePayableAmount,
+        payableFeeAmount: verbosePayableAmount, 
+        currency: currencyCode,
+        currencySymbol: currencySymbol,
         '9817': (paymentStatus || '').toLowerCase(),
         '9816': body.razorpay_order_id || '',
         '9819': body.razorpay_payment_id || '',

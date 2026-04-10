@@ -3,12 +3,12 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getEnrollmentsByEmail, getFormEntries, getCourses, getWorkshops } from "@/lib/wordpress";
+import { getEnrollmentsByEmail, getFormEntries, getCourses, getWorkshops, getPagedCourses } from "@/lib/wordpress";
 import ProductsView from "@/components/dashboard/ProductsView";
 import ProductsSkeleton from "@/components/dashboard/ProductsSkeleton";
 import { Package, Users } from 'lucide-react';
 
-export default async function MyProductsPage() {
+export default async function MyProductsPage({ searchParams }: { searchParams: { page?: string } }) {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
@@ -18,6 +18,7 @@ export default async function MyProductsPage() {
   const user = session.user as any;
   const userEmail = user.email!;
   const isAdmin = user.role === 'admin';
+  const currentPage = parseInt(searchParams.page || '1', 10);
 
   return (
     <DashboardLayout 
@@ -27,26 +28,34 @@ export default async function MyProductsPage() {
       userImage={user.image}
     >
       <Suspense fallback={<ProductsSkeleton />}>
-        <ProductsContent user={user} userEmail={userEmail} isAdmin={isAdmin} />
+        <ProductsContent 
+            user={user} 
+            userEmail={userEmail} 
+            isAdmin={isAdmin} 
+            page={currentPage} 
+        />
       </Suspense>
     </DashboardLayout>
   );
 }
 
-async function ProductsContent({ user, userEmail, isAdmin }: any) {
+async function ProductsContent({ user, userEmail, isAdmin, page }: any) {
   // Fetch data based on role
   let enrollments = [];
   let workshops = [];
+  let totalPages = 1;
+  let totalItems = 0;
 
   if (isAdmin) {
-    // Admin sees everything
-    const [allCourses, allWorkshopData] = await Promise.all([
-      getCourses(),
-      getWorkshops({ perPage: 100 })
+    // Admin sees everything with pagination
+    const perPage = 12;
+    const [coursesData, workshopData] = await Promise.all([
+      getPagedCourses({ page, perPage }),
+      getWorkshops({ page, perPage })
     ]);
     
     // Structure them to look like enrollments for the view component
-    enrollments = allCourses.map(course => ({
+    enrollments = coursesData.posts.map(course => ({
       meta: { mlsd4: course.title.rendered, '2dnu4': 'payment_success' }, // Admins see everything as 'Verified'
       title: course.title.rendered,
       created_at: course.date,
@@ -54,14 +63,18 @@ async function ProductsContent({ user, userEmail, isAdmin }: any) {
       originalPost: course
     }));
 
-    workshops = allWorkshopData.posts.map(post => ({
+    workshops = workshopData.posts.map(post => ({
       meta: { mlsd4: post.title.rendered },
       created_at: post.date,
       isAdminView: true,
       originalPost: post
     }));
+
+    // We take the max pages of either to allow paging through the unified list
+    totalPages = Math.max(coursesData.totalPages, workshopData.totalPages);
+    totalItems = coursesData.totalItems + (workshopData.posts.length > 0 ? (workshopData.totalPages * perPage) : 0); // Estimation for header
   } else {
-    // Regular user sees only their stuff
+    // Regular user sees only their stuff (no server-side pagination needed for small lists, but hook it up anyway)
     const [userEnrollments, allWorkshopEntries] = await Promise.all([
       getEnrollmentsByEmail(userEmail),
       getFormEntries(672)
@@ -74,6 +87,8 @@ async function ProductsContent({ user, userEmail, isAdmin }: any) {
       const email = meta['7yfjv'] || meta['9772'];
       return email?.toLowerCase() === userEmail.toLowerCase();
     });
+    
+    totalItems = enrollments.length + workshops.length;
   }
 
   return (
@@ -96,7 +111,7 @@ async function ProductsContent({ user, userEmail, isAdmin }: any) {
           </div>
           <div className="flex items-center gap-3">
               <div className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-sm font-bold shadow-sm shadow-slate-200/50">
-                  <span className="text-blue-600 mr-1">{enrollments.length + workshops.length}</span> {isAdmin ? 'Total Products' : 'Assets Available'}
+                  <span className="text-blue-600 mr-1">{totalItems}</span> {isAdmin ? 'Total Products' : 'Assets Available'}
               </div>
           </div>
       </div>
@@ -106,12 +121,18 @@ async function ProductsContent({ user, userEmail, isAdmin }: any) {
           <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md">
             <Users size={18} />
           </div>
-          You are browsing as an Administrator. This view displays the entire catalog of courses and workshops.
+          You are browsing as an Administrator. Results are paginated to maintain engine performance.
         </div>
       )}
 
       {/* Unified Client-side View Section */}
-      <ProductsView initialCourses={enrollments} initialWorkshops={workshops} isAdmin={isAdmin} />
+      <ProductsView 
+        initialCourses={enrollments} 
+        initialWorkshops={workshops} 
+        isAdmin={isAdmin}
+        currentPage={page}
+        totalPages={totalPages}
+      />
 
     </div>
   );
