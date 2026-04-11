@@ -34,6 +34,9 @@ export async function GET() {
         transactionId,
         state: meta['9801'] || meta['state'] || '',
         country: meta['9802'] || meta['country'] || '',
+        address: meta['9800'] || meta['address'] || '',
+        contactNumber: meta['9795'] || meta['mobile'] || '',
+        institution: meta['9796'] || meta['affiliation'] || '',
         date: e.created_at
       };
     });

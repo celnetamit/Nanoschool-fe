@@ -29,6 +29,9 @@ interface Payment {
   date: string;
   state: string;
   country: string;
+  address?: string;
+  contactNumber?: string;
+  institution?: string;
 }
 
 export default function StudentPaymentsView() {
@@ -112,7 +115,7 @@ export default function StudentPaymentsView() {
                 <input 
                     type="text" 
                     placeholder="Search by course or transaction ID..." 
-                    className="w-full pl-16 pr-8 py-5 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all font-bold text-slate-900 placeholder:text-slate-400"
+                    className="w-full pl-16 pr-8 py-5 bg-white border border-slate-200 rounded-[1.5rem] shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/30 transition-all font-bold text-slate-950 placeholder:text-slate-400"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />

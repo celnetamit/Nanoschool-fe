@@ -32,6 +32,9 @@ interface Payment {
   date: string;
   state: string;
   country: string;
+  address?: string;
+  contactNumber?: string;
+  institution?: string;
 }
 
 export default function AdminPaymentsView() {
@@ -255,9 +258,9 @@ export default function AdminPaymentsView() {
                     </td>
                   </tr>
                 ))}
-</tbody>
-</table>
-</div>
+              </tbody>
+            </table>
+          </div>
 
           {/* Pagination */}
           <div className="p-8 border-t border-slate-100 flex items-center justify-between bg-slate-50/10">
@@ -285,7 +288,7 @@ export default function AdminPaymentsView() {
                   </div>
                   <button 
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  onClick={() => setCurrentPage(prev => prev - 1)}
                   className="p-3 rounded-xl border border-slate-200 hover:border-blue-200 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 shadow-sm"
                   >
                       <ChevronRight size={18} />
@@ -295,10 +298,12 @@ export default function AdminPaymentsView() {
       </div>
 
       {/* Invoice Modal Integration */}
-      <InvoiceModal 
-        payment={selectedPayment} 
-        onClose={() => setSelectedPayment(null)} 
-      />
+      {selectedPayment && (
+        <InvoiceModal 
+           payment={selectedPayment}
+           onClose={() => setSelectedPayment(null)}
+        />
+      )}
     </div>
   );
 }

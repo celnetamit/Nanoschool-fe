@@ -1,0 +1,29 @@
+{
+  "invoice": {
+    "companyName": "IT Break Com Private Limited",
+    "addressLine1": "A-118, Level 1B, Sector 63",
+    "addressLine2": "Noida, Gautambuddha Nagar",
+    "addressLine3": "Uttar Pradesh, 201301",
+    "gstin": "06AAHCN1234F1Z8",
+    "supportEmail": "support@nanoschool.in",
+    "website": "nanoschool.in",
+    "bankName": "ICICI Bank Ltd",
+    "accountName": "IT Break com pvt LTD.",
+    "accountNumber": "012345678901",
+    "ifscCode": "ICIC0000123",
+    "signatureUrl": "/images/signatures/director.png"
+  },
+  "certificate": {
+    "prefix": "NS",
+    "year": "2026",
+    "authorityName": "Director, NanoSchool",
+    "authorityTitle": "Authorised Controller",
+    "signatureUrl": "/images/signatures/director.png",
+    "templateUrl": "/images/templates/certificate-bg.png"
+  },
+  "branding": {
+    "logoUrl": "/logo.png",
+    "primaryColor": "#2563eb",
+    "secondaryColor": "#0f172a"
+  }
+}

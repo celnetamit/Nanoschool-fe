@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFormEntries } from '@/lib/wordpress';
+import { getSystemConfig } from '@/lib/settings';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
@@ -30,7 +31,8 @@ export async function GET() {
           const email = meta['9793'] || meta['7yfjv'] || meta['9772'];
           const rawStatus = meta['9817'] || meta['2dnu4'] || meta['9777'];
           const isPaid = rawStatus === 'payment_success' || rawStatus === 'Paid';
-          return email?.toLowerCase() === userEmail.toLowerCase() && isPaid;
+          const isCompleted = rawStatus === 'Completed';
+          return email?.toLowerCase() === userEmail.toLowerCase() && (isPaid || isCompleted) && isCompleted;
         })
         .map((e: any) => {
           const meta = e.meta || e.item_meta || {};
@@ -44,7 +46,8 @@ export async function GET() {
           const email = meta['7877'] || meta['email'];
           const rawStatus = meta['9127'] || meta['status'];
           const isPaid = rawStatus === 'payment_success' || rawStatus === 'Paid';
-          return email?.toLowerCase() === userEmail.toLowerCase() && isPaid;
+          const isCompleted = rawStatus === 'Completed';
+          return email?.toLowerCase() === userEmail.toLowerCase() && (isPaid || isCompleted) && isCompleted;
         })
         .map((e: any) => {
           const meta = e.meta || e.item_meta || {};
@@ -75,8 +78,11 @@ function normalizeCertificate(e: any, type: string, explicitTitle?: string) {
     }
   }
 
-  // Generate a stable Credential ID
-  const credentialId = `NS-2026-${String(e.id).padStart(5, '0')}`;
+  // Generate a stable Credential ID from config
+  const config = getSystemConfig();
+  const prefix = config.certificate.prefix || 'NS';
+  const year = config.certificate.year || '2026';
+  const credentialId = `${prefix}-${year}-${String(e.id).padStart(5, '0')}`;
 
   return {
     id: e.id,
