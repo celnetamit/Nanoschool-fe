@@ -187,6 +187,10 @@ export class ScoringEngine {
       (qScore * this.weights.quality) +
       (lScore * this.weights.location);
 
+    // Normalize weighted total based on sum of weights to keep it 0-1
+    const weightSum = Object.values(this.weights).reduce((a, b) => a + b, 0);
+    const normalizedTotal = weightSum > 0 ? total / weightSum : total;
+
     // Human-readable explanation
     const reasons = [];
     if (dScore >= 0.8) reasons.push('perfect domain match');
@@ -206,7 +210,7 @@ export class ScoringEngine {
       organization: Number(oScore.toFixed(2)),
       quality: Number(qScore.toFixed(2)),
       location: Number(lScore.toFixed(2)),
-      total: Number(total.toFixed(2)),
+      total: Number(normalizedTotal.toFixed(2)),
       explanation
     };
   }

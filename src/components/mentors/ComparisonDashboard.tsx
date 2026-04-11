@@ -12,10 +12,12 @@ import {
   ChevronRight,
   Zap,
   TrendingUp,
-  BrainCircuit
+  BrainCircuit 
 } from 'lucide-react';
 import { MentorData } from '@/lib/mentors';
 import { ScoringEngine, ScoringWeights, defaultWeights, UserPreferences, ScoreBreakdown } from '@/lib/mentor-recommendation';
+import AIComparisonAnalytics from './AIComparisonAnalytics';
+import { usePathname } from 'next/navigation';
 
 /**
  * Refined Sublte Radar Chart (120px)
@@ -79,6 +81,7 @@ export default function ComparisonDashboard({ mentors }: { mentors: MentorData[]
     required_skills: [],
     preferred_location: '',
   });
+  const [aiRankings, setAiRankings] = useState<string[] | null>(null);
 
   const scoringEngine = useMemo(() => new ScoringEngine(weights), [weights]);
 
@@ -87,21 +90,44 @@ export default function ComparisonDashboard({ mentors }: { mentors: MentorData[]
       mentor: m,
       breakdown: scoringEngine.getScore(m, prefs)
     }));
+
+    if (aiRankings) {
+      return scored.sort((a, b) => {
+        const rankA = aiRankings.indexOf(a.mentor.id);
+        const rankB = aiRankings.indexOf(b.mentor.id);
+        return (rankA === -1 ? 99 : rankA) - (rankB === -1 ? 99 : rankB);
+      });
+    }
+
     return scored.sort((a, b) => b.breakdown.total - a.breakdown.total);
-  }, [mentors, prefs, scoringEngine]);
+  }, [mentors, prefs, scoringEngine, aiRankings]);
 
   const handleWeightChange = (key: keyof ScoringWeights, val: number) => {
     setWeights(prev => ({ ...prev, [key]: val }));
+    // When manually tuning, we should probably clear the AI ranking to let the manual tuning take over
+    setAiRankings(null);
   };
 
   const rowWinners = useMemo(() => ({
-    experience: rankedMentors.reduce((prev, current) => 
-        (parseInt(current.mentor.experience) > parseInt(prev.mentor.experience)) ? current : prev).mentor.id,
-    rating: rankedMentors.reduce((prev, current) => 
-        ((current.mentor.mentorship_rating ?? 0) > (prev.mentor.mentorship_rating ?? 0)) ? current : prev).mentor.id,
-    mentees: rankedMentors.reduce((prev, current) => 
-        ((current.mentor.total_mentees ?? 0) > (prev.mentor.total_mentees ?? 0)) ? current : prev).mentor.id
+    experience: rankedMentors.length > 0 ? rankedMentors.reduce((prev, current) => 
+        (parseInt(current.mentor.experience) > parseInt(prev.mentor.experience)) ? current : prev).mentor.id : null,
+    rating: rankedMentors.length > 0 ? rankedMentors.reduce((prev, current) => 
+        ((current.mentor.mentorship_rating ?? 0) > (prev.mentor.mentorship_rating ?? 0)) ? current : prev).mentor.id : null,
+    mentees: rankedMentors.length > 0 ? rankedMentors.reduce((prev, current) => 
+        ((current.mentor.total_mentees ?? 0) > (prev.mentor.total_mentees ?? 0)) ? current : prev).mentor.id : null
   }), [rankedMentors]);
+
+  const handleAIWeightsUpdate = (newWeights: Partial<ScoringWeights>) => {
+    setWeights(prev => ({ ...prev, ...newWeights }));
+  };
+
+  const handleAIAnalysisComplete = (data: { rankings: string[] }) => {
+    setAiRankings(data.rankings);
+  };
+
+  const handleAIAnalysisStart = () => {
+    setAiRankings(null);
+  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 items-start relative z-20">
@@ -140,16 +166,16 @@ export default function ComparisonDashboard({ mentors }: { mentors: MentorData[]
               <div key={key} className="space-y-4">
                 <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   <span>{key} Weight</span>
-                  <span className="text-indigo-400 font-extrabold">{Math.round(value * 100)}%</span>
+                   <span className="text-indigo-400 font-extrabold">{Math.round((value / Object.values(weights).reduce((a, b) => a + b, 0)) * 100)}%</span>
                 </div>
                 <input 
                   type="range" 
                   min="0" 
                   max="1" 
-                  step="0.05" 
+                  step="0.01" 
                   value={value} 
                   onChange={(e) => handleWeightChange(key, parseFloat(e.target.value))}
-                  className="w-full h-1 bg-white/5 rounded-full appearance-none cursor-pointer accent-indigo-500 transition-all"
+                  className="w-full h-1.5 bg-white/5 rounded-full appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
                 />
               </div>
             ))}
@@ -167,6 +193,14 @@ export default function ComparisonDashboard({ mentors }: { mentors: MentorData[]
       {/* RIGHT: Comparison View */}
       <div className="flex-grow space-y-10 min-w-0">
         
+        {/* AI Intelligence Block */}
+        <AIComparisonAnalytics 
+          mentors={mentors} 
+          onWeightsUpdate={handleAIWeightsUpdate} 
+          onAnalysisComplete={handleAIAnalysisComplete}
+          onAnalysisStart={handleAIAnalysisStart}
+        />
+
         {/* REFINED MENTOR CARDS */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {rankedMentors.map((item, index) => {

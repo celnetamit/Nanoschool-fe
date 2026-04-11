@@ -4,12 +4,14 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { X, GitCompare, ArrowRight } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useComparison } from '@/context/ComparisonContext';
 
 export default function MentorCompareBar() {
   const { compared, toggle, clear } = useComparison();
+  const pathname = usePathname();
 
-  if (compared.length < 2) return null;
+  if (compared.length < 2 || pathname === '/mentors/compare') return null;
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-[100] flex justify-center pb-4 px-4 pointer-events-none">
