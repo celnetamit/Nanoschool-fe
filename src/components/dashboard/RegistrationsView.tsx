@@ -18,8 +18,16 @@ import {
   Globe,
   Tag,
   Monitor,
-  Network
+  Network,
+  Award,
+  Download,
+  ShieldCheck,
+  User,
+  X,
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
+import Image from 'next/image';
 
 interface Registration {
   id: string;
@@ -49,6 +57,16 @@ interface PaginationData {
   totalPages: number;
 }
 
+interface Certificate {
+  id: string;
+  title: string;
+  type: string;
+  issueDate: string;
+  credentialId: string;
+  status: string;
+  recipientName: string;
+}
+
 export default function RegistrationsView() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [pagination, setPagination] = useState<PaginationData | null>(null);
@@ -60,6 +78,10 @@ export default function RegistrationsView() {
     page: 1
   });
   const [mounted, setMounted] = useState(false);
+  
+  // Certificate Preview State
+  const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
+  const [certLoading, setCertLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -90,6 +112,23 @@ export default function RegistrationsView() {
     e.preventDefault();
     setParams(prev => ({ ...prev, page: 1 }));
     fetchData();
+  };
+
+  const handleViewCertificate = async (entryId: string) => {
+    setCertLoading(true);
+    try {
+      const res = await fetch(`/api/admin/certificates?entryId=${entryId}`);
+      const data = await res.json();
+      if (data.success) {
+        setSelectedCert(data.certificate);
+      } else {
+        alert(data.error || 'Failed to fetch certificate details');
+      }
+    } catch (err) {
+      alert('Network error while fetching certificate');
+    } finally {
+      setCertLoading(false);
+    }
   };
 
   const getIcon = (type: string) => {
@@ -187,10 +226,10 @@ export default function RegistrationsView() {
                 <table className="w-full text-left border-collapse table-fixed">
                     <thead>
                         <tr className="bg-slate-50/50">
-                            <th className="w-[40%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Profile</th>
+                            <th className="w-[35%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Profile</th>
                             <th className="w-[30%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Program</th>
                             <th className="w-[15%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                            <th className="w-[15%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Yield</th>
+                            <th className="w-[20%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Actions / Yield</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -266,20 +305,32 @@ export default function RegistrationsView() {
                                     </div>
                                 </td>
                                 <td className="px-6 py-6 text-right">
-                                    <div className="flex flex-col items-end gap-0.5">
-                                        <span className="text-lg font-black text-slate-950 tracking-tighter">
-                                            {reg.formattedAmount && reg.formattedAmount !== '0' ? (
-                                              reg.formattedAmount.includes('₹') || reg.formattedAmount.includes('$') || reg.formattedAmount.match(/[A-Z]{3}/) || reg.formattedAmount.match(/[^0-9.,]/)
-                                                ? reg.formattedAmount 
-                                                : `₹${reg.amount.toLocaleString()}`
-                                            ) : (
-                                              reg.amount > 0 ? `₹${reg.amount.toLocaleString()}` : <span className="text-slate-300">--</span>
-                                            )}
-                                        </span>
-                                        <div className="flex items-center gap-1 text-slate-400">
-                                            <Calendar size={10} />
-                                            <span className="text-[9px] font-black uppercase tracking-tight">{mounted ? new Date(reg.date).toLocaleDateString() : '...'}</span>
+                                    <div className="flex flex-col items-end gap-3">
+                                        <div className="flex flex-col items-end gap-0.5">
+                                            <span className="text-lg font-black text-slate-950 tracking-tighter">
+                                                {reg.formattedAmount && reg.formattedAmount !== '0' ? (
+                                                  reg.formattedAmount.includes('₹') || reg.formattedAmount.includes('$') || reg.formattedAmount.match(/[A-Z]{3}/) || reg.formattedAmount.match(/[^0-9.,]/)
+                                                    ? reg.formattedAmount 
+                                                    : `₹${reg.amount.toLocaleString()}`
+                                                ) : (
+                                                  reg.amount > 0 ? `₹${reg.amount.toLocaleString()}` : <span className="text-slate-300">--</span>
+                                                )}
+                                            </span>
+                                            <div className="flex items-center gap-1 text-slate-400">
+                                                <Calendar size={10} />
+                                                <span className="text-[9px] font-black uppercase tracking-tight">{mounted ? new Date(reg.date).toLocaleDateString() : '...'}</span>
+                                            </div>
                                         </div>
+                                        
+                                        {!reg.isLead && (
+                                          <button 
+                                            onClick={() => handleViewCertificate(reg.id)}
+                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 group/btn"
+                                          >
+                                            <Award size={10} className="group-hover/btn:rotate-12 transition-transform" />
+                                            Certificate
+                                          </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
@@ -319,6 +370,125 @@ export default function RegistrationsView() {
                 </div>
             )}
         </div>
+
+        {/* Global Loading for Certificates */}
+        {certLoading && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/20 backdrop-blur-sm animate-in fade-in">
+             <div className="bg-white p-6 rounded-3xl shadow-2xl border border-slate-100 flex items-center gap-4">
+                <Loader2 size={24} className="text-blue-600 animate-spin" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-slate-950">Generating Preview Node...</span>
+             </div>
+          </div>
+        )}
+        {/* Certificate Modal */}
+        {selectedCert && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 md:p-6">
+                <div 
+                    className="absolute inset-0 bg-slate-950/30 backdrop-blur-sm animate-in fade-in duration-300" 
+                    onClick={() => setSelectedCert(null)}
+                ></div>
+                
+                <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] animate-in zoom-in-95 duration-500 flex flex-col border border-slate-200 overflow-hidden max-h-[95vh]">
+                    {/* Header Strip */}
+                    <div className="h-1 bg-gradient-to-r from-blue-900 via-slate-900 to-blue-900 w-full"></div>
+
+                    {/* Certificate Content - Textured & Constrained */}
+                    <div className="p-8 md:p-12 relative bg-[#fdfdfd] overflow-y-auto overflow-x-hidden">
+                        {/* Rich Linen/Paper Texture Overlay */}
+                        <div className="absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/linen-paper.png')]"></div>
+                        
+                        {/* Sophisticated Pattern Overlay */}
+                        <div className="absolute inset-0 opacity-[0.4] pointer-events-none">
+                            <Image 
+                                src="/home/itb01/.gemini/antigravity/brain/04ed8273-edae-4ccf-8ccc-d5033e0dd672/nanoschool_modern_certificate_bg_1775894502049.png"
+                                alt="bg"
+                                fill
+                                className="object-cover scale-90"
+                            />
+                        </div>
+
+                        <div className="relative z-10 text-center space-y-6 md:space-y-8">
+                            {/* Academic Identity */}
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="relative w-32 h-12">
+                                    <Image 
+                                        src="https://nanoschool.in/wp-content/uploads/2025/05/NSTC-Logo-2-removebg-preview.png"
+                                        alt="NanoSchool Logo"
+                                        fill
+                                        className="object-contain"
+                                        priority
+                                    />
+                                </div>
+                                <h3 className="text-xl font-black text-slate-900 tracking-[0.2em] uppercase">NanoSchool</h3>
+                                <div className="h-[1px] w-12 bg-slate-200"></div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h1 className="text-2xl md:text-3xl font-serif text-slate-900 tracking-tight italic">
+                                    Certificate of Achievement
+                                </h1>
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[0.25em]">Global Deep-Tech Standards</p>
+                            </div>
+
+                            <div className="py-1 space-y-4">
+                                <p className="text-[11px] font-medium text-slate-500 italic">This credential recognizes that</p>
+                                <h2 className="text-3xl font-serif text-slate-950 capitalize border-b border-slate-100 pb-3 max-w-sm mx-auto overflow-hidden text-ellipsis whitespace-nowrap">
+                                    {selectedCert.recipientName}
+                                </h2>
+                                <p className="text-[11px] text-slate-500 leading-relaxed max-w-xs mx-auto">
+                                    Successfully finalized the evaluation phase for
+                                    <span className="block mt-1 font-black text-slate-900 text-base uppercase tracking-tight line-clamp-2">{selectedCert.title}</span>
+                                </p>
+                            </div>
+
+                            {/* Signatures & Seal - Compacted */}
+                            <div className="pt-4 flex items-center justify-between px-2 gap-4">
+                                <div className="flex-1 text-left space-y-1">
+                                    <p className="text-[10px] font-serif italic text-slate-900 border-b border-slate-200 pb-0.5 px-1 truncate">Director</p>
+                                    <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">NanoSchool Academy</p>
+                                </div>
+
+                                <div className="shrink-0 w-12 h-12 relative">
+                                    <Image 
+                                        src="/home/itb01/.gemini/antigravity/brain/04ed8273-edae-4ccf-8ccc-d5033e0dd672/nanoschool_luxury_certificate_gold_seal_1775894222515.png"
+                                        alt="Seal"
+                                        width={48}
+                                        height={48}
+                                        className="grayscale opacity-70"
+                                    />
+                                </div>
+
+                                <div className="flex-1 text-right space-y-1">
+                                    <p className="text-[10px] font-serif italic text-slate-900 border-b border-slate-200 pb-0.5 px-1 truncate">Controller</p>
+                                    <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">Verification Node</p>
+                                </div>
+                            </div>
+
+                            {/* Metadata */}
+                            <div className="pt-4 flex justify-between items-center text-[8px] font-black text-slate-400 uppercase tracking-widest px-4 border-t border-slate-50">
+                                <span>DATE: {mounted ? new Date(selectedCert.issueDate).toLocaleDateString('en-GB') : '...'}</span>
+                                <span className="opacity-30">|</span>
+                                <span>ID: {selectedCert.credentialId}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Bottom Action Bar */}
+                    <div className="bg-slate-50 border-t border-slate-200 px-6 py-3 flex justify-between items-center">
+                        <button 
+                            onClick={() => setSelectedCert(null)}
+                            className="text-slate-400 hover:text-slate-950 font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2"
+                        >
+                            <X size={12} /> Close
+                        </button>
+                        <button className="bg-slate-950 text-white px-5 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-2 shadow-lg shadow-black/5">
+                            <Download size={12} /> Export Node
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 }
+

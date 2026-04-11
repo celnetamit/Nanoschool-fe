@@ -15,28 +15,29 @@ export async function GET() {
     
     const payments = entries.map((e: any) => {
       const meta = e.meta || e.item_meta || {};
-      const formattedAmount = String(meta['ijpy8'] || meta['9810'] || '0');
+      const formattedAmount = String(meta['ijpy8'] || meta['p30ad'] || '0');
       const amountRaw = formattedAmount.replace(/[^0-9.]/g, '');
       const amount = parseFloat(amountRaw) || 0;
-      const status = (meta['2dnu4'] === 'payment_success' || meta['9817'] === 'payment_success') ? 'Paid' : 'Unpaid';
+      const status = (meta['2dnu4'] === 'payment_success' || meta['payment_success'] === 'success') ? 'Paid' : 'Unpaid';
       
-      // Attempt to extract transaction ID if available (needs verification of field ID)
-      const transactionId = meta['payment_id'] || meta['transaction_id'] || 'N/A';
+      const transactionId = meta['m80xc'] || meta['payment_id'] || 'N/A';
 
       return {
         id: e.id,
-        name: meta['wly6y'] || meta['9792'] || 'Unknown',
-        email: meta['7yfjv'] || meta['9793'] || 'N/A',
-        course: meta['mlsd4'] || meta['9789'] || 'Generic Enrollment',
+        name: meta['wly6y'] || 'Unknown',
+        email: meta['7yfjv'] || 'N/A',
+        course: meta['mlsd4'] || 'Generic Enrollment',
         status,
         amount,
         formattedAmount,
         transactionId,
-        state: meta['9801'] || meta['state'] || '',
-        country: meta['9802'] || meta['country'] || '',
-        address: meta['9800'] || meta['address'] || '',
-        contactNumber: meta['9795'] || meta['mobile'] || '',
-        institution: meta['9796'] || meta['affiliation'] || '',
+        state: meta['q2ct5'] || '',
+        country: meta['yiu1i'] || '',
+        address: meta['kt4ba'] || '',
+        contactNumber: meta['ycnup'] || '',
+        institution: meta['7bm3p'] || '',
+        pid: meta['ysfj2'] || `NSTC-${e.id.slice(-4).toUpperCase()}`,
+        zipCode: meta['dnoob'] || '',
         date: e.created_at
       };
     });

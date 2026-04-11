@@ -4,7 +4,7 @@
     "addressLine1": "A-118, Level 1B, Sector 63",
     "addressLine2": "Noida, Gautambuddha Nagar",
     "addressLine3": "Uttar Pradesh, 201301",
-    "gstin": "06AAHCN1234F1Z8",
+    "gstin": "09AAACI8666D2ZD",
     "supportEmail": "support@nanoschool.in",
     "website": "nanoschool.in",
     "bankName": "ICICI Bank Ltd",
@@ -22,8 +22,8 @@
     "templateUrl": "/images/templates/certificate-bg.png"
   },
   "branding": {
-    "logoUrl": "/logo.png",
-    "primaryColor": "#2563eb",
-    "secondaryColor": "#0f172a"
+    "logoUrl": "https://storage.googleapis.com/nanoschool-in-website-wp-media-to-gcp-offload/2026/03/70e6b471-converted_image_1773927504290.webp",
+    "primaryColor": "#0f46eb",
+    "secondaryColor": "#000000"
   }
 }

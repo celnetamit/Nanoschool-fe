@@ -12,6 +12,9 @@ export interface SystemConfig {
     gstin: string;
     supportEmail: string;
     website: string;
+    cinNo: string;
+    stateCode: string;
+    panNo: string;
     bankName: string;
     accountName: string;
     accountNumber: string;
@@ -70,6 +73,9 @@ function getDefaultConfig(): SystemConfig {
       gstin: "06AAHCN1234F1Z8",
       supportEmail: "support@nanoschool.in",
       website: "nanoschool.in",
+      cinNo: "U74899DL2001PTC109327",
+      stateCode: "09",
+      panNo: "AAACI8565D",
       bankName: "ICICI Bank Ltd",
       accountName: "IT Break com pvt LTD.",
       accountNumber: "012345678901",

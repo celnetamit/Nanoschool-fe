@@ -1,0 +1,10 @@
+<svg width="300" height="60" viewBox="0 0 300 60" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" fill-rule="evenodd">
+    <!-- Icon part - scaled up -->
+    <path d="M20 12l15 7.5v20l-15 7.5-15-7.5v-20l15-7.5z" fill="#2563EB"/>
+    <path d="M20 5l22 11v28l-22 11-22-11V16l22-11zm0 7l-13 6.5v13.5l13 6.5 13-6.5V18.5L20 12z" fill="#1E40AF"/>
+    
+    <!-- Text part - bolder and larger fonts -->
+    <text x="65" y="42" font-family="Arial, sans-serif" font-weight="900" font-size="34" fill="#000" letter-spacing="1">NANOSCHOOL</text>
+  </g>
+</svg>

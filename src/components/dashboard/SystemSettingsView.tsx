@@ -226,6 +226,28 @@ export default function SystemSettingsView() {
                                   </div>
                                   <div>
                                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1 flex items-center gap-2">
+                                          <Hash size={12} /> CIN NUMBER
+                                      </label>
+                                      <input 
+                                        type="text" 
+                                        value={config.invoice.cinNo}
+                                        onChange={(e) => updateConfig('invoice', 'cinNo', e.target.value)}
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1 flex items-center gap-2">
+                                          <Hash size={12} /> PAN NUMBER
+                                      </label>
+                                      <input 
+                                        type="text" 
+                                        value={config.invoice.panNo}
+                                        onChange={(e) => updateConfig('invoice', 'panNo', e.target.value)}
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1 flex items-center gap-2">
                                           <Mail size={12} /> Billing Email
                                       </label>
                                       <input 
@@ -235,66 +257,6 @@ export default function SystemSettingsView() {
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold"
                                       />
                                   </div>
-                              </div>
-                          </div>
-                      </div>
-
-                      {/* Bank Details */}
-                      <div className="bg-white p-10 rounded-[3rem] border border-slate-200/60 shadow-xl space-y-8">
-                          <h3 className="text-xl font-black text-slate-950 tracking-tight flex items-center gap-3">
-                              <CreditCard className="text-indigo-600" /> Remittance Protocols
-                          </h3>
-                          <div className="space-y-6">
-                              <div>
-                                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Bank Name</label>
-                                  <input 
-                                    type="text" 
-                                    value={config.invoice.bankName}
-                                    onChange={(e) => updateConfig('invoice', 'bankName', e.target.value)}
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold"
-                                  />
-                              </div>
-                              <div>
-                                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Account Holder Name</label>
-                                  <input 
-                                    type="text" 
-                                    value={config.invoice.accountName}
-                                    onChange={(e) => updateConfig('invoice', 'accountName', e.target.value)}
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold"
-                                  />
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1 text-sans">Account Number</label>
-                                      <input 
-                                        type="text" 
-                                        value={config.invoice.accountNumber}
-                                        onChange={(e) => updateConfig('invoice', 'accountNumber', e.target.value)}
-                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black tracking-widest"
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">IFSC / Routing Code</label>
-                                      <input 
-                                        type="text" 
-                                        value={config.invoice.ifscCode}
-                                        onChange={(e) => updateConfig('invoice', 'ifscCode', e.target.value)}
-                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black tracking-widest"
-                                      />
-                                  </div>
-                              </div>
-                              <div className="pt-6 border-t border-slate-100">
-                                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1 flex items-center gap-2">
-                                      <ImageIcon size={12} /> Authorized Signature (URL)
-                                  </label>
-                                  <input 
-                                    type="text" 
-                                    value={config.invoice.signatureUrl}
-                                    onChange={(e) => updateConfig('invoice', 'signatureUrl', e.target.value)}
-                                    placeholder="/images/signatures/..."
-                                    className="w-full px-6 py-4 bg-indigo-50 border border-indigo-100/50 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all font-mono text-xs"
-                                  />
-                                  <p className="text-[9px] text-slate-400 font-bold mt-2 px-1 italic italic-none">Relative path or secure HTTPS URL for the signature displayed on bills.</p>
                               </div>
                           </div>
                       </div>

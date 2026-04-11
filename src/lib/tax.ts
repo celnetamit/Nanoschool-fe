@@ -68,9 +68,37 @@ export function getStateCode(state: string): string {
   return partial ? partial[1] : '';
 }
 
+export function numberToWords(num: number): string {
+  if (num === 0) return 'Zero';
+  
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  
+  function bulk(n: number): string {
+    if (n < 20) return ones[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + ones[n % 10] : '');
+    if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred ' + (n % 100 !== 0 ? bulk(n % 100) : '');
+    if (n < 100000) return bulk(Math.floor(n / 1000)) + ' Thousand ' + (n % 1000 !== 0 ? bulk(n % 1000) : '');
+    if (n < 10000000) return bulk(Math.floor(n / 100000)) + ' Lakh ' + (n % 100000 !== 0 ? bulk(n % 100000) : '');
+    return bulk(Math.floor(n / 10000000)) + ' Crore ' + (n % 10000000 !== 0 ? bulk(n % 10000000) : '');
+  }
+
+  const integerPart = Math.floor(num);
+  const decimalPart = Math.round((num - integerPart) * 100);
+  
+  let result = bulk(integerPart);
+  if (decimalPart > 0) {
+    result += ' and ' + bulk(decimalPart) + ' Paise';
+  }
+  return result + ' Only';
+}
+
 export function calculateGST(totalAmount: number, country: string, state: string): TaxBreakdown {
   const isIndia = country?.toLowerCase() === 'india';
-  const isUP = state?.toLowerCase().includes('uttar pradesh') || state?.toLowerCase() === 'up';
+  
+  // Normalize state for comparison
+  const normalizedState = state?.toLowerCase()?.trim() || '';
+  const isUP = normalizedState.includes('uttar pradesh') || normalizedState === 'up' || normalizedState === 'uttarpradesh';
 
   if (!isIndia) {
     return {
@@ -86,11 +114,12 @@ export function calculateGST(totalAmount: number, country: string, state: string
   }
 
   // 18% Inclusive GST calculation
-  // Base = Total / 1.18
+  // Formula: Base = Total / (1 + Rate)
   const baseAmount = totalAmount / 1.18;
   const totalTax = totalAmount - baseAmount;
 
   if (isUP) {
+    // Intrastate: CGST (9%) + SGST (9%)
     return {
       baseAmount,
       cgst: totalTax / 2,
@@ -99,9 +128,10 @@ export function calculateGST(totalAmount: number, country: string, state: string
       totalTax,
       grandTotal: totalAmount,
       taxStatus: 'Inclusive',
-      description: 'GST Inclusive (UP)'
+      description: 'GST Inclusive (9% CGST + 9% SGST)'
     };
   } else {
+    // Interstate: IGST (18%)
     return {
       baseAmount,
       cgst: 0,
@@ -110,7 +140,7 @@ export function calculateGST(totalAmount: number, country: string, state: string
       totalTax,
       grandTotal: totalAmount,
       taxStatus: 'Inclusive',
-      description: 'GST Inclusive (IGST)'
+      description: 'GST Inclusive (18% IGST)'
     };
   }
 }

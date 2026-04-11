@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Printer, GraduationCap, CheckCircle2, FileText, Landmark, ShieldCheck, Mail, MapPin, Globe, Phone, Building2 } from 'lucide-react';
-import { calculateGST, getStateCode } from '@/lib/tax';
+import { X, Printer } from 'lucide-react';
+import { calculateGST, numberToWords, getStateCode } from '@/lib/tax';
+import Image from 'next/image';
+import React from 'react';
 
 interface InvoiceModalProps {
   payment: {
@@ -20,6 +22,8 @@ interface InvoiceModalProps {
     address?: string;
     contactNumber?: string;
     institution?: string;
+    pid?: string;
+    zipCode?: string;
   } | null;
   onClose: () => void;
 }
@@ -49,365 +53,246 @@ export default function InvoiceModal({ payment, onClose }: InvoiceModalProps) {
   };
 
   const taxBreakdown = calculateGST(payment.amount, payment.country, payment.state);
-  const { baseAmount, cgst, sgst, igst, taxStatus, totalTax } = taxBreakdown;
-  const isIndia = payment.country.toLowerCase() === 'india';
-  const stateCode = isIndia ? getStateCode(payment.state) : '';
+  const { baseAmount, cgst, sgst, igst, totalTax } = taxBreakdown;
   
-  // Extract symbol from formattedAmount or default to ₹
-  const currencySymbol = payment.formattedAmount?.match(/[^0-9.,\s]/)?.[0] || (isIndia ? '₹' : '$');
-  
-  const invoiceNumber = `${isIndia ? 'TAX' : 'EXP'}-${payment.id.slice(-4)}-${new Date(payment.date).getTime().toString().slice(-6)}`;
+  const invoiceDate = new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+  const invoiceNumber = `INV-${payment.id.slice(-6).toUpperCase()}`;
 
-  // Dynamic config with safe fallbacks
   const conf = sysConfig?.invoice || {
     companyName: "IT Break Com Private Limited",
     addressLine1: "A-118, Level 1B, Sector 63",
     addressLine2: "Noida, Gautambuddha Nagar",
     addressLine3: "Uttar Pradesh, 201301",
-    gstin: "06AAHCN1234F1Z8",
-    supportEmail: "support@nanoschool.in",
-    website: "nanoschool.in",
-    bankName: "ICICI Bank Ltd",
-    accountName: "IT Break com pvt LTD.",
-    accountNumber: "012345678901",
-    ifscCode: "ICIC0000123",
-    signatureUrl: "/images/signatures/director.png"
+    gstin: "09AAACI8565D2ZD",
+    cinNo: "U74899DL2001PTC109327",
+    stateCode: "09",
+    panNo: "AAACI8565D"
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-950/60 backdrop-blur-xl animate-fade-in print:bg-white print:p-0 print:block">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-hidden print:bg-white print:p-0 print:block">
+      <style jsx global>{`
+        @media print {
+          /* Hide all page content except the invoice */
+          body * {
+            visibility: hidden;
+          }
+          #printable-invoice, #printable-invoice * {
+            visibility: visible;
+          }
+          
+          /* Position the invoice at the very top left of the printed page */
+          #printable-invoice {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 1px solid black !important;
+          }
+          
+          /* Kill any background overlays from the modal */
+          .print\:hidden, [class*="backdrop-blur"], [class*="bg-slate-950/40"] {
+            display: none !important;
+          }
+          
+          /* Ensure we don't scale/shrink the invoice in the printed output */
+          div[class*="relative"][class*="max-w-5xl"] {
+            transform: none !important;
+            max-width: none !important;
+            width: 100% !important;
+            box-shadow: none !important;
+            position: static !important;
+          }
+        }
+      `}</style>
+
+      {/* Background Overlay */}
+      <div 
+        className="absolute inset-0 bg-slate-950/40 backdrop-blur-md animate-in fade-in duration-300 print:hidden"
+        onClick={onClose}
+      ></div>
+
       {/* Modal Container */}
-      <div className="relative w-full max-w-5xl bg-white rounded-[3rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20 print:shadow-none print:border-none print:rounded-none animate-in zoom-in-95 duration-500">
+      <div className="relative w-full max-w-5xl bg-white shadow-2xl overflow-hidden print:shadow-none print:border-none print:rounded-none animate-in zoom-in-95 duration-500 scale-[0.95] origin-center flex flex-col max-h-[98vh]">
         
         {/* Top Control Bar (Hidden on Print) */}
-        <div className="flex items-center justify-between px-10 py-6 border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-[110] print:hidden">
-            <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                    <FileText size={20} />
-                </div>
-                <div>
-                    <h3 className="text-xs font-black text-slate-950 uppercase tracking-widest">{isIndia ? 'Official Tax Invoice' : 'Commercial Export Invoice'}</h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Managed by {conf.companyName}</p>
-                </div>
-            </div>
-            <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between px-6 py-2 border-b border-slate-100 bg-white sticky top-0 z-[110] print:hidden shrink-0">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Retail Tax Invoice Preview</span>
+            <div className="flex items-center gap-3">
                 <button 
                   onClick={handlePrint}
-                  className="px-6 py-3 bg-slate-950 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 flex items-center gap-3 shadow-lg shadow-slate-950/10"
+                  className="px-4 py-1.5 bg-slate-950 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-2"
                 >
-                    <Printer size={16} /> Generate Hard Copy
+                    <Printer size={14} /> Print
                 </button>
-                <button 
-                  onClick={onClose}
-                  className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-950 border border-transparent hover:border-slate-200"
-                >
-                    <X size={20} />
+                <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-all text-slate-400">
+                    <X size={18} />
                 </button>
             </div>
         </div>
 
-        {/* Invoice Body */}
-        <div className="p-12 sm:p-20 print:p-10 space-y-12 bg-white relative overflow-hidden" id="printable-invoice">
-            {/* Background Decoration elements */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/30 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-50/20 rounded-full blur-[80px] -ml-32 -mb-32 pointer-events-none"></div>
-
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start gap-10 relative z-10">
-                <div className="space-y-6">
-                    <div className="flex items-center gap-5">
-                        <div className="w-20 h-20 rounded-3xl bg-slate-950 flex items-center justify-center text-white shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] transform -rotate-3 group-hover:rotate-0 transition-transform">
-                            <GraduationCap size={40} className="stroke-[1.5]" />
+        {/* Invoice Scrollable Area */}
+        <div className="overflow-y-auto flex-1 bg-slate-50 p-4 md:p-8 print:p-0 print:bg-white print:overflow-visible">
+            <div 
+                className="bg-white mx-auto print:m-0 print:w-full border-[1.5px] border-black text-black font-serif text-[13px] leading-tight" 
+                id="printable-invoice"
+                style={{ maxWidth: '800px', width: '100%' }}
+            >
+                {/* 1. Logo and Company Header */}
+                <div className="grid grid-cols-[220px_1fr_180px] items-center border-b-[1.5px] border-black p-4 text-center gap-4">
+                    <div className="text-left">
+                        <div className="relative w-52 h-14 mb-1">
+                             <Image 
+                                src="/images/logos/nanoschool-logo.svg" 
+                                alt="NanoSchool" 
+                                fill 
+                                className="object-contain"
+                             />
                         </div>
-                        <div>
-                            <h1 className="text-4xl font-black text-slate-950 tracking-tighter leading-none mb-2">{conf.companyName}</h1>
-                            <div className="flex items-center gap-2">
-                                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.35em] leading-none">Registered Technical Entity</p>
-                            </div>
-                        </div>
+                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-600 pl-1">The Learning Revolution</p>
                     </div>
-                    
-                    <div className="pt-2 space-y-1">
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-2">
-                             <MapPin size={12} className="text-blue-500" /> Corporate Headquarters
+                    <div>
+                        <h2 className="text-base font-black leading-tight uppercase tracking-tighter">{conf.companyName}</h2>
+                        <div className="h-0.5 w-12 bg-black mx-auto my-0.5"></div>
+                        <p className="text-[10px] font-bold">
+                            {conf.addressLine1}, {conf.addressLine2},<br />
+                            {conf.addressLine3}
                         </p>
-                        <div className="text-xs font-bold text-slate-600 leading-relaxed max-w-[320px]">
-                            <p>{conf.addressLine1}</p>
-                            <p>{conf.addressLine2}</p>
-                            <p>{conf.addressLine3}</p>
-                            <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
-                                <span className="flex items-center gap-2 italic"><Mail size={12} className="text-slate-400" /> {conf.supportEmail}</span>
-                                <span className="flex items-center gap-2 italic"><Globe size={12} className="text-slate-400" /> {conf.website}</span>
-                            </div>
+                    </div>
+                    <div className="flex justify-end">
+                        <div className="relative w-16 h-16 border border-black p-1 flex items-center justify-center">
+                            <Image 
+                                src="/images/logos/nstc-logo.svg" 
+                                alt="NSTC Logo" 
+                                width={60} 
+                                height={60} 
+                                className="object-contain"
+                            />
+                            <span className="absolute -bottom-2 right-0 bg-white px-1 text-[8px] font-bold">NSTC</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="text-right space-y-4">
-                    <div className="flex flex-col items-end gap-2">
-                         <div className={`inline-flex items-center gap-2.5 px-5 py-2 rounded-2xl border ${payment.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                            <CheckCircle2 size={14} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{payment.status === 'Paid' ? 'Transaction Authenticated' : 'Awaiting Confirmation'}</span>
-                        </div>
+                {/* 2. Compliance Row */}
+                <div className="grid grid-cols-3 border-b-[1.5px] border-black text-[11px] font-bold bg-slate-50/50">
+                    <div className="p-2 border-r border-black">GSTIN No.{conf.gstin}</div>
+                    <div className="p-2 border-r border-black text-center">State Code:{conf.stateCode}</div>
+                    <div className="p-2 text-right uppercase">CIN NO :{conf.cinNo}</div>
+                </div>
+
+                {/* 3. Invoice Title Row */}
+                <div className="grid grid-cols-3 border-b-[1.5px] border-black text-[11px] items-center bg-slate-50/30">
+                    <div className="p-2 border-r border-black">
+                        <span className="text-slate-500">Invoice No:</span> <span className="font-bold ml-1">{invoiceNumber}</span>
                     </div>
-                    
-                    <div className="space-y-3 pt-4">
-                        <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tax ID (GSTIN)</span>
-                            <span className="text-lg font-black text-slate-950 tracking-widest uppercase">{conf.gstin}</span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-right">
-                             <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Invoice Code</p>
-                                <p className="text-sm font-black text-slate-950 tabular-nums">{invoiceNumber}</p>
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Generation Date</p>
-                                <p className="text-sm font-black text-slate-950">{new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                            </div>
-                            {isIndia && stateCode && (
-                               <div className="col-span-2">
-                                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Place of Supply (State Code)</p>
-                                   <p className="text-sm font-black text-slate-950 tracking-widest">{payment.state} ({stateCode})</p>
-                               </div>
-                            )}
-                        </div>
+                    <div className="p-2 border-r border-black text-center font-bold text-[13px] tracking-widest">RETAIL TAX INVOICE</div>
+                    <div className="p-2 text-right">
+                        <span className="text-slate-500">Invoice Date:</span> <span className="font-bold ml-1">{invoiceDate}</span>
                     </div>
                 </div>
-            </div>
 
-            {/* Separator Line with Micro-details */}
-            <div className="relative py-4">
-                <div className="h-px w-full bg-slate-100"></div>
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 bg-white text-[8px] font-black text-slate-300 uppercase tracking-[1em]">Financial Document</div>
-            </div>
+                {/* 4. Client Information Grid */}
+                <div className="grid grid-cols-[160px_1fr] border-b-[1.5px] border-black">
+                    {[
+                        ['Participant ID:', payment.pid || `NSTC-${payment.id.slice(-4).toUpperCase()}`],
+                        ['Name:', payment.name],
+                        ['Address:', [payment.address, payment.state, payment.country, payment.zipCode].filter(v => v && v !== '').join(', ') || 'N/A'],
+                        ['Contact Number:', payment.contactNumber && payment.contactNumber !== 'N/A' ? payment.contactNumber : 'N/A'],
+                        ['Email:', payment.email],
+                        ['State Code:', getStateCode(payment.state) || '09'],
+                        ['Profession / Mode:', payment.institution || 'N/A'],
+                        ['Enrollment Category:', 'Course'],
+                        ['Reference No:', payment.transactionId || 'N/A']
+                    ].map(([label, value], idx) => (
+                        <React.Fragment key={idx}>
+                            <div className={`p-2 border-r border-black font-bold flex items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/20'}`}>{label}</div>
+                            <div className={`p-2 flex items-center ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/20'}`}>{value}</div>
+                            {idx < 8 && <div className="col-span-2 border-b border-black/30 w-full h-px"></div>}
+                        </React.Fragment>
+                    ))}
+                </div>
 
-            {/* Billing Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                {/* Client Info */}
-                <div className="space-y-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg">
-                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Billing Recipient</span>
-                    </div>
-                    <div className="space-y-4">
-                        <div>
-                            <p className="text-3xl font-black text-slate-950 tracking-tight leading-none mb-1">{payment.name}</p>
-                            <p className="text-sm font-bold text-blue-600">{payment.email}</p>
-                        </div>
-                        
-                        <div className="space-y-3 pt-2">
-                            {payment.institution && (
-                                <div className="flex items-start gap-3">
-                                    <Building2 size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Institution / Org</p>
-                                        <p className="text-xs font-bold text-slate-700">{payment.institution}</p>
+                {/* 5. Main Items Table */}
+                <div className="border-b-[1.5px] border-black">
+                    <table className="w-full text-center border-collapse">
+                        <thead>
+                            <tr className="border-b border-black text-[11px] font-bold">
+                                <th className="p-2 border-r border-black w-10">S.No.</th>
+                                <th className="p-2 border-r border-black">Particular</th>
+                                <th className="p-2 border-r border-black w-20">HSN Code</th>
+                                <th className="p-2 border-r border-black w-24">Taxable Value</th>
+                                <th className="p-2 border-r border-black w-20">GST</th>
+                                <th className="p-2 w-28">Amount (in INR)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="border-b border-black/30 align-top min-h-[60px]">
+                                <td className="p-2 border-r border-black">1</td>
+                                <td className="p-2 border-r border-black text-left font-bold">{payment.course}</td>
+                                <td className="p-2 border-r border-black text-[11px]">998439</td>
+                                <td className="p-2 border-r border-black tabular-nums font-bold">{baseAmount.toFixed(2)}</td>
+                                <td className="p-2 border-r border-black tabular-nums font-bold">{totalTax.toFixed(2)}</td>
+                                <td className="p-2 tabular-nums font-bold">{payment.amount}</td>
+                            </tr>
+                            <tr className="h-4">
+                                <td className="p-2 border-r border-black"></td>
+                                <td className="p-2 border-r border-black"></td>
+                                <td className="p-2 border-r border-black"></td>
+                                <td className="p-2 border-r border-black"></td>
+                                <td className="p-2 border-r border-black"></td>
+                                <td className="p-2"></td>
+                            </tr>
+                        </tbody>
+                        <tfoot className="border-t border-black font-bold">
+                            <tr>
+                                <td colSpan={3} rowSpan={3} className="border-r border-black p-4 text-left align-top bg-slate-50/10">
+                                    <div className="text-[10px] uppercase text-slate-500 mb-1">Amount in Words (in INR):</div>
+                                    <div className="text-[12px] italic font-bold">
+                                        <u>{numberToWords(payment.amount)}</u>
                                     </div>
-                                </div>
-                            )}
-                            {payment.contactNumber && (
-                                <div className="flex items-start gap-3">
-                                    <Phone size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                                    <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Contact Vector</p>
-                                        <p className="text-xs font-bold text-slate-700">{payment.contactNumber}</p>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="flex items-start gap-3">
-                                <MapPin size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Registered Address</p>
-                                    <p className="text-xs font-bold text-slate-700 leading-relaxed max-w-[280px]">
-                                        {payment.address || `${payment.state}, ${payment.country}`}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                                </td>
+                                <td className="p-2 border-r border-black text-right border-b border-black">Taxable Value</td>
+                                <td colSpan={2} className="p-2 text-right border-b border-black tabular-nums">{baseAmount.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td className="p-2 border-r border-black text-right border-b border-black">
+                                    {igst > 0 ? 'Add: IGST (18%)' : (cgst > 0 ? 'Add: CGST/SGST (9%+9%)' : 'GST (18%)')}
+                                </td>
+                                <td colSpan={2} className="p-2 text-right border-b border-black tabular-nums">{totalTax.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td className="p-2 border-r border-black text-right bg-slate-900 text-white">Total Amount After Tax</td>
+                                <td colSpan={2} className="p-2 text-right tabular-nums bg-slate-900 text-white text-lg">{payment.amount}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
 
-                {/* Audit & Audit Trace */}
-                <div className="space-y-6 flex flex-col md:items-end">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-50 border border-slate-100 rounded-lg">
-                         <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
-                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Audit Traceability</span>
+                {/* 6. Legal Footer Notes */}
+                <div className="p-4 border-b border-black text-[11px] font-bold">
+                    GST HEAD: Other on-line Contents n.e.c
+                </div>
+
+                {/* 7. Declaration and Sign-off */}
+                <div className="grid grid-cols-2">
+                    <div className="p-4 border-r border-black text-[9px] leading-relaxed italic">
+                        <p className="font-bold underline mb-1">Terms & Conditions:</p>
+                        <ul className="list-disc pl-4">
+                            <li>Subject to local jurisdiction.</li>
+                            <li>Payment is strictly non-refundable once enrollment is confirmed.</li>
+                            <li>Professionally generated digital document.</li>
+                        </ul>
                     </div>
-                    <div className="space-y-5 w-full md:max-w-[280px]">
-                        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
-                            <div className="flex flex-col gap-1">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Digital Merchant ID</span>
-                                <span className="font-mono text-xs font-black text-slate-950 bg-white border border-slate-200 rounded-lg px-2 py-1 leading-none">RAZORPAY_001</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">System Trace ID (TXID)</span>
-                                <span className="font-mono text-[10px] text-slate-600 break-all">{payment.transactionId}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 text-right md:justify-end">
-                             <div className="flex flex-col">
-                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Status</span>
-                                 <span className="text-xs font-black text-slate-950 uppercase tracking-tighter">Verified Stream</span>
-                             </div>
-                             <ShieldCheck size={28} className="text-blue-500 stroke-[1.5]" />
-                        </div>
+                    <div className="p-4 flex flex-col items-center justify-between text-center min-h-[100px]">
+                        <p className="text-[10px] font-bold uppercase tracking-tighter">For {conf.companyName}</p>
+                        <div className="w-40 h-px bg-black"></div>
+                        <p className="text-[9px] font-bold">Authorized Signatory</p>
                     </div>
                 </div>
             </div>
-
-            {/* Line Items Table */}
-            <div className="rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-2xl bg-white relative">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="bg-slate-950 text-white">
-                            <th className="pl-10 pr-4 py-6 text-[10px] font-black uppercase tracking-[0.2em] w-16">S.No</th>
-                            <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em]">Particular / Service Description</th>
-                            <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-center">HSN Code</th>
-                            <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right">Taxable Value</th>
-                            <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right">GST</th>
-                            <th className="pl-6 pr-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-right">Total Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        <tr className="group hover:bg-slate-50 transition-colors">
-                            <td className="pl-10 pr-4 py-10 font-black text-slate-300 text-lg italic">01</td>
-                            <td className="px-6 py-10">
-                                <span className="text-xl font-black text-slate-950 block tracking-tight mb-1">{payment.course}</span>
-                                <span className="text-[11px] font-bold text-slate-400 leading-tight block max-w-xs">Professional Certification & Learning Assets Deployment</span>
-                            </td>
-                            <td className="px-6 py-10 text-center">
-                                <span className="px-3 py-1.5 bg-slate-100 rounded-lg font-black text-[11px] text-slate-500 tracking-widest">{isIndia ? '9992' : 'EXPORT'}</span>
-                            </td>
-                            <td className="px-6 py-10 text-right font-black text-slate-600 tabular-nums">
-                                {currencySymbol}{baseAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-                            <td className="px-6 py-10 text-right font-black text-blue-600/80 tabular-nums">
-                                {currencySymbol}{totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-                            <td className="pl-6 pr-10 py-10 text-right font-black text-slate-950 text-2xl tracking-tighter tabular-nums">
-                                {payment.formattedAmount || `${currencySymbol}${payment.amount.toLocaleString()}`}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-                {/* Bank Details Block */}
-                <div className="lg:col-span-7 p-10 rounded-[2.5rem] bg-slate-50 border border-slate-200/60 space-y-6 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
-                    
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                        <Landmark size={16} className="text-indigo-500" />
-                        Remittance Target (Beneficiary Details)
-                    </h4>
-                    
-                    <div className="grid grid-cols-2 gap-y-6 gap-x-10 relative z-10">
-                        <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Legal Entity</p>
-                            <p className="text-xs font-black text-slate-950 uppercase tracking-tight">{conf.accountName}</p>
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Banking Partner</p>
-                            <p className="text-xs font-black text-slate-950 uppercase tracking-tight">{conf.bankName}</p>
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Account Asset ID</p>
-                            <p className="text-sm font-bold text-slate-900 tracking-[0.2em]">{conf.accountNumber}</p>
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Protocol (IFSC / SWIFT)</p>
-                            <p className="text-sm font-bold text-slate-900 tracking-widest">{conf.ifscCode}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Totals Block */}
-                <div className="lg:col-span-5 space-y-5 px-4">
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center px-4">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Net Value (ExTax)</span>
-                            <span className="text-sm font-black text-slate-700 tabular-nums">{currencySymbol}{baseAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        
-                        {taxStatus === 'Inclusive' ? (
-                          <div className="p-6 bg-blue-50/50 rounded-3xl border border-blue-100/50 space-y-3">
-                                {cgst > 0 && (
-                                    <>
-                                        <div className="flex justify-between items-center text-[10px]">
-                                          <span className="text-blue-600/60 font-black uppercase tracking-widest">CGST (9.00%)</span>
-                                          <span className="text-blue-900 font-black tabular-nums">{currencySymbol}{cgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[10px]">
-                                          <span className="text-blue-600/60 font-black uppercase tracking-widest">SGST (9.00%)</span>
-                                          <span className="text-blue-900 font-black tabular-nums">{currencySymbol}{sgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                        </div>
-                                    </>
-                                )}
-                                {igst > 0 && (
-                                    <div className="flex justify-between items-center text-[10px]">
-                                      <span className="text-blue-600/60 font-black uppercase tracking-widest">IGST (18.00%)</span>
-                                      <span className="text-blue-900 font-black tabular-nums">{currencySymbol}{igst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                    </div>
-                                )}
-                                <div className="h-px w-full bg-blue-200/30 my-2"></div>
-                                <div className="flex justify-between items-center text-[10px]">
-                                    <span className="text-blue-600 font-black uppercase tracking-widest">Consolidated GST</span>
-                                    <span className="text-blue-900 font-black tabular-nums">{currencySymbol}{totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-                          </div>
-                        ) : (
-                          <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 flex justify-between items-center">
-                             <span className="text-emerald-700 font-black uppercase tracking-widest text-[10px]">International Export Tax</span>
-                             <span className="text-emerald-700 font-black tabular-nums">0.00%</span>
-                          </div>
-                        )}
-
-                        <div className="h-0.5 w-full bg-slate-900 rounded-full my-4"></div>
-                        <div className="flex justify-between items-center px-2">
-                            <div className="flex flex-col">
-                                <span className="text-slate-400 font-black uppercase tracking-widest text-[10px] leading-none mb-1">Final Settlement</span>
-                                <span className="text-[9px] font-bold text-blue-600 italic">Total Inclusive of Taxes</span>
-                            </div>
-                            <span className="text-5xl font-black text-slate-950 tracking-tighter tabular-nums drop-shadow-sm">
-                                {payment.formattedAmount || `${currencySymbol}${payment.amount.toLocaleString()}`}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Signature & Legal Footer */}
-            <div className="pt-16 mt-8 flex flex-col md:flex-row justify-between items-end gap-10">
-                <div className="max-w-[480px]">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 rounded-full border border-slate-200 p-2 flex items-center justify-center grayscale opacity-50">
-                            <GraduationCap size={24} className="text-slate-400" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black text-slate-950 uppercase tracking-widest">Compliance Protocol</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase">Document Ref: NS-SYS-GEN-2024</p>
-                        </div>
-                    </div>
-                    <p className="text-[9px] text-slate-400 leading-relaxed font-bold tracking-tight lowercase text-justify">
-                        This digital document is generated by the {conf.companyName} documentation engine. 
-                        it is encrypted and digitally authenticated upon issuance. 
-                        all professional training fees are non-refundable and constitute an investment in academic assessment and certification resources. 
-                        this invoice remains perfectly valid without a physical signature.
-                    </p>
-                </div>
-                
-                <div className="text-right flex flex-col items-end min-w-[240px]">
-                    <div className="w-48 h-px bg-slate-950 mb-3 invisible md:visible"></div>
-                    <p className="text-[11px] font-black text-slate-950 uppercase tracking-[0.2em] mb-1">Authorised Controller</p>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">For {conf.companyName}</p>
-                </div>
-            </div>
-
         </div>
       </div>
     </div>

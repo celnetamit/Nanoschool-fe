@@ -4,6 +4,57 @@ import { getSystemConfig } from '@/lib/settings';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
+/**
+ * Fetch certificate-eligible entries from Form 40 (Events)
+ * This allows us to check for end dates.
+ */
+async function getEventEndDates(): Promise<Record<string, Date>> {
+  const url = process.env.UPCOMING_EVENTS_API_URL;
+  const user = process.env.WP_USER;
+  const pass = process.env.WP_PASSWORD;
+
+  if (!url || !user || !pass) return {};
+
+  try {
+    const authString = Buffer.from(`${user}:${pass}`).toString('base64');
+    const response = await fetch(`${url}&page_size=300`, {
+      headers: { 'Authorization': `Basic ${authString}` }
+    });
+
+    if (!response.ok) return {};
+
+    const data = await response.json();
+    const entries = Array.isArray(data) ? data : Object.values(data);
+    const dateMap: Record<string, Date> = {};
+
+    entries.forEach((entry: any) => {
+      const meta = entry.meta || {};
+      const title = String(meta['w1zd'] || '').trim().toLowerCase();
+      const endDateStr = meta['9p93w']; // End Date Field
+
+      if (title && endDateStr) {
+        // Parse "MM/DD/YYYY"
+        const parts = String(endDateStr).split('/');
+        if (parts.length === 3) {
+          const m = parseInt(parts[0], 10);
+          const d = parseInt(parts[1], 10);
+          const y = parseInt(parts[2], 10);
+          const fullYear = y < 100 ? 2000 + y : y;
+          const date = new Date(fullYear, m - 1, d, 23, 59, 59);
+          if (!isNaN(date.getTime())) {
+            dateMap[title] = date;
+          }
+        }
+      }
+    });
+
+    return dateMap;
+  } catch (e) {
+    console.error('Error fetching event end dates:', e);
+    return {};
+  }
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
 
@@ -17,11 +68,13 @@ export async function GET() {
   }
 
   try {
-    // Fetch from 673 (Courses & Workshops) and 554 (Internships)
-    const [registrations673, internships] = await Promise.all([
+    const [registrations673, internships, eventEndDates] = await Promise.all([
        getFormEntries(673),
-       getFormEntries(554)
+       getFormEntries(554),
+       getEventEndDates()
     ]);
+
+    const today = new Date();
 
     // Filter and normalize entries for the current user
     const certificates = [
@@ -30,24 +83,35 @@ export async function GET() {
           const meta = e.meta || e.item_meta || {};
           const email = meta['9793'] || meta['7yfjv'] || meta['9772'];
           const rawStatus = meta['9817'] || meta['2dnu4'] || meta['9777'];
+          const productTitle = String(meta['9789'] || meta['mlsd4'] || meta['9770'] || '').trim().toLowerCase();
+          
           const isPaid = rawStatus === 'payment_success' || rawStatus === 'Paid';
-          const isCompleted = rawStatus === 'Completed';
-          return email?.toLowerCase() === userEmail.toLowerCase() && (isPaid || isCompleted) && isCompleted;
+          
+          // STRICT RULE: Must be paid AND program must have ended
+          const endDate = eventEndDates[productTitle];
+          const hasEnded = endDate ? today > endDate : false;
+
+          return email?.toLowerCase() === userEmail.toLowerCase() && isPaid && hasEnded;
         })
         .map((e: any) => {
           const meta = e.meta || e.item_meta || {};
           const productTitle = meta['9789'] || meta['mlsd4'] || meta['9770'] || 'Academy Program';
-          const type = productTitle.toLowerCase().includes('internship') ? 'Internship' : 'Academy Program';
-          return normalizeCertificate(e, type, productTitle);
+          return normalizeCertificate(e, 'Academy Program', productTitle);
         }),
       ...internships
         .filter((e: any) => {
           const meta = e.meta || e.item_meta || {};
           const email = meta['7877'] || meta['email'];
           const rawStatus = meta['9127'] || meta['status'];
-          const isPaid = rawStatus === 'payment_success' || rawStatus === 'Paid';
-          const isCompleted = rawStatus === 'Completed';
-          return email?.toLowerCase() === userEmail.toLowerCase() && (isPaid || isCompleted) && isCompleted;
+          const productTitle = String(meta['7881'] || meta['projectTitle'] || '').trim().toLowerCase();
+          
+          const isPaid = rawStatus === 'payment_success' || rawStatus === 'Paid' || rawStatus === 'Completed';
+          
+          // Internship date check
+          const endDate = eventEndDates[productTitle];
+          const hasEnded = endDate ? today > endDate : true; // Default true for internships if not in Form 40
+
+          return email?.toLowerCase() === userEmail.toLowerCase() && isPaid && hasEnded;
         })
         .map((e: any) => {
           const meta = e.meta || e.item_meta || {};
@@ -70,15 +134,6 @@ function normalizeCertificate(e: any, type: string, explicitTitle?: string) {
   const meta = e.meta || e.item_meta || {};
   let title = explicitTitle || 'Professional Certificate';
   
-  if (!explicitTitle) {
-    if (type === 'Academy Program') {
-      title = meta['9789'] || meta['mlsd4'] || meta['9770'] || 'Course/Workshop';
-    } else if (type === 'Internship') {
-      title = meta['7881'] || 'Internship Program';
-    }
-  }
-
-  // Generate a stable Credential ID from config
   const config = getSystemConfig();
   const prefix = config.certificate.prefix || 'NS';
   const year = config.certificate.year || '2026';
