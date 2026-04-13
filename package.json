@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:push": "prisma db push --skip-generate"
+    "db:push": "npx prisma@6.2.1 db push --skip-generate"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
