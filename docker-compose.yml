@@ -1,0 +1,60 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - MENTOR_API_URL=${MENTOR_API_URL}
+        - WP_USER=${WP_USER}
+        - WP_PASSWORD=${WP_PASSWORD}
+        - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+        - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+        - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+        - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
+        - WP_PAYMENT_API_BASE_URL=${WP_PAYMENT_API_BASE_URL}
+        - LEAD_WEBHOOK_SECRET=${LEAD_WEBHOOK_SECRET}
+        - NANOSCHOOL_WEBHOOK_SECRET=${NANOSCHOOL_WEBHOOK_SECRET}
+        - USER_FEEDBACK_API=${USER_FEEDBACK_API}
+        - INTERNSHIP_API_URL=${INTERNSHIP_API_URL}
+        - UPCOMING_EVENTS_API_URL=${UPCOMING_EVENTS_API_URL}
+        - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+        - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+        - ADMIN_EMAILS=${ADMIN_EMAILS}
+        - NEXTAUTH_URL=${NEXTAUTH_URL}
+        - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+        - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-jpub@123}@db:5432/${POSTGRES_DB:-nanoschooldb}
+        - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+        - GEMINI_API_KEY=${GEMINI_API_KEY}
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-jpub@123}@db:5432/${POSTGRES_DB:-nanoschooldb}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jpub@123}
+      POSTGRES_DB: ${POSTGRES_DB:-nanoschooldb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
