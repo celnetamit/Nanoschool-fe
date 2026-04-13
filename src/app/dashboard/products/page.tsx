@@ -8,7 +8,8 @@ import ProductsView from "@/components/dashboard/ProductsView";
 import ProductsSkeleton from "@/components/dashboard/ProductsSkeleton";
 import { Package, Users } from 'lucide-react';
 
-export default async function MyProductsPage({ searchParams }: { searchParams: { page?: string } }) {
+export default async function MyProductsPage(props: { searchParams: Promise<{ page?: string }> }) {
+  const searchParams = await props.searchParams;
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
@@ -41,22 +42,21 @@ export default async function MyProductsPage({ searchParams }: { searchParams: {
 
 async function ProductsContent({ user, userEmail, isAdmin, page }: any) {
   // Fetch data based on role
-  let enrollments = [];
-  let workshops = [];
+  let enrollments: any[] = [];
+  let workshops: any[] = [];
   let totalPages = 1;
   let totalItems = 0;
 
   if (isAdmin) {
-    // Admin sees everything with pagination
+    // Admin sees everything with pagination - Keep server-side for initial load performance
     const perPage = 12;
     const [coursesData, workshopData] = await Promise.all([
       getPagedCourses({ page, perPage }),
       getWorkshops({ page, perPage })
     ]);
     
-    // Structure them to look like enrollments for the view component
     enrollments = coursesData.posts.map(course => ({
-      meta: { mlsd4: course.title.rendered, '2dnu4': 'payment_success' }, // Admins see everything as 'Verified'
+      meta: { mlsd4: course.title.rendered, '2dnu4': 'payment_success' },
       title: course.title.rendered,
       created_at: course.date,
       isAdminView: true,
@@ -70,25 +70,13 @@ async function ProductsContent({ user, userEmail, isAdmin, page }: any) {
       originalPost: post
     }));
 
-    // We take the max pages of either to allow paging through the unified list
     totalPages = Math.max(coursesData.totalPages, workshopData.totalPages);
-    totalItems = coursesData.totalItems + (workshopData.posts.length > 0 ? (workshopData.totalPages * perPage) : 0); // Estimation for header
+    totalItems = coursesData.totalItems + (workshopData.posts.length > 0 ? (workshopData.totalPages * perPage) : 0);
   } else {
-    // Regular user sees only their stuff (no server-side pagination needed for small lists, but hook it up anyway)
-    const [userEnrollments, allWorkshopEntries] = await Promise.all([
-      getEnrollmentsByEmail(userEmail),
-      getFormEntries(672)
-    ]);
-
-    enrollments = userEnrollments;
-    workshops = allWorkshopEntries.filter((entry: any) => {
-      const meta = entry.meta || entry.item_meta;
-      if (!meta) return false;
-      const email = meta['7yfjv'] || meta['9772'];
-      return email?.toLowerCase() === userEmail.toLowerCase();
-    });
-    
-    totalItems = enrollments.length + workshops.length;
+    // Regular user: Offload to Client-side fetch in ProductsView as requested
+    enrollments = []; // Will be fetched via /api/user/enrollments
+    workshops = [];
+    totalItems = 0; // Will be updated on client
   }
 
   return (

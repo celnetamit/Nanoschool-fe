@@ -13,7 +13,6 @@ import {
     Loader2
 } from 'lucide-react';
 import { useAuthAction } from '@/hooks/useAuthAction';
-import LoginRequiredModal from './auth/LoginRequiredModal';
 
 /**
  * Custom Contact Form component with Pro UI/UX design.
@@ -25,7 +24,7 @@ export function ContactForm() {
         message: "",
     });
 
-    const { performAction, showLoginModal, closeLoginModal, currentPath } = useAuthAction();
+    const { performAction, currentPath } = useAuthAction();
 
     const [pageUrl, setPageUrl] = React.useState('');
 
@@ -215,13 +214,6 @@ export function ContactForm() {
                 </form>
             </div>
 
-            <LoginRequiredModal 
-                isOpen={showLoginModal} 
-                onClose={closeLoginModal} 
-                title="Sign In Required"
-                message="To ensure we can track your request and provide expert assistance, please sign in before submitting the contact form."
-                callbackUrl={currentPath}
-            />
         </div>
     );
 }

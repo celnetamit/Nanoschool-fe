@@ -178,7 +178,7 @@ export default function SystemSettingsView() {
                                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Legal Company Name</label>
                                   <input 
                                     type="text" 
-                                    value={config.invoice.companyName}
+                                    value={config.invoice.companyName || ''}
                                     onChange={(e) => updateConfig('invoice', 'companyName', e.target.value)}
                                     className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                   />
@@ -188,7 +188,7 @@ export default function SystemSettingsView() {
                                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Registered Address (Line 1)</label>
                                       <input 
                                         type="text" 
-                                        value={config.invoice.addressLine1}
+                                        value={config.invoice.addressLine1 || ''}
                                         onChange={(e) => updateConfig('invoice', 'addressLine1', e.target.value)}
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                       />
@@ -197,7 +197,7 @@ export default function SystemSettingsView() {
                                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Registered Address (Line 2)</label>
                                       <input 
                                         type="text" 
-                                        value={config.invoice.addressLine2}
+                                        value={config.invoice.addressLine2 || ''}
                                         onChange={(e) => updateConfig('invoice', 'addressLine2', e.target.value)}
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                       />
@@ -206,7 +206,7 @@ export default function SystemSettingsView() {
                                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Registered Address (Line 3)</label>
                                       <input 
                                         type="text" 
-                                        value={config.invoice.addressLine3}
+                                        value={config.invoice.addressLine3 || ''}
                                         onChange={(e) => updateConfig('invoice', 'addressLine3', e.target.value)}
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                       />
@@ -219,7 +219,7 @@ export default function SystemSettingsView() {
                                       </label>
                                       <input 
                                         type="text" 
-                                        value={config.invoice.gstin}
+                                        value={config.invoice.gstin || ''}
                                         onChange={(e) => updateConfig('invoice', 'gstin', e.target.value)}
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black"
                                       />
@@ -230,19 +230,8 @@ export default function SystemSettingsView() {
                                       </label>
                                       <input 
                                         type="text" 
-                                        value={config.invoice.cinNo}
+                                        value={config.invoice.cinNo || ''}
                                         onChange={(e) => updateConfig('invoice', 'cinNo', e.target.value)}
-                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black"
-                                      />
-                                  </div>
-                                  <div>
-                                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1 flex items-center gap-2">
-                                          <Hash size={12} /> PAN NUMBER
-                                      </label>
-                                      <input 
-                                        type="text" 
-                                        value={config.invoice.panNo}
-                                        onChange={(e) => updateConfig('invoice', 'panNo', e.target.value)}
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black"
                                       />
                                   </div>
@@ -252,7 +241,7 @@ export default function SystemSettingsView() {
                                       </label>
                                       <input 
                                         type="email" 
-                                        value={config.invoice.supportEmail}
+                                        value={config.invoice.supportEmail || ''}
                                         onChange={(e) => updateConfig('invoice', 'supportEmail', e.target.value)}
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold"
                                       />
@@ -286,7 +275,7 @@ export default function SystemSettingsView() {
                                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Credential Prefix</label>
                                       <input 
                                         type="text" 
-                                        value={config.certificate.prefix}
+                                        value={config.certificate.prefix || ''}
                                         onChange={(e) => updateConfig('certificate', 'prefix', e.target.value)}
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black text-slate-950 uppercase"
                                       />
@@ -295,7 +284,7 @@ export default function SystemSettingsView() {
                                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Issue Year</label>
                                       <input 
                                         type="text" 
-                                        value={config.certificate.year}
+                                        value={config.certificate.year || ''}
                                         onChange={(e) => updateConfig('certificate', 'year', e.target.value)}
                                         className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black text-sans"
                                       />
@@ -308,7 +297,7 @@ export default function SystemSettingsView() {
                                   </label>
                                   <input 
                                     type="text" 
-                                    value={config.certificate.authorityName}
+                                    value={config.certificate.authorityName || ''}
                                     onChange={(e) => updateConfig('certificate', 'authorityName', e.target.value)}
                                     className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black text-slate-950"
                                   />
@@ -318,7 +307,7 @@ export default function SystemSettingsView() {
                                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Authority Designation</label>
                                   <input 
                                     type="text" 
-                                    value={config.certificate.authorityTitle}
+                                    value={config.certificate.authorityTitle || ''}
                                     onChange={(e) => updateConfig('certificate', 'authorityTitle', e.target.value)}
                                     className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-bold"
                                   />
@@ -342,7 +331,7 @@ export default function SystemSettingsView() {
                                   </label>
                                   <input 
                                     type="text" 
-                                    value={config.certificate.templateUrl}
+                                    value={config.certificate.templateUrl || ''}
                                     onChange={(e) => updateConfig('certificate', 'templateUrl', e.target.value)}
                                     className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-mono text-xs"
                                   />
@@ -354,7 +343,7 @@ export default function SystemSettingsView() {
                                   </label>
                                   <input 
                                     type="text" 
-                                    value={config.certificate.signatureUrl}
+                                    value={config.certificate.signatureUrl || ''}
                                     onChange={(e) => updateConfig('certificate', 'signatureUrl', e.target.value)}
                                     className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-mono text-xs"
                                   />
@@ -378,7 +367,7 @@ export default function SystemSettingsView() {
                               <div className="flex gap-4">
                                   <input 
                                     type="text" 
-                                    value={config.branding.logoUrl}
+                                    value={config.branding.logoUrl || ''}
                                     onChange={(e) => updateConfig('branding', 'logoUrl', e.target.value)}
                                     className="flex-1 px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-mono text-xs"
                                   />
@@ -394,13 +383,13 @@ export default function SystemSettingsView() {
                                   <div className="flex items-center gap-3">
                                       <input 
                                         type="color" 
-                                        value={config.branding.primaryColor}
+                                        value={config.branding.primaryColor || ''}
                                         onChange={(e) => updateConfig('branding', 'primaryColor', e.target.value)}
                                         className="w-12 h-12 rounded-xl border-0 cursor-pointer p-0 overflow-hidden"
                                       />
                                       <input 
                                         type="text" 
-                                        value={config.branding.primaryColor}
+                                        value={config.branding.primaryColor || ''}
                                         onChange={(e) => updateConfig('branding', 'primaryColor', e.target.value)}
                                         className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm font-bold"
                                       />
@@ -411,13 +400,13 @@ export default function SystemSettingsView() {
                                   <div className="flex items-center gap-3">
                                       <input 
                                         type="color" 
-                                        value={config.branding.secondaryColor}
+                                        value={config.branding.secondaryColor || ''}
                                         onChange={(e) => updateConfig('branding', 'secondaryColor', e.target.value)}
                                         className="w-12 h-12 rounded-xl border-0 cursor-pointer p-0 overflow-hidden"
                                       />
                                       <input 
                                         type="text" 
-                                        value={config.branding.secondaryColor}
+                                        value={config.branding.secondaryColor || ''}
                                         onChange={(e) => updateConfig('branding', 'secondaryColor', e.target.value)}
                                         className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm font-bold"
                                       />

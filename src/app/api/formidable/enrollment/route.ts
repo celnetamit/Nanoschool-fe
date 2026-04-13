@@ -96,10 +96,14 @@ export async function POST(request: Request) {
       item_meta: itemMeta
     };
 
-    // Execute the POST request
+    // Dynamic endpoint target: PUT if entryId exists (update), else POST (create)
+    const isUpdate = !!body.entryId;
+    const fetchUrl = isUpdate ? `${FORMIDABLE_API_URL}/${body.entryId}` : FORMIDABLE_API_URL;
+    const fetchMethod = isUpdate ? 'PUT' : 'POST';
+
     const authHeader = `Basic ${Buffer.from(`${wpUser}:${wpPassword}`).toString('base64')}`;
-    const response = await fetch(FORMIDABLE_API_URL, {
-      method: 'POST',
+    const response = await fetch(fetchUrl, {
+      method: fetchMethod,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': authHeader,
@@ -130,7 +134,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const newEntryId = result.id;
+    const newEntryId = isUpdate ? body.entryId : (result.id || body.entryId);
 
     const cleanCourseFee = body.courseFee?.toString() || '0';
     const cleanPayableAmount = body.payableAmount?.toString() || '0';

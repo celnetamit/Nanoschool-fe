@@ -109,13 +109,44 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen flex flex-col`}
       >
         <AuthProvider>
+          <Toaster 
+            position="top-center" 
+            containerStyle={{ zIndex: 999999 }}
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: 'rgba(15, 23, 42, 0.95)',
+                backdropFilter: 'blur(8px)',
+                color: '#fff',
+                borderRadius: '1.25rem',
+                fontSize: '14px',
+                fontWeight: '600',
+                border: '1px solid rgba(255,255,255,0.15)',
+                padding: '16px 28px',
+                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.05), inset 0 0 0 1px rgba(255,255,255,0.05)',
+                maxWidth: '450px',
+                textAlign: 'center'
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#fff',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: '#3b82f6', // Sapphire blue for informational "error"
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
           <Navbar />
           <main className="flex-grow">
             {children}
           </main>
           <Footer />
           <Chatbot />
-          <Toaster position="top-center" />
         </AuthProvider>
       </body>
     </html>

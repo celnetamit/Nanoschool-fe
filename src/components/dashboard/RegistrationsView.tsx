@@ -131,6 +131,77 @@ export default function RegistrationsView() {
     }
   };
 
+  const handleExportNode = () => {
+    const printableContent = document.getElementById('printable-certificate');
+    if (!printableContent) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    if (!iframe.contentWindow) return;
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Certificate - ${selectedCert?.recipientName}</title>
+          <style>
+            @page { margin: 0mm; size: A4 landscape; }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              width: 297mm;
+              height: 209mm; /* Slightly under 210 to prevent spill */
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: white !important;
+              overflow: hidden;
+            }
+            .cert-shell {
+              width: 297mm;
+              height: 209mm;
+              position: relative;
+              overflow: hidden;
+              box-sizing: border-box;
+              page-break-inside: avoid;
+              page-break-after: avoid;
+              padding: 64px 80px;
+            }
+          </style>
+        </head>
+        <body style="background: white !important;">
+          <div class="cert-shell" style="position:relative; overflow:hidden;">
+            ${printableContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // 100% Reliable CSS Transfer: Clone all active stylesheets and font links
+    Array.from(document.head.querySelectorAll('style, link[rel="stylesheet"], link[rel="preconnect"]')).forEach(node => {
+      doc.head.appendChild(node.cloneNode(true));
+    });
+
+    iframe.contentWindow.focus();
+    // Increase timeout slightly to allow heavy cloned stylesheets to apply
+    setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 300);
+    }, 800);
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'Course': return <BookOpen size={14} />;
@@ -393,30 +464,28 @@ export default function RegistrationsView() {
                     <div className="h-1 bg-gradient-to-r from-blue-900 via-slate-900 to-blue-900 w-full"></div>
 
                     {/* Certificate Content - Textured & Constrained */}
-                    <div className="p-8 md:p-12 relative bg-[#fdfdfd] overflow-y-auto overflow-x-hidden">
+                    <div id="printable-certificate" className="p-8 md:p-12 relative bg-[#fdfdfd] overflow-y-auto overflow-x-hidden">
                         {/* Rich Linen/Paper Texture Overlay */}
-                        <div className="absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/linen-paper.png')]"></div>
+                        <div className="absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-multiply bg-[url('https://www.transparenttextures.com/patterns/linen-paper.png')]" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 }}></div>
                         
                         {/* Sophisticated Pattern Overlay */}
-                        <div className="absolute inset-0 opacity-[0.4] pointer-events-none">
-                            <Image 
-                                src="/home/itb01/.gemini/antigravity/brain/04ed8273-edae-4ccf-8ccc-d5033e0dd672/nanoschool_modern_certificate_bg_1775894502049.png"
+                        <div className="absolute inset-0 opacity-[0.4] pointer-events-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
+                            <img 
+                                src="/images/certificates/nanoschool_modern_certificate_bg_1775894502049.png"
                                 alt="bg"
-                                fill
-                                className="object-cover scale-90"
+                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                className="absolute inset-0"
                             />
                         </div>
 
-                        <div className="relative z-10 text-center space-y-6 md:space-y-8">
+                        <div className="relative z-10 text-center space-y-6 md:space-y-8" style={{ position: 'relative', zIndex: 10 }}>
                             {/* Academic Identity */}
                             <div className="flex flex-col items-center gap-3">
-                                <div className="relative w-32 h-12">
-                                    <Image 
+                                <div className="relative w-32 h-12 flex justify-center">
+                                    <img 
                                         src="https://nanoschool.in/wp-content/uploads/2025/05/NSTC-Logo-2-removebg-preview.png"
                                         alt="NanoSchool Logo"
-                                        fill
-                                        className="object-contain"
-                                        priority
+                                        style={{ width: '128px', height: '48px', objectFit: 'contain' }}
                                     />
                                 </div>
                                 <h3 className="text-xl font-black text-slate-900 tracking-[0.2em] uppercase">NanoSchool</h3>
@@ -448,13 +517,11 @@ export default function RegistrationsView() {
                                     <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">NanoSchool Academy</p>
                                 </div>
 
-                                <div className="shrink-0 w-12 h-12 relative">
-                                    <Image 
-                                        src="/home/itb01/.gemini/antigravity/brain/04ed8273-edae-4ccf-8ccc-d5033e0dd672/nanoschool_luxury_certificate_gold_seal_1775894222515.png"
+                                <div className="shrink-0 w-12 h-12 relative flex justify-center items-center">
+                                    <img 
+                                        src="/images/certificates/nanoschool_luxury_certificate_gold_seal_1775894222515.png"
                                         alt="Seal"
-                                        width={48}
-                                        height={48}
-                                        className="grayscale opacity-70"
+                                        style={{ width: '48px', height: '48px', filter: 'grayscale(100%)', opacity: 0.7 }}
                                     />
                                 </div>
 
@@ -481,7 +548,10 @@ export default function RegistrationsView() {
                         >
                             <X size={12} /> Close
                         </button>
-                        <button className="bg-slate-950 text-white px-5 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-2 shadow-lg shadow-black/5">
+                        <button 
+                            onClick={handleExportNode}
+                            className="bg-slate-950 text-white px-5 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-2 shadow-lg shadow-black/5"
+                        >
                             <Download size={12} /> Export Node
                         </button>
                     </div>

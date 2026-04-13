@@ -13,9 +13,12 @@ import {
   Search,
   ArrowUpRight,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import InvoiceModal from './InvoiceModal';
+import WorkshopEnrollmentDialog from '@/components/payments/WorkshopEnrollmentDialog';
 
 interface Payment {
   id: string;
@@ -32,19 +35,26 @@ interface Payment {
   address?: string;
   contactNumber?: string;
   institution?: string;
+  zipCode?: string;
+  pid?: string;
 }
 
 export default function StudentPaymentsView() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [resumePaymentModal, setResumePaymentModal] = useState<Payment | null>(null);
 
   useEffect(() => {
     fetchPayments();
   }, []);
 
-  const fetchPayments = async () => {
+  const fetchPayments = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    else setLoading(true);
+    
     try {
       const response = await fetch('/api/user/payments');
       const data = await response.json();
@@ -55,6 +65,7 @@ export default function StudentPaymentsView() {
       console.error('Error fetching payments:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -93,6 +104,15 @@ export default function StudentPaymentsView() {
                 <p className="text-slate-400 font-bold max-w-lg leading-relaxed">
                    Track your learning investments and access official IT Break com pvt LTD. documentation for all your enrolled workshops/programs.
                 </p>
+                
+                <button 
+                  onClick={() => fetchPayments(true)}
+                  disabled={refreshing}
+                  className="flex items-center gap-3 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-xs font-black text-white transition-all active:scale-95 disabled:opacity-50 mt-4"
+                >
+                  {refreshing ? <Loader2 size={16} className="animate-spin text-blue-400" /> : <RefreshCw size={16} className="text-blue-400" />}
+                  {refreshing ? 'Synchronizing...' : 'Sync History'}
+                </button>
             </div>
             
             <div className="flex gap-4">
@@ -169,12 +189,19 @@ export default function StudentPaymentsView() {
                                  </p>
                              </div>
                              
-                             {payment.status === 'Paid' && (
+                             {payment.status === 'Paid' ? (
                                  <button 
                                     onClick={() => setSelectedPayment(payment)}
                                     className="p-5 rounded-3xl bg-slate-950 text-white hover:bg-blue-600 transition-all shadow-xl active:scale-90 group/btn"
                                  >
                                      <Download size={22} className="group-hover:translate-y-0.5 transition-transform" />
+                                 </button>
+                             ) : (
+                                 <button 
+                                    onClick={() => setResumePaymentModal(payment)}
+                                    className="px-6 py-4 rounded-2xl bg-amber-500 text-white hover:bg-amber-600 font-black text-[11px] uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 flex items-center gap-2"
+                                 >
+                                     <RefreshCw size={16} /> Resume Payment
                                  </button>
                              )}
                         </div>
@@ -201,6 +228,20 @@ export default function StudentPaymentsView() {
         <InvoiceModal 
            payment={selectedPayment}
            onClose={() => setSelectedPayment(null)}
+        />
+      )}
+
+      {/* Resume Payment Modal Integration */}
+      {resumePaymentModal && (
+        <WorkshopEnrollmentDialog 
+          isOpen={true}
+          onClose={() => setResumePaymentModal(null)}
+          pid={resumePaymentModal.pid}
+          entryId={resumePaymentModal.id}
+          workshopTitle={resumePaymentModal.course}
+          courseFee={resumePaymentModal.formattedAmount || `₹${resumePaymentModal.amount}`}
+          itemType={resumePaymentModal.course.toLowerCase().includes('course') || resumePaymentModal.course.toLowerCase().includes('training') ? 'courses' : 'workshops'}
+          initialCurrency={resumePaymentModal.formattedAmount?.includes('$') || resumePaymentModal.formattedAmount?.includes('USD') ? 'USD' : 'INR'}
         />
       )}
     </div>

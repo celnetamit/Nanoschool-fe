@@ -13,26 +13,33 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Info
+  Info,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ProductsSkeleton from './ProductsSkeleton';
 
 interface ProductsViewProps {
-  initialCourses: any[];
-  initialWorkshops: any[];
+  initialCourses?: any[];
+  initialWorkshops?: any[];
   isAdmin?: boolean;
   currentPage?: number;
   totalPages?: number;
 }
 
 export default function ProductsView({ 
-    initialCourses, 
-    initialWorkshops, 
+    initialCourses = [], 
+    initialWorkshops = [], 
     isAdmin = false,
     currentPage = 1,
     totalPages = 1
 }: ProductsViewProps) {
+  const [courses, setCourses] = useState<any[]>(initialCourses);
+  const [workshops, setWorkshops] = useState<any[]>(initialWorkshops);
+  const [loading, setLoading] = useState(initialCourses.length === 0 && initialWorkshops.length === 0);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'courses' | 'workshops'>('courses');
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
@@ -40,7 +47,31 @@ export default function ProductsView({
 
   useEffect(() => {
     setMounted(true);
+    if (initialCourses.length === 0 && initialWorkshops.length === 0) {
+        fetchEnrollments();
+    }
   }, []);
+
+  const fetchEnrollments = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      const response = await fetch('/api/user/enrollments');
+      const data = await response.json();
+      if (data.success) {
+        // Normalize as per the component's expectation if needed
+        // The API returns 'enrollments' (courses) and 'workshops'
+        setCourses(data.enrollments);
+        setWorkshops(data.workshops);
+      }
+    } catch (error) {
+      console.error('Error fetching enrollments:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -48,55 +79,70 @@ export default function ProductsView({
     router.push(`/dashboard/products?${params.toString()}`);
   };
 
+  if (loading) {
+    return <ProductsSkeleton />;
+  }
+
   return (
     <div className="space-y-8 pb-20">
-      {/* Premium Tab Switcher */}
-      <div className="flex p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl w-fit border border-slate-200 shadow-inner">
-        <button
-          onClick={() => setActiveTab('courses')}
-          className={`
-            flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-black transition-all duration-500
-            ${activeTab === 'courses' 
-              ? 'bg-white text-blue-600 shadow-xl shadow-blue-500/10 border border-blue-100' 
-              : 'text-slate-500 hover:text-slate-900'}
-          `}
-        >
-          <BookOpen size={18} className={activeTab === 'courses' ? 'text-blue-600' : 'text-slate-400'} />
-          Technical Courses
-          {initialCourses.length > 0 && activeTab === 'courses' && (
-            <span className="ml-1 px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-blue-600">
-              {initialCourses.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('workshops')}
-          className={`
-            flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-black transition-all duration-500
-            ${activeTab === 'workshops' 
-              ? 'bg-white text-blue-600 shadow-xl shadow-blue-500/10 border border-blue-100' 
-              : 'text-slate-500 hover:text-slate-900'}
-          `}
-        >
-          <Calendar size={18} className={activeTab === 'workshops' ? 'text-blue-600' : 'text-slate-400'} />
-          Live Workshops
-          {initialWorkshops.length > 0 && activeTab === 'workshops' && (
-            <span className="ml-1 px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-blue-600">
-              {initialWorkshops.length}
-            </span>
-          )}
-        </button>
+      {/* Premium Tab Switcher & Sync */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl w-fit border border-slate-200 shadow-inner">
+            <button
+              onClick={() => setActiveTab('courses')}
+              className={`
+                flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-black transition-all duration-500
+                ${activeTab === 'courses' 
+                  ? 'bg-white text-blue-600 shadow-xl shadow-blue-500/10 border border-blue-100' 
+                  : 'text-slate-500 hover:text-slate-900'}
+              `}
+            >
+              <BookOpen size={18} className={activeTab === 'courses' ? 'text-blue-600' : 'text-slate-400'} />
+              Technical Courses
+              {courses.length > 0 && activeTab === 'courses' && (
+                <span className="ml-1 px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-blue-600">
+                  {courses.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('workshops')}
+              className={`
+                flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-black transition-all duration-500
+                ${activeTab === 'workshops' 
+                  ? 'bg-white text-blue-600 shadow-xl shadow-blue-500/10 border border-blue-100' 
+                  : 'text-slate-500 hover:text-slate-900'}
+              `}
+            >
+              <Calendar size={18} className={activeTab === 'workshops' ? 'text-blue-600' : 'text-slate-400'} />
+              Live Workshops
+              {workshops.length > 0 && activeTab === 'workshops' && (
+                <span className="ml-1 px-2 py-0.5 rounded-md text-[10px] bg-blue-50 text-blue-600">
+                  {workshops.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <button 
+            onClick={() => fetchEnrollments(true)}
+            disabled={refreshing}
+            className="flex items-center gap-3 px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {refreshing ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <RefreshCw size={16} />}
+            {refreshing ? 'Syncing...' : 'Sync Registry'}
+          </button>
       </div>
 
       {/* Content Grid */}
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
         {activeTab === 'courses' ? (
-          initialCourses.length > 0 ? (
+          courses.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-              {initialCourses.map((course: any, idx: number) => {
+              {courses.map((course: any, idx: number) => {
                 const meta = course.meta || course.item_meta || {};
                 const courseTitle = course.title || meta['mlsd4'] || meta['9789'] || 'Specialized Program';
-                const isPaid = meta['2dnu4'] === 'payment_success' || meta['9817'] === 'payment_success';
+                const isPaid = meta['2dnu4'] === 'payment_success' || meta['9817'] === 'payment_success' || course.isAdminView;
                 const date = mounted ? new Date(course.created_at).toLocaleDateString('en-IN', {
                     day: 'numeric',
                     month: 'short',
@@ -161,11 +207,11 @@ export default function ProductsView({
             />
           )
         ) : (
-          initialWorkshops.length > 0 ? (
+          workshops.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-              {initialWorkshops.map((workshop: any, idx: number) => {
+              {workshops.map((workshop: any, idx: number) => {
                 const meta = workshop.meta || workshop.item_meta || {};
-                const workshopName = meta['mlsd4'] || meta['9768'] || 'Hands-on Workshop';
+                const workshopName = meta['mlsd4'] || meta['9768'] || meta['9789'] || 'Hands-on Workshop';
                 const date = mounted ? new Date(workshop.created_at).toLocaleDateString('en-IN', {
                     day: 'numeric',
                     month: 'short',

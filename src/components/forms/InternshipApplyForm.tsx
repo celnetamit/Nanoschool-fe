@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Internship } from '@/lib/internships';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuthAction } from '@/hooks/useAuthAction';
-import LoginRequiredModal from '../auth/LoginRequiredModal';
 
 import { countries } from '@/data/countries';
 
@@ -19,7 +18,7 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
-    const { performAction, showLoginModal, closeLoginModal, currentPath } = useAuthAction();
+    const { performAction, currentPath } = useAuthAction();
 
     const [formData, setFormData] = useState({
         internshipId: internship.code,
@@ -103,7 +102,6 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
     };
 
     return (
-        <>
         <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 relative">
             {/* Status Popup Modal */}
             {submitStatus !== 'idle' && (
@@ -360,14 +358,5 @@ export default function InternshipApplyForm({ internship, applicationId }: Inter
                 </button>
             </div>
         </form>
-
-        <LoginRequiredModal 
-            isOpen={showLoginModal} 
-            onClose={closeLoginModal} 
-            title="Authentication Needed"
-            message="To process your internship application and link it to your profile, please sign in before completing the form."
-            callbackUrl={currentPath}
-        />
-        </>
     );
 }

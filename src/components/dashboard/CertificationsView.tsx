@@ -12,7 +12,8 @@ import {
   ChevronRight,
   Loader2,
   FileText,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 
 interface Certificate {
@@ -30,18 +31,29 @@ export default function CertificationsView() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    fetch('/api/user/certificates')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setCertificates(data.certificates);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetchCertificates();
   }, []);
+
+  const fetchCertificates = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      const res = await fetch('/api/user/certificates');
+      const data = await res.json();
+      if (data.success) setCertificates(data.certificates);
+    } catch (error) {
+      console.error('Error fetching certificates:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const filteredCerts = certificates.filter(c => 
     c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -61,8 +73,89 @@ export default function CertificationsView() {
     );
   }
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-14 animate-fade-in pb-20">
+      <style jsx global>{`
+        @media print {
+            /* Force landscape orientation for certificates */
+            @page {
+                size: landscape;
+                margin: 0;
+            }
+
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Hide everything in the background */
+            body > *:not(#certificate-modal-portal) {
+                display: none !important;
+            }
+
+            /* Promote the printable area */
+            #certificate-modal-portal {
+                position: absolute !important;
+                inset: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                background: white !important;
+                z-index: 99999 !important;
+            }
+
+            #certificate-printable-area, #certificate-printable-area * {
+                visibility: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            #certificate-printable-area {
+                width: 100% !important;
+                height: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                background: white !important;
+            }
+
+            /* Fix dimensions and scale for A4 Landscape */
+            .cert-paper {
+                width: 297mm !important;
+                height: 210mm !important;
+                padding: 20mm !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: #fafafa !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+            }
+
+            .print\:hidden {
+                display: none !important;
+            }
+
+            /* Force color for labels and backgrounds */
+            .bg-blue-600, .bg-emerald-50, .text-blue-600 {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+      `}</style>
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 px-2">
           <div className="space-y-1">
@@ -83,15 +176,25 @@ export default function CertificationsView() {
                  </span>
               </p>
           </div>
-          <div className="relative w-full sm:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search credentials..."
-                className="w-full pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-950 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all outline-none shadow-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="relative w-full sm:w-80">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Search credentials..."
+                    className="w-full pl-12 pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-950 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 transition-all outline-none shadow-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+              </div>
+              <button 
+                onClick={() => fetchCertificates(true)}
+                disabled={refreshing}
+                className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-600 hover:text-blue-600 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50 shadow-sm"
+                title="Refresh Certificates"
+              >
+                {refreshing ? <Loader2 size={20} className="animate-spin text-blue-600" /> : <RefreshCw size={20} />}
+              </button>
           </div>
       </div>
 
@@ -164,15 +267,18 @@ export default function CertificationsView() {
 
       {/* Certificate Modal */}
       {selectedCert && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-10 overflow-y-auto">
+        <div id="certificate-modal-portal" className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-10 overflow-y-auto">
           <div 
              className="absolute inset-0 bg-slate-950/60 backdrop-blur-xl animate-in fade-in duration-500" 
              onClick={() => setSelectedCert(null)}
           ></div>
           
-          <div className="relative w-full max-w-5xl bg-white rounded-[4rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.5)] animate-in zoom-in-95 slide-in-from-bottom-10 duration-700">
+          <div 
+             id="certificate-printable-area"
+             className="relative w-full max-w-5xl bg-white rounded-[4rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.5)] animate-in zoom-in-95 slide-in-from-bottom-10 duration-700 print:shadow-none print:rounded-none"
+          >
              {/* Certificate Design */}
-             <div className="p-12 md:p-20 relative bg-[#fafafa]">
+             <div className="p-12 md:p-20 relative bg-[#fafafa] cert-paper">
                 {/* Decorative border */}
                 <div className="absolute inset-10 border-[12px] border-double border-blue-600/10 pointer-events-none"></div>
                 <div className="absolute inset-14 border border-blue-600/20 pointer-events-none"></div>
@@ -236,7 +342,10 @@ export default function CertificationsView() {
                    <X size={16} /> Close Preview
                 </button>
                 <div className="flex items-center gap-4">
-                    <button className="px-8 py-3 bg-white text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-400 hover:text-white transition-all active:scale-95 shadow-xl shadow-black/20 flex items-center gap-2">
+                    <button 
+                      onClick={handlePrint}
+                      className="px-8 py-3 bg-white text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-400 hover:text-white transition-all active:scale-95 shadow-xl shadow-black/20 flex items-center gap-2"
+                    >
                         <Download size={14} /> Download PDF
                     </button>
                 </div>

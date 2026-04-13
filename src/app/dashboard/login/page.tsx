@@ -3,20 +3,40 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
-import { Shield, Loader2, LogIn } from 'lucide-react';
+import { Shield, Loader2, LogIn, Home } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
     const [loading, setLoading] = useState(false);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const router = useRouter();
     const searchParams = useSearchParams();
     const { status } = useSession();
 
+    const getTargetUrl = () => {
+        if (typeof window === 'undefined') return '/dashboard';
+        
+        // 1. Check query parameter
+        const callbackUrl = searchParams.get('callbackUrl');
+        if (callbackUrl && callbackUrl.startsWith('/')) return callbackUrl;
+        
+        // 2. Check localStorage
+        const storedRedirect = localStorage.getItem('redirectAfterLogin');
+        if (storedRedirect && storedRedirect.startsWith('/')) {
+            return storedRedirect;
+        }
+        
+        return '/dashboard';
+    };
+
     useEffect(() => {
         if (status === 'authenticated') {
-            router.push('/dashboard');
+            const target = getTargetUrl();
+            localStorage.removeItem('redirectAfterLogin');
+            router.push(target);
         }
-    }, [status, router]);
+    }, [status, router, searchParams]);
 
     useEffect(() => {
         const error = searchParams.get('error');
@@ -29,8 +49,41 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         setLoading(true);
+        const target = getTargetUrl();
         try {
-            await signIn('google', { callbackUrl: '/dashboard' });
+            await signIn('google', { callbackUrl: target });
+        } catch (error) {
+            toast.error('An error occurred. Please try again.');
+            setLoading(false);
+        }
+    };
+
+    const handleManualLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email || !password) {
+            toast.error('Please enter both email and password');
+            return;
+        }
+
+        setLoading(true);
+        const target = getTargetUrl();
+        
+        try {
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false,
+                callbackUrl: target
+            });
+
+            if (result?.error) {
+                toast.error('Invalid email or password');
+                setLoading(false);
+            } else {
+                toast.success('Login successful!');
+                localStorage.removeItem('redirectAfterLogin');
+                router.push(target);
+            }
         } catch (error) {
             toast.error('An error occurred. Please try again.');
             setLoading(false);
@@ -53,6 +106,61 @@ export default function LoginPage() {
                         <p className="text-slate-500 mt-2 font-medium">Safe & Secure Access</p>
                     </div>
 
+                    <form onSubmit={handleManualLogin} className="space-y-4 mb-8">
+                        <div className="space-y-4">
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <span className="text-slate-400 group-focus-within:text-blue-600 transition-colors">@</span>
+                                </div>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Enter your email"
+                                    className="block w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium"
+                                    required
+                                />
+                            </div>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <Shield className="w-5 h-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                                </div>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="block w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading || status === 'loading'}
+                            className="w-full bg-slate-900 text-white py-4 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-xl shadow-slate-900/10"
+                        >
+                            {loading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <>
+                                    <LogIn className="w-5 h-5" />
+                                    Login
+                                </>
+                            )}
+                        </button>
+                    </form>
+
+                    <div className="relative mb-8">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-slate-100"></div>
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white px-4 text-slate-400 font-black tracking-widest">Or access with</span>
+                        </div>
+                    </div>
+
                     <div className="space-y-6">
                         <button
                             onClick={handleGoogleLogin}
@@ -72,6 +180,14 @@ export default function LoginPage() {
                                     Sign in with Google
                                 </>
                             )}
+                        </button>
+                        
+                        <button
+                            onClick={() => router.push('/')}
+                            className="w-full flex items-center justify-center gap-3 bg-slate-100/50 text-slate-600 py-3.5 px-6 rounded-2xl font-bold hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98] transition-all group text-sm border border-slate-200/60"
+                        >
+                            <Home className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
+                            Go to Home
                         </button>
 
                         {loading && (

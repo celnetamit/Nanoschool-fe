@@ -11,10 +11,11 @@
     "accountName": "IT Break com pvt LTD.",
     "accountNumber": "012345678901",
     "ifscCode": "ICIC0000123",
-    "signatureUrl": "/images/signatures/director.png"
+    "signatureUrl": "/images/signatures/director.png",
+    "cinNo": "U74899DL2001PTC109327"
   },
   "certificate": {
-    "prefix": "NS",
+    "prefix": "NSTC",
     "year": "2026",
     "authorityName": "Director, NanoSchool",
     "authorityTitle": "Authorised Controller",

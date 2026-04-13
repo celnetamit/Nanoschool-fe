@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, MapPin, CheckCircle, LayoutDashboard, Globe, CheckCircle2, ChevronDown, Search, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { X, User, MapPin, CheckCircle, LayoutDashboard, Globe, CheckCircle2, ChevronDown, Search, Lock, RefreshCw, Loader2 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { countries } from '@/data/countries';
 import { useAuthAction } from '@/hooks/useAuthAction';
-import LoginRequiredModal from '../auth/LoginRequiredModal';
+import { useSession } from 'next-auth/react';
+import { useGeolocation } from '@/hooks/useGeolocation';
 
 import { calculateGST, TaxBreakdown } from '@/lib/tax';
 import { getCurrencyForCountry, formatPrice, getCurrencyName, getUniqueCurrencies, getCurrencyFlag } from '@/lib/currency';
@@ -44,6 +46,8 @@ interface WorkshopEnrollmentDialogProps {
   };
   initialCurrency?: string;
   initialSelection?: string;
+  entryId?: string;
+  initialData?: any;
 }
 
 export default function WorkshopEnrollmentDialog({
@@ -59,7 +63,11 @@ export default function WorkshopEnrollmentDialog({
   pricesUSD,
   initialCurrency = 'INR',
   initialSelection = '',
+  entryId,
+  initialData,
 }: WorkshopEnrollmentDialogProps) {
+  const { data: session } = useSession();
+  const { detectLocation, loading: locationLoading } = useGeolocation();
   const [isMounted, setIsMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payableAmount, setPayableAmount] = useState(courseFee);
@@ -105,6 +113,7 @@ export default function WorkshopEnrollmentDialog({
 
   // Unique sequential PID fetched from the server when the dialog opens
   const [uniquePid, setUniquePid] = useState('Loading...');
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Helper to parse price string to number
   const parsePrice = (str: string) => {
@@ -144,7 +153,7 @@ export default function WorkshopEnrollmentDialog({
     if (!isOpen) return;
     
     const availableOptions = Object.keys(professionFees);
-    if (availableOptions.length > 0) {
+    if (availableOptions.length > 0 && !isRestoring) {
       const fieldName = itemType === 'courses' ? 'learningMode' : 'profession';
       
       // Only auto-select if nothing is selected yet
@@ -153,7 +162,7 @@ export default function WorkshopEnrollmentDialog({
         setFormData(prev => ({ ...prev, [fieldName]: defaultValue }));
       }
     }
-  }, [isOpen, itemType, professionFees, formData]);
+  }, [isOpen, itemType, professionFees, isRestoring]);
 
   // Effect to handle currency switching in real-time
   useEffect(() => {
@@ -259,14 +268,19 @@ export default function WorkshopEnrollmentDialog({
     }
   }, [currency, currencySymbol, exchangeRates, formData.profession, formData.learningMode, isOpen, priceUSD, pricesINR, pricesUSD, professionFees, courseFee, itemType]);
 
-  // Fetch the next sequential PID whenever the dialog opens
+  // Fetch the next sequential PID whenever the dialog opens (unless an existing PID is explicitly passed)
   useEffect(() => {
     if (!isOpen) return;
-    setUniquePid('Loading...');
-    fetch('/api/formidable/next-pid')
-      .then(res => res.json())
-      .then(data => setUniquePid(data.pid || 'NSTC0001'))
-      .catch(() => setUniquePid('NSTC0001'));
+    
+    if (pid && pid !== 'NSTC2120') {
+      setUniquePid(pid);
+    } else {
+      setUniquePid('Loading...');
+      fetch('/api/formidable/next-pid')
+        .then(res => res.json())
+        .then(data => setUniquePid(data.pid || 'NSTC0001'))
+        .catch(() => setUniquePid('NSTC0001'));
+    }
 
     // Load Razorpay script
     const script = document.createElement('script');
@@ -290,6 +304,124 @@ export default function WorkshopEnrollmentDialog({
       document.body.removeChild(script);
     };
   }, [isOpen]);
+
+  // Pre-fill form with user data when dialog opens
+  useEffect(() => {
+    if (!isOpen || !session?.user) return;
+
+    // 1. Immediate pre-fill from session
+    setFormData(prev => ({
+      ...prev,
+      name: session.user?.name || prev.name,
+      email: session.user?.email || prev.email
+    }));
+
+    // 2. Fetch extended profile (mobile, address) or explicit entry restoration
+    const fetchProfile = async () => {
+        // EXPLICIT RESTORATION: if entryId is present, bypass generic profile fetch and query the EXACT transaction directly
+        if (entryId) {
+            setIsRestoring(true);
+            try {
+                const res = await fetch(`/api/formidable/entry?entryId=${entryId}`);
+                const data = await res.json();
+                
+                if (data.success && data.entry) {
+                    const e = data.entry;
+                    setFormData(prev => ({
+                        ...prev,
+                        name: e.name || prev.name,
+                        email: e.email || prev.email,
+                        mobileNumber: e.mobileNumber?.replace('+91', '') || prev.mobileNumber,
+                        currentAffiliation: e.currentAffiliation || prev.currentAffiliation,
+                        profession: e.profession || prev.profession,
+                        designation: e.designation || prev.designation,
+                        address: e.address || prev.address,
+                        state: e.state || prev.state,
+                        country: e.country || prev.country,
+                        pinCode: e.pinCode || prev.pinCode,
+                        learningMode: e.learningMode || prev.learningMode,
+                        gstVatNo: e.gstVatNo || prev.gstVatNo
+                    }));
+                    
+                    if (e.country === 'India') {
+                        setCurrency('INR');
+                        setCurrencySymbol('₹');
+                    }
+
+                    // Force sync the payable amount from the props if it was passed 
+                    if (courseFee && courseFee !== '0.00' && courseFee !== '0') {
+                        setPayableAmount(courseFee);
+                    }
+                    
+                    // Do NOT return here; allow it to fetch general profile as a fallback for missing fields
+                }
+            } catch (err) {
+                console.error("Failed to implicitly restore previous entry data:", err);
+            } finally {
+                // Keep it true for just a moment longer to let other effects stabilize
+                setTimeout(() => setIsRestoring(false), 500);
+            }
+        }
+
+        try {
+            const res = await fetch('/api/user/profile');
+            const data = await res.json();
+            if (data.success && data.profile) {
+                const p = data.profile;
+                setFormData(prev => ({
+                    ...prev,
+                    name: p.name || session.user?.name || prev.name,
+                    email: p.email || session.user?.email || prev.email,
+                    mobileNumber: p.mobileNumber || prev.mobileNumber,
+                    currentAffiliation: p.currentAffiliation || prev.currentAffiliation,
+                    address: p.address || prev.address,
+                    state: p.state || prev.state,
+                    country: p.country || prev.country,
+                    pinCode: p.pinCode || prev.pinCode,
+                    designation: p.designation || prev.designation,
+                    profession: p.profession || prev.profession
+                }));
+
+                // If country is India, ensure currency is set correctly
+                if (p.country === 'India') {
+                    setCurrency('INR');
+                    setCurrencySymbol('₹');
+                }
+                
+                // If profile is incomplete, try geolocation as well
+                if (!p.address || !p.country) {
+                    triggerGeolocation();
+                }
+            } else {
+                // No profile found, try geolocation immediately
+                triggerGeolocation();
+            }
+        } catch (err) {
+            console.error('Failed to pre-fill profile:', err);
+            triggerGeolocation();
+        }
+    };
+
+    const triggerGeolocation = async () => {
+        const loc = await detectLocation();
+        if (loc) {
+            setFormData(prev => ({
+                ...prev,
+                country: prev.country || loc.country,
+                state: prev.state || loc.state,
+                address: prev.address || loc.address || loc.city,
+                pinCode: prev.pinCode || loc.pinCode
+            }));
+
+            if (!formData.country && loc.country === 'India') {
+                setCurrency('INR');
+                setCurrencySymbol('₹');
+            }
+        }
+    };
+
+    fetchProfile();
+  }, [isOpen, session, entryId]);
 
   // Prevent background scrolling when dialog is open
   useEffect(() => {
@@ -387,6 +519,7 @@ export default function WorkshopEnrollmentDialog({
         },
         body: JSON.stringify({
           ...formData,
+          entryId,
           pid: uniquePid,
           workshopTitle,
           courseFee: payableAmount,   // Use the calculated fee for selected mode/profession
@@ -409,7 +542,7 @@ export default function WorkshopEnrollmentDialog({
         throw new Error(result.error || 'Failed to submit enrollment.');
       }
 
-      const entryId = result.data?.id;
+      const returnedEntryId = result.data?.id || entryId;
       const itemMeta = result.itemMeta;
       
       // Step 2: Create Razorpay Order
@@ -460,7 +593,7 @@ export default function WorkshopEnrollmentDialog({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                entryId: entryId,
+                entryId: returnedEntryId,
                 itemMeta: itemMeta
               }),
             });
@@ -498,7 +631,7 @@ export default function WorkshopEnrollmentDialog({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  entryId: entryId,
+                  entryId: returnedEntryId,
                   itemMeta: itemMeta,
                   razorpay_order_id: orderData.orderId,
                 }),
@@ -520,7 +653,7 @@ export default function WorkshopEnrollmentDialog({
     }
   };
 
-  const { performAction, showLoginModal, closeLoginModal, currentPath } = useAuthAction();
+  const { performAction, currentPath } = useAuthAction();
 
   const handleProtectedSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -533,7 +666,6 @@ export default function WorkshopEnrollmentDialog({
 
   const dialogContent = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md overflow-y-auto">
-      <Toaster position="top-center" reverseOrder={false} />
       <div 
         className="absolute inset-0" 
         onClick={onClose}
@@ -541,6 +673,13 @@ export default function WorkshopEnrollmentDialog({
       />
       
       <div className={`relative z-[101] w-full transition-all duration-500 ease-in-out ${paymentSuccess || paymentFailed ? 'max-w-md' : 'max-w-4xl'} max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl animate-in fade-in zoom-in-95`}>
+        {isRestoring && (
+          <div className="absolute inset-0 z-[110] bg-white/90 backdrop-blur-md flex flex-col items-center justify-center rounded-3xl">
+            <Loader2 size={40} className="text-blue-600 animate-spin mb-6" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Restoring Form...</h3>
+            <p className="text-sm font-medium text-gray-500">Securely retrieving your previous details</p>
+          </div>
+        )}
         
         {/* Main Enrollment Form - Hidden when showing results */}
         {!paymentSuccess && !paymentFailed && (
@@ -608,15 +747,25 @@ export default function WorkshopEnrollmentDialog({
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Email *</label>
-                <input 
-                  type="email" 
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g. example@gmail.com"
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400"
-                />
+                <div className="relative group/field">
+                  <input 
+                    type="email" 
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    readOnly={!!session?.user?.email}
+                    placeholder="e.g. example@gmail.com"
+                    className={`w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 ${
+                      session?.user?.email ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200' : ''
+                    }`}
+                  />
+                  {session?.user?.email && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" title="Verified email cannot be changed">
+                      <Lock size={16} />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -713,11 +862,19 @@ export default function WorkshopEnrollmentDialog({
 
           {/* Address Information */}
           <div>
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-800 tracking-tight">Location Details</h3>
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+               <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 tracking-tight">Location Details</h3>
+               </div>
+               {locationLoading && (
+                  <div className="flex items-center gap-2 text-xs font-bold text-blue-600 animate-pulse bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+                     <RefreshCw size={12} className="animate-spin" />
+                     Detecting your location...
+                  </div>
+               )}
             </div>
             
             <div className="space-y-6">
@@ -1129,16 +1286,16 @@ export default function WorkshopEnrollmentDialog({
               </div>
             </div>
           </div>
-          <button 
-            type="button"
-            onClick={() => {
-              setPaymentSuccess(false);
-              onClose();
-            }}
-            className="w-full px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95"
-          >
-            Go to My Dashboard
-          </button>
+            <Link 
+              href="/dashboard"
+              onClick={() => {
+                setPaymentSuccess(false);
+                onClose();
+              }}
+              className="w-full px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+            >
+              Go to My Dashboard
+            </Link>
         </div>
       )}
       
@@ -1169,14 +1326,6 @@ export default function WorkshopEnrollmentDialog({
         </div>
       )}
       </div>
-      
-      <LoginRequiredModal 
-        isOpen={showLoginModal} 
-        onClose={closeLoginModal} 
-        title="Account Required"
-        message="Please sign in to your NanoSchool account to complete your enrollment. This ensures your course progress and certificates are correctly linked to your profile."
-        callbackUrl={currentPath}
-      />
     </div>
   );
 

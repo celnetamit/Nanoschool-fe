@@ -24,6 +24,7 @@ interface InvoiceModalProps {
     institution?: string;
     pid?: string;
     zipCode?: string;
+    category?: string;
   } | null;
   onClose: () => void;
 }
@@ -49,7 +50,74 @@ export default function InvoiceModal({ payment, onClose }: InvoiceModalProps) {
   if (!payment) return null;
 
   const handlePrint = () => {
-    window.print();
+    // 1. Create a hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    // 2. Extract HTML content
+    const printableContent = document.getElementById('printable-invoice');
+    if (!printableContent || !iframe.contentWindow) return;
+
+    // 3. Construct the print document
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Retail Tax Invoice - ${invoiceNumber}</title>
+          <style>
+            @page { margin: 10mm; size: portrait; }
+            body { 
+              margin: 0; 
+              padding: 0; 
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .invoice-shell {
+              width: 100%;
+              max-width: 800px;
+              margin: 0 auto;
+              border: 1.5px solid black;
+              font-family: serif;
+              font-size: 13px;
+              color: black;
+              line-height: normal;
+            }
+            /* Import critical styles from the UI */
+            ${Array.from(document.styleSheets)
+              .map(sheet => {
+                try {
+                  return Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n');
+                } catch (e) {
+                  return '';
+                }
+              })
+              .join('\n')}
+          </style>
+        </head>
+        <body>
+          <div class="invoice-shell">
+            ${printableContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // 4. Trigger print and cleanup
+    iframe.contentWindow.focus();
+    setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 100);
+    }, 500);
   };
 
   const taxBreakdown = calculateGST(payment.amount, payment.country, payment.state);
@@ -66,57 +134,18 @@ export default function InvoiceModal({ payment, onClose }: InvoiceModalProps) {
     gstin: "09AAACI8565D2ZD",
     cinNo: "U74899DL2001PTC109327",
     stateCode: "09",
-    panNo: "AAACI8565D"
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-hidden print:bg-white print:p-0 print:block">
-      <style jsx global>{`
-        @media print {
-          /* Hide all page content except the invoice */
-          body * {
-            visibility: hidden;
-          }
-          #printable-invoice, #printable-invoice * {
-            visibility: visible;
-          }
-          
-          /* Position the invoice at the very top left of the printed page */
-          #printable-invoice {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100% !important;
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: 1px solid black !important;
-          }
-          
-          /* Kill any background overlays from the modal */
-          .print\:hidden, [class*="backdrop-blur"], [class*="bg-slate-950/40"] {
-            display: none !important;
-          }
-          
-          /* Ensure we don't scale/shrink the invoice in the printed output */
-          div[class*="relative"][class*="max-w-5xl"] {
-            transform: none !important;
-            max-width: none !important;
-            width: 100% !important;
-            box-shadow: none !important;
-            position: static !important;
-          }
-        }
-      `}</style>
-
+    <div id="invoice-modal-portal" className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-hidden">
       {/* Background Overlay */}
       <div 
-        className="absolute inset-0 bg-slate-950/40 backdrop-blur-md animate-in fade-in duration-300 print:hidden"
+        className="absolute inset-0 bg-slate-950/40 backdrop-blur-md animate-in fade-in duration-300"
         onClick={onClose}
       ></div>
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-5xl bg-white shadow-2xl overflow-hidden print:shadow-none print:border-none print:rounded-none animate-in zoom-in-95 duration-500 scale-[0.95] origin-center flex flex-col max-h-[98vh]">
+      <div className="relative w-full max-w-5xl bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 scale-[0.95] origin-center flex flex-col max-h-[98vh]">
         
         {/* Top Control Bar (Hidden on Print) */}
         <div className="flex items-center justify-between px-6 py-2 border-b border-slate-100 bg-white sticky top-0 z-[110] print:hidden shrink-0">
@@ -145,11 +174,10 @@ export default function InvoiceModal({ payment, onClose }: InvoiceModalProps) {
                 <div className="grid grid-cols-[220px_1fr_180px] items-center border-b-[1.5px] border-black p-4 text-center gap-4">
                     <div className="text-left">
                         <div className="relative w-52 h-14 mb-1">
-                             <Image 
+                             <img 
                                 src="/images/logos/nanoschool-logo.svg" 
                                 alt="NanoSchool" 
-                                fill 
-                                className="object-contain"
+                                className="w-full h-full object-contain"
                              />
                         </div>
                         <p className="text-[8px] font-black uppercase tracking-[0.2em] text-blue-600 pl-1">The Learning Revolution</p>
@@ -164,12 +192,10 @@ export default function InvoiceModal({ payment, onClose }: InvoiceModalProps) {
                     </div>
                     <div className="flex justify-end">
                         <div className="relative w-16 h-16 border border-black p-1 flex items-center justify-center">
-                            <Image 
+                            <img 
                                 src="/images/logos/nstc-logo.svg" 
                                 alt="NSTC Logo" 
-                                width={60} 
-                                height={60} 
-                                className="object-contain"
+                                className="w-[60px] h-[60px] object-contain"
                             />
                             <span className="absolute -bottom-2 right-0 bg-white px-1 text-[8px] font-bold">NSTC</span>
                         </div>
@@ -204,7 +230,7 @@ export default function InvoiceModal({ payment, onClose }: InvoiceModalProps) {
                         ['Email:', payment.email],
                         ['State Code:', getStateCode(payment.state) || '09'],
                         ['Profession / Mode:', payment.institution || 'N/A'],
-                        ['Enrollment Category:', 'Course'],
+                        ['Enrollment Category:', payment.category || 'Course'],
                         ['Reference No:', payment.transactionId || 'N/A']
                     ].map(([label, value], idx) => (
                         <React.Fragment key={idx}>
