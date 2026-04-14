@@ -11,7 +11,9 @@ import {
   Calendar, 
   Zap,
   TrendingUp,
-  Bookmark
+  Bookmark,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface Enrollment {
@@ -22,7 +24,11 @@ interface Enrollment {
 
 export default function UserView({ userEmail }: { userEmail: string }) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [timelineItems, setTimelineItems] = useState<any[]>([]);
+  const [timelinePage, setTimelinePage] = useState(1);
+  const [timelineTotalPages, setTimelineTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [timelineLoading, setTimelineLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -41,6 +47,26 @@ export default function UserView({ userEmail }: { userEmail: string }) {
       })
       .catch(() => setLoading(false));
   }, [userEmail]);
+
+  /* useEffect(() => {
+    fetchTimeline();
+  }, [timelinePage]); */
+
+  const fetchTimeline = async () => {
+    setTimelineLoading(true);
+    try {
+      const response = await fetch(`/api/dashboard/academic-timeline?page=${timelinePage}&limit=4`);
+      const data = await response.json();
+      if (data.success) {
+        setTimelineItems(data.items);
+        setTimelineTotalPages(data.totalPages);
+      }
+    } catch (err) {
+      console.error('Failed to fetch timeline:', err);
+    } finally {
+      setTimelineLoading(false);
+    }
+  };
 
   if (loading) return (
     <div className="space-y-12">
@@ -155,6 +181,8 @@ export default function UserView({ userEmail }: { userEmail: string }) {
       </section>
 
       {/* Information Grid - Secondary Insights */}
+      {/* Information Grid - Secondary Insights (Hidden as per user request) */}
+      {/* 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-12 pt-6">
           <div className="xl:col-span-2 space-y-10">
                 <div className="bg-white rounded-[3rem] border border-slate-200/50 shadow-2xl shadow-slate-200/20 overflow-hidden group">
@@ -165,12 +193,53 @@ export default function UserView({ userEmail }: { userEmail: string }) {
                             </div>
                             <h3 className="text-2xl font-black text-slate-950 tracking-tighter">Academic Timeline</h3>
                         </div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Next 14 Days</span>
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => setTimelinePage(p => Math.max(1, p - 1))}
+                                disabled={timelinePage === 1 || timelineLoading}
+                                className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:text-slate-900 transition-all disabled:opacity-30"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest min-w-[50px] text-center">
+                                Page {timelinePage} / {timelineTotalPages}
+                            </span>
+                            <button 
+                                onClick={() => setTimelinePage(p => Math.min(timelineTotalPages, p + 1))}
+                                disabled={timelinePage === timelineTotalPages || timelineLoading}
+                                className="p-2 rounded-xl bg-slate-100 text-slate-400 hover:text-slate-900 transition-all disabled:opacity-30"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
                     </div>
-                    <div className="p-10 space-y-8">
-                        <TimelineItem title="Advanced Nano-Ethics" type="Workshop" time="Today, 14:00" status="Live" />
-                        <TimelineItem title="Introduction to Molecular Design" type="Course" time="Tomorrow, 10:00" status="Upcoming" />
-                        <TimelineItem title="Lab Safety Protocols" type="Internal" time="Friday, 09:00" status="Required" />
+                    <div className="p-10 space-y-8 relative">
+                        {timelineLoading && (
+                            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        )}
+                        
+                        {timelineItems.length > 0 ? (
+                            timelineItems.map((item) => (
+                                <TimelineItem 
+                                    key={item.id}
+                                    title={item.title}
+                                    type={item.type}
+                                    time={mounted ? new Date(item.startDate).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    }) : '...'}
+                                    status={item.status === 'live' ? 'Ongoing' : 'Upcoming'}
+                                    isLive={item.status === 'live'}
+                                    link={item.link}
+                                />
+                            ))
+                        ) : (
+                            <p className="text-center py-10 text-slate-400 font-bold italic">No active sessions scheduled in the registry.</p>
+                        )}
                     </div>
                 </div>
           </div>
@@ -191,6 +260,7 @@ export default function UserView({ userEmail }: { userEmail: string }) {
                </div>
           </div>
       </div>
+      */}
     </div>
   );
 }
@@ -245,21 +315,23 @@ function CourseCard({ course, mounted }: { course: Enrollment, mounted: boolean 
   );
 }
 
-function TimelineItem({ title, type, time, status }: any) {
+function TimelineItem({ title, type, time, status, isLive, link }: any) {
     return (
-        <div className="flex items-center justify-between group/item cursor-pointer">
+        <a href={link} className="flex items-center justify-between group/item cursor-pointer block">
             <div className="flex items-center gap-6">
-                <div className="w-2.5 h-2.5 rounded-full bg-slate-200 group-hover/item:bg-blue-500 group-hover/item:scale-150 transition-all duration-500 shadow-sm relative">
-                    <div className="absolute inset-0 bg-blue-500 rounded-full opacity-0 group-hover/item:animate-ping opacity-40"></div>
+                <div className={`w-2.5 h-2.5 rounded-full ${isLive ? 'bg-emerald-500' : 'bg-slate-200'} group-hover/item:bg-blue-500 group-hover/item:scale-150 transition-all duration-500 shadow-sm relative`}>
+                    {isLive && (
+                         <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-40"></div>
+                    )}
                 </div>
                 <div className="space-y-1">
                     <h4 className="text-base font-black text-slate-900 group-hover/item:text-blue-700 transition-colors leading-none tracking-tight">{title}</h4>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{type} • {time}</p>
                 </div>
             </div>
-            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 shadow-sm group-hover/item:border-blue-100 group-hover/item:text-blue-600 transition-all bg-white`}>
+            <div className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 shadow-sm group-hover/item:border-blue-100 group-hover/item:text-blue-600 transition-all ${isLive ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-white'}`}>
                 {status}
             </div>
-        </div>
+        </a>
     );
 }

@@ -7,6 +7,7 @@ import { BookOpen, Award, Users, CheckCircle, Clock, Calendar, ChevronDown, Chev
 import FAQ from '@/components/FAQ';
 import { FAQ_DATA } from '@/data/faqs';
 import WorkshopEnrollButton from '@/components/payments/WorkshopEnrollButton';
+import EnrollmentActions from '@/components/payments/EnrollmentActions';
 import { FeedbackData } from '@/lib/feedback';
 
 interface CourseTemplateProps {
@@ -208,8 +209,7 @@ export default function CourseTemplate({ post, storeProduct, feedbacks }: Course
                             );
                         })}
                     </div>
-                    {/* Simplified Enroll Button for Nav */}
-                    <div className="hidden md:block">
+                    <div className="hidden md:flex items-center gap-4">
                         <WorkshopEnrollButton
                             itemType="courses"
                             workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
@@ -222,6 +222,11 @@ export default function CourseTemplate({ post, storeProduct, feedbacks }: Course
                         >
                             Enroll Now
                         </WorkshopEnrollButton>
+                        <EnrollmentActions 
+                            workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                            itemType="courses"
+                            slug={post.slug}
+                        />
                     </div>
                 </div>
             </div>
@@ -401,18 +406,25 @@ export default function CourseTemplate({ post, storeProduct, feedbacks }: Course
                                 </div>
 
                                 {/* Use enrollment button instead of direct link */}
-                                <WorkshopEnrollButton 
-                                    itemType="courses"
-                                    workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
-                                    professionFees={learningModeFeeMap}
-                                    courseFee={formatPrice(currentPrice)}
-                                    pricesInr={post.prices_inr}
-                                    initialCurrency={currency}
-                                    initialSelection={selectedVariation.name}
-                                    className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-lg shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all mb-4"
-                                >
-                                    Enroll Now
-                                </WorkshopEnrollButton>
+                                <div className="flex flex-col gap-3 mb-4">
+                                    <WorkshopEnrollButton 
+                                        itemType="courses"
+                                        workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                                        professionFees={learningModeFeeMap}
+                                        courseFee={formatPrice(currentPrice)}
+                                        pricesInr={post.prices_inr}
+                                        initialCurrency={currency}
+                                        initialSelection={selectedVariation.name}
+                                        className="block w-full text-center py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-lg shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all"
+                                    >
+                                        Enroll Now
+                                    </WorkshopEnrollButton>
+                                    <EnrollmentActions 
+                                        workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                                        itemType="courses"
+                                        slug={post.slug}
+                                    />
+                                </div>
 
                                 <div className="text-center text-xs text-slate-500 mb-6">
                                     30-Day Money-Back Guarantee • Lifetime Access

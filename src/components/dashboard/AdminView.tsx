@@ -18,6 +18,7 @@ interface Stats {
   paid: number;
   unpaid: number;
   revenue: number;
+  revenueTarget: number;
   recent: any[];
 }
 
@@ -226,15 +227,28 @@ export default function AdminView() {
                 </div>
                 <h3 className="font-black text-2xl mb-3 tracking-tight">Rev Target Index</h3>
                 <p className="text-slate-400 text-[13px] mb-10 font-bold leading-relaxed opacity-80">
-                   Operational performance is trending at <span className="text-white underline decoration-blue-500 underline-offset-4">88% efficiency</span> relative to fiscal targets.
+                   Operational performance is trending at <span className="text-white underline decoration-blue-500 underline-offset-4">{stats.revenueTarget > 0 ? Math.round((stats.revenue/stats.revenueTarget)*100) : 0}% efficiency</span> relative to fiscal targets.
                 </p>
                 <div className="mt-auto space-y-4">
                     <div className="flex justify-between items-end">
-                        <span className="text-4xl font-black tracking-tighter">{mounted ? '₹4.8M' : '₹...'}</span>
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1.5">Idx Opt 88.4%</span>
+                        <span className="text-4xl font-black tracking-tighter">
+                            {mounted ? (
+                                stats.revenue >= 1000000 
+                                    ? `₹${(stats.revenue/1000000).toFixed(1)}M` 
+                                    : stats.revenue >= 1000 
+                                        ? `₹${(stats.revenue/1000).toFixed(0)}K` 
+                                        : `₹${stats.revenue}`
+                            ) : '₹...'}
+                        </span>
+                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1.5">
+                            Idx Opt {stats.total > 0 ? ((stats.paid/stats.total)*100).toFixed(1) : 0}%
+                        </span>
                     </div>
                     <div className="w-full h-4 bg-white/5 rounded-full overflow-hidden p-1 border border-white/5 shadow-inner">
-                        <div className="h-full bg-gradient-to-r from-blue-700 via-blue-500 to-indigo-400 rounded-full w-[88%] shadow-[0_0_20px_rgba(59,130,246,0.3)] relative transition-all duration-1000 ease-out">
+                        <div 
+                            className="h-full bg-gradient-to-r from-blue-700 via-blue-500 to-indigo-400 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.3)] relative transition-all duration-1000 ease-out"
+                            style={{ width: `${Math.min(100, Math.round((stats.revenue/stats.revenueTarget)*100))}%` }}
+                        >
                              <div className="absolute top-0 right-0 h-full w-4 bg-white/20 animate-pulse"></div>
                         </div>
                     </div>

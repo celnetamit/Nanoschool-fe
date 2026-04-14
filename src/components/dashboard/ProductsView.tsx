@@ -47,26 +47,32 @@ export default function ProductsView({
 
   useEffect(() => {
     setMounted(true);
-    if (initialCourses.length === 0 && initialWorkshops.length === 0) {
-        fetchEnrollments();
-    }
-  }, []);
+    fetchEnrollments();
+  }, [activeTab]);
 
   const fetchEnrollments = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     else setLoading(true);
 
     try {
-      const response = await fetch('/api/user/enrollments');
-      const data = await response.json();
-      if (data.success) {
-        // Normalize as per the component's expectation if needed
-        // The API returns 'enrollments' (courses) and 'workshops'
-        setCourses(data.enrollments);
-        setWorkshops(data.workshops);
+      // Logic Change: If Admin is looking at courses, fetch the actual Product Catalog from WooCommerce
+      if (isAdmin && activeTab === 'courses') {
+        const response = await fetch(`/api/admin/products?page=${currentPage}&limit=12`);
+        const data = await response.json();
+        if (data.success) {
+          setCourses(data.products);
+        }
+      } else {
+        // Fallback or Student View: Fetch individual enrollment records
+        const response = await fetch('/api/user/enrollments');
+        const data = await response.json();
+        if (data.success) {
+          setCourses(data.enrollments);
+          setWorkshops(data.workshops);
+        }
       }
     } catch (error) {
-      console.error('Error fetching enrollments:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -139,21 +145,45 @@ export default function ProductsView({
         {activeTab === 'courses' ? (
           courses.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-              {courses.map((course: any, idx: number) => {
-                const meta = course.meta || course.item_meta || {};
-                const courseTitle = course.title || meta['mlsd4'] || meta['9789'] || 'Specialized Program';
-                const isPaid = meta['2dnu4'] === 'payment_success' || meta['9817'] === 'payment_success' || course.isAdminView;
-                const date = mounted ? new Date(course.created_at).toLocaleDateString('en-IN', {
+              {courses.map((item: any, idx: number) => {
+                // If it's a WooCommerce Product (Admin View)
+                const isProduct = !!item.price || !!item.prices_inr;
+                
+                const title = item.title?.rendered || item.course || 'Specialized Program';
+                const slug = item.slug || '';
+                const priceInr = item.prices_inr?.sale || item.prices_inr?.regular || item.price;
+                const priceUsd = item.prices_usd?.sale || item.prices_usd?.regular;
+                
+                // If it's an enrollment record (Student View)
+                const meta = item.meta || item.item_meta || {};
+                const isPaid = meta['2dnu4'] === 'payment_success' || meta['9817'] === 'payment_success' || item.isAdminView || isProduct;
+                const date = mounted ? new Date(item.created_at || item.date).toLocaleDateString('en-IN', {
                     day: 'numeric',
                     month: 'short',
                     year: 'numeric'
                 }) : '...';
 
+                // Featured Image Logic
+                const featuredImage = item.originalPost?._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+
                 return (
                   <div key={idx} className="group relative bg-white rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-blue-500/10 hover:border-blue-400/30 transition-all duration-500 overflow-hidden flex flex-col">
-                      <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity duration-700">
+                      {/* Course Thumbnail or Decorative Icon */}
+                      {featuredImage ? (
+                        <div className="h-48 w-full relative overflow-hidden">
+                           <img 
+                            src={featuredImage} 
+                            alt={title} 
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                           />
+                           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                        </div>
+                      ) : (
+                        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity duration-700">
                           <Award size={120} />
-                      </div>
+                        </div>
+                      )}
+                      
                       <div className="p-8 flex-grow">
                           <div className="flex items-center justify-between mb-6">
                               <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${
@@ -161,35 +191,42 @@ export default function ProductsView({
                                   ? 'bg-emerald-50 text-emerald-600 border-emerald-200/50' 
                                   : 'bg-amber-50 text-amber-600 border-amber-200/50'
                               }`}>
-                                  {isPaid ? 'Verified' : 'Pending'}
+                                  {isPaid ? (isProduct ? 'Live Product' : 'Verified') : 'Pending'}
                               </span>
                               <div className="text-slate-400">
                                   <Clock size={18} />
                               </div>
                           </div>
                           <h3 className="text-xl font-black text-slate-900 mb-4 leading-tight group-hover:text-blue-600 transition-colors h-14 line-clamp-2">
-                              {courseTitle}
+                              {title}
                           </h3>
                           <div className="space-y-3">
-                              <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
-                                  <Calendar size={16} className="text-slate-400" />
-                                  Enrolled on {date}
-                              </div>
+                              {isProduct ? (
+                                <div className="flex items-center gap-4 text-sm font-black text-blue-600">
+                                    <span className="px-3 py-1 bg-blue-50 rounded-lg">₹{priceInr}</span>
+                                    {priceUsd && <span className="text-slate-400 font-bold">${priceUsd}</span>}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
+                                    <Calendar size={16} className="text-slate-400" />
+                                    Enrolled on {date}
+                                </div>
+                              )}
                           </div>
                       </div>
                       <div className="p-8 pt-0 mt-auto">
-                          {isAdmin ? (
+                          {isAdmin || slug ? (
                             <Link 
-                                href={`/course/${course.originalPost?.slug || ''}`}
-                                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-slate-100 text-slate-900 text-sm font-black hover:bg-slate-200 active:scale-[0.98] transition-all border border-slate-200"
+                                href={isAdmin ? `/course/${slug}` : (slug ? `/course/${slug}` : '#')}
+                                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-slate-900 text-white text-sm font-black hover:bg-blue-600 active:scale-[0.98] transition-all shadow-xl shadow-slate-900/10 hover:shadow-blue-500/20 group-hover:translate-y-[-4px] duration-500"
                             >
-                                <Eye size={20} />
-                                View Details
+                                {isAdmin ? <Eye size={20} /> : <PlayCircle size={20} />}
+                                {isAdmin ? 'View Details' : 'Enter Classroom'}
                             </Link>
                           ) : (
-                            <button className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-slate-900 text-white text-sm font-black hover:bg-blue-600 active:scale-[0.98] transition-all shadow-xl shadow-slate-900/10 hover:shadow-blue-500/20 group-hover:translate-y-[-4px] duration-500">
+                            <button className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-slate-100 text-slate-400 text-sm font-black cursor-not-allowed border border-slate-100">
                                 <PlayCircle size={20} />
-                                Enter Classroom
+                                Enrollment Syncing...
                             </button>
                           )}
                       </div>
@@ -245,16 +282,19 @@ export default function ProductsView({
                           </div>
                       </div>
                       <div className="p-8 pt-0 mt-auto">
-                          {isAdmin ? (
+                          {isAdmin || workshop.slug ? (
                             <Link 
-                                href={`/workshops/${workshop.originalPost?.slug || ''}`}
-                                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-slate-100 text-slate-900 text-sm font-black hover:bg-slate-200 active:scale-[0.98] transition-all border border-slate-200"
+                                href={isAdmin ? `/workshops/${workshop.originalPost?.slug || ''}` : `/workshops/${workshop.slug}`}
+                                className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-black active:scale-[0.98] transition-all shadow-xl group-hover:translate-y-[-4px] duration-500
+                                  ${isAdmin ? 'bg-slate-100 text-slate-900 hover:bg-slate-200 border border-slate-200' : 'bg-slate-900 text-white hover:bg-indigo-600 shadow-slate-900/10 hover:shadow-indigo-500/20'}
+                                `}
                             >
-                                <Info size={20} />
-                                Session Info
+                                {isAdmin ? <Info size={20} /> : <PlayCircle size={20} />}
+                                {isAdmin ? 'Session Info' : 'Enter Workshop'}
+                                {!isAdmin && <ExternalLink size={18} />}
                             </Link>
                           ) : (
-                              <button className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-slate-900 text-white text-sm font-black hover:bg-indigo-600 active:scale-[0.98] transition-all shadow-xl shadow-slate-900/10 hover:shadow-indigo-500/20 group-hover:translate-y-[-4px] duration-500">
+                              <button className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-slate-100 text-slate-400 text-sm font-black cursor-not-allowed border border-slate-100">
                                 Join Session
                                 <ExternalLink size={18} />
                             </button>

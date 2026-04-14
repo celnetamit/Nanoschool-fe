@@ -200,10 +200,13 @@ export default function DashboardLayout({ children, role, userEmail, userName, u
                 <span className="text-[10px] font-bold text-slate-400 tabular-nums">4 ms latency</span>
              </div>
              
+             {/* Notification Button (Hidden as per user request) */}
+             {/* 
              <button className="p-4 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-blue-600 transition-all relative group shadow-sm">
                 <Bell size={22} className="group-hover:rotate-12 transition-transform stroke-[2]" />
                 <span className="absolute top-4 right-4 w-2 h-2 bg-rose-600 rounded-full border-2 border-white animate-bounce"></span>
              </button>
+             */}
              
              <div className="h-14 w-px bg-slate-100 hidden sm:block"></div>
              

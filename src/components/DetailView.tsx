@@ -8,6 +8,7 @@ import PricingSection from './PricingSection';
 import KeyHighlights from './KeyHighlights';
 import HallOfFameSection from './HallOfFameSection';
 import WorkshopEnrollButton from './payments/WorkshopEnrollButton';
+import EnrollmentActions from './payments/EnrollmentActions';
 import Link from 'next/link';
 import { getFeedbacks } from '@/lib/feedback';
 
@@ -330,11 +331,18 @@ export default async function DetailView({ params, type, initialPost }: { params
                                             courseFee={post.price || baseCourseFee}
                                             pricesInr={post.prices_inr}
                                             pricesUsd={post.prices_usd}
-                                            className="w-full py-4 bg-white text-slate-900 font-bold uppercase tracking-widest text-sm rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-black/20 flex items-center justify-center gap-2 group-hover:shadow-red-500/20"
+                                            className="w-full py-4 bg-white text-slate-900 font-bold uppercase tracking-widest text-sm rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-black/20 flex items-center justify-center gap-2 group-hover:shadow-red-500/20 mb-4"
                                         >
                                             <span>Secure Seat</span>
                                             <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                                         </WorkshopEnrollButton>
+
+                                        <EnrollmentActions 
+                                            workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                                            itemType={type}
+                                            slug={slug}
+                                            endDate={extractWorkshopDate(post.content.rendered)}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -525,7 +533,7 @@ export default async function DetailView({ params, type, initialPost }: { params
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    <div className="flex flex-col gap-4">
                                         <WorkshopEnrollButton
                                             itemType={type}
                                             href={`https://nanoschool.in/${type === 'courses' ? 'course' : type}/${slug}`}
@@ -539,6 +547,14 @@ export default async function DetailView({ params, type, initialPost }: { params
                                             <span className="relative z-10">Enroll Now</span>
                                             <div className="absolute inset-0 bg-white/20 translate-y-full hover:translate-y-0 transition-transform duration-300"></div>
                                         </WorkshopEnrollButton>
+
+                                        <EnrollmentActions 
+                                            workshopTitle={post.title.rendered.replace(/<[^>]*>?/gm, '')}
+                                            itemType={type}
+                                            slug={slug}
+                                            endDate={extractWorkshopDate(post.content.rendered)}
+                                        />
+                                        
                                         <div className="flex items-center justify-center gap-2 opacity-60">
                                             <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Instant Access</p>

@@ -19,12 +19,13 @@ import {
   UserCheck,
   ShieldCheck,
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  TrendingUp
 } from 'lucide-react';
 import { SystemConfig } from '@/lib/settings';
 
 export default function SystemSettingsView() {
-  const [activeTab, setActiveTab] = useState<'invoice' | 'certificate' | 'branding'>('invoice');
+  const [activeTab, setActiveTab] = useState<'invoice' | 'certificate' | 'branding' | 'fiscal'>('invoice');
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,11 +78,18 @@ export default function SystemSettingsView() {
 
   const updateConfig = (section: keyof SystemConfig, field: string, value: string) => {
     if (!config) return;
+    
+    let processedValue: any = value;
+    // Handle numeric conversion for specific fields
+    if (section === 'fiscal' && field === 'revenueTarget') {
+        processedValue = parseFloat(value) || 0;
+    }
+
     setConfig({
       ...config,
       [section]: {
         ...(config[section] as any),
-        [field]: value
+        [field]: processedValue
       }
     });
   };
@@ -160,6 +168,12 @@ export default function SystemSettingsView() {
             className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'branding' ? 'bg-white text-slate-950 shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
           >
               <Palette size={14} className="inline mr-2" /> Global Brand
+          </button>
+          <button 
+            onClick={() => setActiveTab('fiscal')}
+            className={`px-8 py-3 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'fiscal' ? 'bg-white text-slate-950 shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+              <TrendingUp size={14} className="inline mr-2" /> Fiscal & Goals
           </button>
       </div>
 
@@ -412,6 +426,62 @@ export default function SystemSettingsView() {
                                       />
                                   </div>
                                </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'fiscal' && (
+              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="max-w-2xl mx-auto bg-white p-12 rounded-[3rem] border border-slate-200/60 shadow-2xl space-y-10 relative overflow-hidden">
+                      <div className="absolute -right-20 -top-20 w-80 h-80 bg-blue-500/5 rounded-full blur-[80px] pointer-events-none"></div>
+                      
+                      <div className="flex items-center gap-6 mb-4">
+                          <div className="w-16 h-16 rounded-[1.5rem] bg-slate-950 flex items-center justify-center text-white shadow-xl">
+                              <TrendingUp size={32} />
+                          </div>
+                          <div>
+                              <h3 className="text-3xl font-black text-slate-950 tracking-tight">Fiscal Targets</h3>
+                              <p className="text-slate-400 font-bold text-sm tracking-tight">Configure the economic goals for your Intelligence Node.</p>
+                          </div>
+                      </div>
+
+                      <div className="space-y-8 relative z-10">
+                          <div className="p-8 rounded-[2rem] bg-slate-50 border border-slate-200/60 space-y-6">
+                               <div>
+                                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1 flex items-center gap-2">
+                                      <CreditCard size={12} /> Revenue Target (Base Currency)
+                                  </label>
+                                  <div className="relative">
+                                      <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-slate-400 text-lg">₹</span>
+                                      <input 
+                                        type="number" 
+                                        value={config.fiscal.revenueTarget || 0}
+                                        onChange={(e) => updateConfig('fiscal', 'revenueTarget', e.target.value)}
+                                        className="w-full pl-12 pr-6 py-5 bg-white border border-slate-200 rounded-[1.5rem] focus:ring-4 focus:ring-blue-50 focus:border-blue-500 outline-none transition-all font-black text-2xl text-slate-950"
+                                        placeholder="5000000"
+                                      />
+                                  </div>
+                               </div>
+
+                               <div className="flex items-center gap-4 pt-4 border-t border-slate-200/60">
+                                   <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                       <Hash size={20} />
+                                   </div>
+                                   <div>
+                                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Reporting Currency</p>
+                                       <p className="text-sm font-black text-slate-950">{config.fiscal.currency || 'INR'}</p>
+                                   </div>
+                               </div>
+                          </div>
+
+                          <div className="p-6 rounded-2xl bg-slate-950 text-white flex items-center justify-between shadow-xl">
+                               <div className="space-y-1">
+                                   <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Target Preview</p>
+                                   <p className="text-2xl font-black tracking-tight">₹{(config.fiscal.revenueTarget / 1000000).toFixed(1)}M Goal</p>
+                               </div>
+                               <TrendingUp className="text-blue-500 opacity-50" size={32} />
                           </div>
                       </div>
                   </div>

@@ -110,7 +110,7 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 // Helper to fetch ALL items across pages
-async function fetchAllItems<T>(endpoint: string): Promise<T[]> {
+async function fetchAllItems<T>(endpoint: string, stripContent: boolean = true): Promise<T[]> {
   const perPage = 100;
   const initialUrl = `${BASE_URL}/${endpoint}?per_page=${perPage}&_embed`; // Always embed for consistency
 
@@ -141,7 +141,7 @@ async function fetchAllItems<T>(endpoint: string): Promise<T[]> {
 
   return allItems.map((item: any) => ({
     ...item,
-    content: undefined, // Strip huge fields for catalog listings
+    content: stripContent ? undefined : item.content, // Conditionally strip huge fields
   }));
 }
 
@@ -246,8 +246,8 @@ export async function getPagedCourses({ page = 1, perPage = 12 }: { page?: numbe
   }
 }
 
-export async function getCourses(): Promise<WordPressPost[]> {
-  const items = await fetchAllItems<WordPressPost>('ai_course');
+export async function getCourses(options: { stripContent?: boolean } = {}): Promise<WordPressPost[]> {
+  const items = await fetchAllItems<WordPressPost>('ai_course', options.stripContent ?? true);
   return enrichWithWooCommercePrices(items);
 }
 

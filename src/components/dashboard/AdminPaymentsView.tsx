@@ -79,6 +79,47 @@ export default function AdminPaymentsView() {
   const totalRevenue = payments.reduce((acc, p) => p.status === 'Paid' ? acc + p.amount : acc, 0);
   const successRate = payments.length > 0 ? (payments.filter(p => p.status === 'Paid').length / payments.length) * 100 : 0;
 
+  const handleExportAudit = () => {
+    if (filteredPayments.length === 0) return;
+
+    // Define CSV Headers
+    const headers = ['Name', 'Email', 'Path/Course', 'Transaction ID', 'Status', 'Amount', 'Date', 'State', 'Country'];
+    
+    // Convert payments to CSV rows
+    const csvRows = filteredPayments.map(p => [
+      `"${p.name}"`,
+      `"${p.email}"`,
+      `"${p.course}"`,
+      `"${p.transactionId}"`,
+      `"${p.status}"`,
+      `"${p.formattedAmount || p.amount}"`,
+      `"${new Date(p.date).toLocaleString()}"`,
+      `"${p.state || 'N/A'}"`,
+      `"${p.country || 'N/A'}"`
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create a Blob and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `nanoschool-payments-audit-${timestamp}.csv`;
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) return (
     <div className="space-y-12">
         <div className="h-24 bg-white/50 backdrop-blur-md rounded-[2rem] border border-slate-200/40 animate-pulse"></div>
@@ -112,7 +153,10 @@ export default function AdminPaymentsView() {
               </p>
           </div>
           <div className="flex items-center gap-4">
-              <button className="px-6 py-4 bg-slate-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-xl flex items-center gap-3">
+              <button 
+                onClick={handleExportAudit}
+                className="px-6 py-4 bg-slate-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all active:scale-95 shadow-xl flex items-center gap-3"
+              >
                  <Download size={16} /> Export Audit
               </button>
           </div>

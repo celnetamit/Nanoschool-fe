@@ -3,6 +3,7 @@ import { WordPressPost } from '@/lib/wordpress';
 import { Internship } from '@/lib/internships';
 import { UpcomingEvent } from '@/lib/events';
 import UpcomingEvents from '@/components/UpcomingEvents';
+import EnrollmentActions from '@/components/payments/EnrollmentActions';
 
 interface InternshipTemplateProps {
     post?: WordPressPost | null;
@@ -131,6 +132,12 @@ export default function InternshipTemplate({ post, internships = [], upcomingEve
                                             Register
                                         </Link>
                                     </div>
+                                    
+                                    <EnrollmentActions 
+                                        workshopTitle={project.title}
+                                        itemType="internship"
+                                        slug={(project as any).key}
+                                    />
                                 </div>
                             ))
                         ) : (

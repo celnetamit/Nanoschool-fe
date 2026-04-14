@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import WorkshopEnrollmentDialog from './WorkshopEnrollmentDialog';
 import { useAuthAction } from '@/hooks/useAuthAction';
 import { useSession } from 'next-auth/react';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { isProductMatched } from '@/lib/matchers';
 
 interface WorkshopEnrollButtonProps {
   children: React.ReactNode;
@@ -49,6 +50,9 @@ export default function WorkshopEnrollButton({
   
   const [isChecking, setIsChecking] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
+  const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
+  const [pendingPid, setPendingPid] = useState<string | null>(null);
+  const [pendingItemType, setPendingItemType] = useState<string | null>(null);
 
   useEffect(() => {
     if (session?.user) {
@@ -57,32 +61,34 @@ export default function WorkshopEnrollButton({
         .then(res => res.json())
         .then(data => {
             if (data.success && data.payments) {
-                // Check if user has a SUCCESS/Paid entry matching this specific title
-                // Fuzzy Matcher: Handles cases where WP Title and Database Title differ
-                const hasPaid = data.payments.some((p: any) => {
-                    const dbTitle = (p.course || '').toLowerCase();
-                    const wpTitle = (workshopTitle || '').toLowerCase();
-                    const hasSuccessfulPayment = p.status === 'Paid';
-                    
-                    if (!hasSuccessfulPayment || !dbTitle || !wpTitle) return false;
-
-                    // 1. Direct or partial match (Require a reasonably specific match)
-                    if (dbTitle.includes(wpTitle) || wpTitle.includes(dbTitle)) {
-                        // Avoid matching on generic single words like "Workshop"
-                        if (wpTitle.length > 8 || dbTitle.length > 8) return true;
-                    }
-                    
-                    // 2. Surrogate Matches (Special cases for known discrepancies)
-                    const isOmicsDiscrepancy = 
-                        (wpTitle.includes('omics') && (dbTitle.includes('drug discovery') || dbTitle.includes('genomics'))) ||
-                        (wpTitle.includes('manufacturing') && dbTitle.includes('smart factories'));
-                        
-                    if (isOmicsDiscrepancy) return true;
-
-                    return false;
+                // 1. Check for SUCCESSFUL Enrollment
+                const paidEntry = data.payments.find((p: any) => {
+                    return p.status === 'Paid' && isProductMatched(p.course, workshopTitle || '');
                 });
                 
-                setIsEnrolled(hasPaid);
+                if (paidEntry) {
+                    setIsEnrolled(true);
+                    setPendingEntryId(null);
+                } else {
+                    // 2. Check for PENDING (Unpaid) Enrollment to Resume
+                    const unpaidEntry = data.payments.find((p: any) => {
+                        return p.status !== 'Paid' && isProductMatched(p.course, workshopTitle || '');
+                    });
+                    
+                    if (unpaidEntry) {
+                        setPendingEntryId(unpaidEntry.id);
+                        setPendingPid(unpaidEntry.pid);
+                        
+                        // Categorical Translation for Resumption
+                        const cat = unpaidEntry.category?.toLowerCase() || '';
+                        let type = 'workshops';
+                        if (cat === 'course') type = 'courses';
+                        else if (cat === 'internship') type = 'internships';
+                        else type = 'workshops';
+                        
+                        setPendingItemType(type);
+                    }
+                }
             }
         })
         .finally(() => setIsChecking(false));
@@ -97,8 +103,8 @@ export default function WorkshopEnrollButton({
         return;
     }
 
-    // Open dialog for workshops and courses.
-    if (itemType === 'workshops' || itemType === 'courses') {
+    // Open dialog for workshops, courses, and internships.
+    if (itemType === 'workshops' || itemType === 'courses' || itemType === 'internships' || pendingItemType) {
       e.preventDefault();
       performAction(() => {
         setIsOpen(true);
@@ -107,7 +113,7 @@ export default function WorkshopEnrollButton({
   };
 
   // Only use <a> for non-dialog types
-  if (itemType !== 'workshops' && itemType !== 'courses' && href) {
+  if (itemType !== 'workshops' && itemType !== 'courses' && itemType !== 'internships' && !pendingItemType && href) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
         {children}
@@ -126,6 +132,10 @@ export default function WorkshopEnrollButton({
            <span className="relative z-10 flex items-center justify-center gap-2">
               <CheckCircle2 size={16} className="text-white" /> Already Enrolled
            </span>
+        ) : pendingEntryId ? (
+           <span className="relative z-10 flex items-center justify-center gap-2">
+              <ArrowRight size={16} className="animate-pulse" /> Resume Payment
+           </span>
         ) : (
            children
         )}
@@ -134,16 +144,17 @@ export default function WorkshopEnrollButton({
       <WorkshopEnrollmentDialog
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
-        pid={pid}
+        pid={pendingPid || pid}
         workshopTitle={workshopTitle}
         courseFee={courseFee}
         professionFees={professionFees}
-        itemType={itemType}
+        itemType={pendingItemType || itemType}
         priceUSD={courseFee}
         pricesINR={pricesInr}
         pricesUSD={pricesUsd}
         initialCurrency={initialCurrency}
         initialSelection={initialSelection}
+        entryId={pendingEntryId || undefined}
       />
     </>
   );

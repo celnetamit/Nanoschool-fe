@@ -33,6 +33,10 @@ export interface SystemConfig {
     primaryColor: string;
     secondaryColor: string;
   };
+  fiscal: {
+    revenueTarget: number;
+    currency: string;
+  };
 }
 
 export function getSystemConfig(): SystemConfig {
@@ -92,6 +96,10 @@ function getDefaultConfig(): SystemConfig {
       logoUrl: "/logo.png",
       primaryColor: "#2563eb",
       secondaryColor: "#0f172a"
+    },
+    fiscal: {
+      revenueTarget: 5000000,
+      currency: "INR"
     }
   };
 }

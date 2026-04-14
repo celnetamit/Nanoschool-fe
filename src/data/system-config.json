@@ -26,5 +26,9 @@
     "logoUrl": "https://storage.googleapis.com/nanoschool-in-website-wp-media-to-gcp-offload/2026/03/70e6b471-converted_image_1773927504290.webp",
     "primaryColor": "#0f46eb",
     "secondaryColor": "#000000"
+  },
+  "fiscal": {
+    "revenueTarget": 5000000,
+    "currency": "INR"
   }
 }

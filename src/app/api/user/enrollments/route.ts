@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getFormEntries } from '@/lib/wordpress';
+import { getFormEntries, getCourses, getWorkshops, getProducts } from '@/lib/wordpress';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { isProductMatched } from '@/lib/matchers';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -14,10 +15,16 @@ export async function GET() {
   const role = (session.user as any).role;
 
   try {
-    const [enrollmentEntries, workshopEntries] = await Promise.all([
+    const [enrollmentEntries, workshopEntries, allWpCourses, workshopData, allWcProducts] = await Promise.all([
       getFormEntries(673),
-      getFormEntries(672)
+      getFormEntries(672),
+      getCourses(),
+      getWorkshops({ perPage: 100 }), // Fetch large batch for matching
+      getProducts({ perPage: 100 }) // BROADENED: Fetch WC products for matching
     ]);
+
+    const allWpWorkshops = workshopData.posts;
+    const allCourseCandidates = [...allWpCourses, ...allWcProducts];
 
     // Combine and Re-categorize based on Robust Logic
     const allRawEntries = [
@@ -39,16 +46,33 @@ export async function GET() {
         if (role !== 'admin' && entryEmail !== userEmail) return;
 
         // 2. Intelligence Layer V3 (Universal Signature & Keyword Detection)
-        const courseTitleLower = (meta['mlsd4'] || meta['9789'] || meta['9770'] || meta['7881'] || '').toLowerCase();
+        const entryTitle = (meta['mlsd4'] || meta['9789'] || meta['9770'] || meta['7881'] || '');
+        const courseTitleLower = entryTitle.toLowerCase();
         const explicitCategory = String(meta['vtajg'] || meta['9823'] || '').toLowerCase();
         const isWorkshopSignature = !!(meta['9770'] || meta['9772'] || meta['9768'] || meta['9769']);
         const workshopKeywords = ['workshop', 'masterclass', 'bootcamp', 'training', 'session'];
         const hasWorkshopKeyword = workshopKeywords.some(kw => courseTitleLower.includes(kw));
         
+        // 3. Match with Real WP Products
+        let matchedProduct = null;
         if (e.formId === 672 || explicitCategory === 'workshop' || isWorkshopSignature || hasWorkshopKeyword) {
-            finalWorkshops.push(e);
+            matchedProduct = allWpWorkshops.find(w => isProductMatched(entryTitle, w.title.rendered));
+            
+            finalWorkshops.push({
+                ...e,
+                slug: matchedProduct?.slug,
+                originalPost: matchedProduct,
+                course: matchedProduct?.title.rendered || entryTitle
+            });
         } else {
-            finalEnrollments.push(e);
+            matchedProduct = allCourseCandidates.find(c => isProductMatched(entryTitle, c.title.rendered));
+            
+            finalEnrollments.push({
+                ...e,
+                slug: matchedProduct?.slug,
+                originalPost: matchedProduct,
+                course: matchedProduct?.title.rendered || entryTitle
+            });
         }
     });
 

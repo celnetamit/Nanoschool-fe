@@ -37,6 +37,7 @@ interface Payment {
   institution?: string;
   zipCode?: string;
   pid?: string;
+  category: string;
 }
 
 export default function StudentPaymentsView() {
@@ -240,7 +241,12 @@ export default function StudentPaymentsView() {
           entryId={resumePaymentModal.id}
           workshopTitle={resumePaymentModal.course}
           courseFee={resumePaymentModal.formattedAmount || `₹${resumePaymentModal.amount}`}
-          itemType={resumePaymentModal.course.toLowerCase().includes('course') || resumePaymentModal.course.toLowerCase().includes('training') ? 'courses' : 'workshops'}
+          initialData={resumePaymentModal}
+          itemType={
+            resumePaymentModal.category.toLowerCase() === 'workshop' ? 'workshops' : 
+            resumePaymentModal.category.toLowerCase() === 'course' ? 'courses' : 
+            'internships'
+          }
           initialCurrency={resumePaymentModal.formattedAmount?.includes('$') || resumePaymentModal.formattedAmount?.includes('USD') ? 'USD' : 'INR'}
         />
       )}

@@ -63,7 +63,12 @@ export async function GET() {
       const workshopKeywords = ['workshop', 'masterclass', 'bootcamp', 'training', 'session'];
       const hasWorkshopKeyword = workshopKeywords.some(kw => course.toLowerCase().includes(kw));
       
-      const category = (e.formId === 672 || explicitCategory === 'workshop' || isWorkshopSignature || hasWorkshopKeyword) ? 'Workshop' : 'Course';
+      const isInternship = course.toLowerCase().includes('internship') || explicitCategory === 'internship';
+      const isWorkshop = e.formId === 672 || explicitCategory === 'workshop' || isWorkshopSignature || hasWorkshopKeyword;
+      
+      let category = 'Course';
+      if (isInternship) category = 'Internship';
+      else if (isWorkshop) category = 'Workshop';
 
       return {
         id: e.id,
@@ -80,6 +85,8 @@ export async function GET() {
         address: meta['kt4ba'] || meta['9800'] || meta['9774'] || '',
         contactNumber: meta['ycnup'] || meta['9794'] || meta['9773'] || meta['jqnig'] || '',
         institution: meta['238v0'] || meta['9795'] || meta['2mjze'] || '',
+        profession: meta['1vmh9'] || meta['9796'] || '',
+        learningMode: meta['7bm3p'] || meta['9824'] || '',
         pid: meta['ysfj2'] || meta['9788'] || meta['9769'] || `NSTC-${e.id.slice(-4).toUpperCase()}`,
         zipCode: meta['dnoob'] || meta['9805'] || '',
         date: e.created_at

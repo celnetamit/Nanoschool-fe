@@ -111,9 +111,14 @@ export default function WorkshopEnrollmentDialog({
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
 
-  // Unique sequential PID fetched from the server when the dialog opens
   const [uniquePid, setUniquePid] = useState('Loading...');
   const [isRestoring, setIsRestoring] = useState(false);
+  const [internalItemType, setInternalItemType] = useState<string>(itemType);
+
+  // Sync internalItemType with prop initially
+  useEffect(() => {
+    setInternalItemType(itemType);
+  }, [itemType]);
 
   // Helper to parse price string to number
   const parsePrice = (str: string) => {
@@ -331,7 +336,7 @@ export default function WorkshopEnrollmentDialog({
                         ...prev,
                         name: e.name || prev.name,
                         email: e.email || prev.email,
-                        mobileNumber: e.mobileNumber?.replace('+91', '') || prev.mobileNumber,
+                        mobileNumber: e.mobileNumber ? e.mobileNumber.replace('+91', '') : prev.mobileNumber,
                         currentAffiliation: e.currentAffiliation || prev.currentAffiliation,
                         profession: e.profession || prev.profession,
                         designation: e.designation || prev.designation,
@@ -342,6 +347,13 @@ export default function WorkshopEnrollmentDialog({
                         learningMode: e.learningMode || prev.learningMode,
                         gstVatNo: e.gstVatNo || prev.gstVatNo
                     }));
+                    
+                    // ADAPTIVE LAYOUT: Detect original form type from data
+                    if (e.learningMode) {
+                        setInternalItemType('courses');
+                    } else if (e.profession) {
+                        setInternalItemType('workshops');
+                    }
                     
                     if (e.country === 'India') {
                         setCurrency('INR');
@@ -370,16 +382,16 @@ export default function WorkshopEnrollmentDialog({
                 const p = data.profile;
                 setFormData(prev => ({
                     ...prev,
-                    name: p.name || session.user?.name || prev.name,
-                    email: p.email || session.user?.email || prev.email,
-                    mobileNumber: p.mobileNumber || prev.mobileNumber,
-                    currentAffiliation: p.currentAffiliation || prev.currentAffiliation,
-                    address: p.address || prev.address,
-                    state: p.state || prev.state,
-                    country: p.country || prev.country,
-                    pinCode: p.pinCode || prev.pinCode,
-                    designation: p.designation || prev.designation,
-                    profession: p.profession || prev.profession
+                    name: prev.name || p.name || session.user?.name || '',
+                    email: prev.email || p.email || session.user?.email || '',
+                    mobileNumber: prev.mobileNumber || p.mobileNumber || '',
+                    currentAffiliation: prev.currentAffiliation || p.currentAffiliation || '',
+                    address: prev.address || p.address || '',
+                    state: prev.state || p.state || '',
+                    country: prev.country || p.country || '',
+                    pinCode: prev.pinCode || p.pinCode || '',
+                    designation: prev.designation || p.designation || '',
+                    profession: prev.profession || p.profession || ''
                 }));
 
                 // If country is India, ensure currency is set correctly
@@ -524,8 +536,8 @@ export default function WorkshopEnrollmentDialog({
           workshopTitle,
           courseFee: payableAmount,   // Use the calculated fee for selected mode/profession
           payableAmount,              // Final dynamically calculated discount/fee
-          itemType,
-          category: itemType === 'courses' ? 'Course' : 'Workshop',
+          itemType: internalItemType,
+          category: internalItemType === 'courses' ? 'Course' : (internalItemType === 'internships' ? 'Internship' : 'Workshop'),
           currency,               // Added the selected currency
           currencySymbol,         // Added the selected currency symbol
           payableFeeAmount: payableAmount, // Explicit field for IMS
@@ -795,7 +807,7 @@ export default function WorkshopEnrollmentDialog({
                 </div>
               </div>
 
-              {itemType !== 'courses' && (
+              {internalItemType !== 'courses' && (
                 <>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Current Affiliation</label>
@@ -840,7 +852,7 @@ export default function WorkshopEnrollmentDialog({
                 </>
               )}
 
-              {itemType === 'courses' && (
+              {internalItemType === 'courses' && (
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">Choose your learning mode *</label>
                   <select 
