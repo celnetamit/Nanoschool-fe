@@ -144,3 +144,122 @@ export function calculateGST(totalAmount: number, country: string, state: string
     };
   }
 }
+
+// -------------------------------------------------------------
+// NEW PRICING ALGORITHM (Forward Calculation from Base Price)
+// -------------------------------------------------------------
+
+export interface PricingInput {
+  country: string; // ISO Code (e.g., 'IN', 'US') or Full Name
+  state?: string;  // State Code (e.g., 'UP') or Full Name
+  basePrice: number;
+  currency: string; // ISO Currency Code (e.g., 'INR', 'USD', 'EUR')
+}
+
+export interface TaxDetails {
+  taxType: 'CGST_SGST' | 'IGST' | 'INTERNATIONAL_TAX';
+  totalTaxPercentage: number;
+  cgstPercentage?: number;
+  sgstPercentage?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  internationalTaxAmount?: number;
+  totalTaxAmount: number;
+}
+
+export interface InvoiceBreakdown {
+  currency: string;
+  basePrice: number;
+  extraChargePercentage: number;
+  extraChargeAmount: number;
+  taxableAmount: number;
+  taxDetails: TaxDetails;
+  totalPayableAmount: number;
+  currencySymbol: string;
+  description: string;
+}
+
+export function calculateEnrollmentPricing(input: PricingInput): InvoiceBreakdown {
+  const { country, state, basePrice, currency } = input;
+  
+  // Normalize inputs for reliable checking
+  const isIndia = ['IN', 'INDIA'].includes((country || '').toUpperCase());
+  const isUPState = state && ['UP', 'UTTAR PRADESH'].includes(state.toUpperCase());
+  
+  let extraChargePercentage = 0;
+  
+  // Rule: International Users & Currency NOT USD -> 3% extra charge
+  if (!isIndia && currency.toUpperCase() !== 'USD') {
+    extraChargePercentage = 3;
+  }
+
+  const extraChargeAmount = (basePrice * extraChargePercentage) / 100;
+  const taxableAmount = basePrice + extraChargeAmount;
+  
+  // Flat Tax Rate is 18%
+  const taxRate = 18;
+  const totalTaxAmount = (taxableAmount * taxRate) / 100;
+  
+  let taxDetails: TaxDetails;
+  let description = '';
+
+  if (isIndia) {
+    if (isUPState) {
+      // UP: 9% CGST + 9% SGST
+      const splitTaxAmt = totalTaxAmount / 2;
+      taxDetails = {
+        taxType: 'CGST_SGST',
+        totalTaxPercentage: taxRate,
+        cgstPercentage: 9,
+        sgstPercentage: 9,
+        cgstAmount: splitTaxAmt,
+        sgstAmount: splitTaxAmt,
+        totalTaxAmount: totalTaxAmount,
+      };
+      description = 'GST Exclusive (9% CGST + 9% SGST)';
+    } else {
+      // Non-UP India: 18% IGST
+      taxDetails = {
+        taxType: 'IGST',
+        totalTaxPercentage: taxRate,
+        igstAmount: totalTaxAmount,
+        totalTaxAmount: totalTaxAmount,
+      };
+      description = 'GST Exclusive (18% IGST)';
+    }
+  } else {
+    // International: 18% Tax
+    taxDetails = {
+      taxType: 'INTERNATIONAL_TAX',
+      totalTaxPercentage: taxRate,
+      internationalTaxAmount: totalTaxAmount,
+      totalTaxAmount: totalTaxAmount,
+    };
+    description = extraChargePercentage > 0 
+      ? `Tax Exclusive (18%) + ${extraChargePercentage}% Currency Surcharge`
+      : 'Tax Exclusive (18% Export Tax)';
+  }
+
+  // Round values for safe financial representation (assuming cents/paise)
+  const roundCurrency = (num: number) => Math.round(num * 100) / 100;
+
+  return {
+    currency: currency.toUpperCase(),
+    basePrice: roundCurrency(basePrice),
+    extraChargePercentage,
+    extraChargeAmount: roundCurrency(extraChargeAmount),
+    taxableAmount: roundCurrency(taxableAmount),
+    taxDetails: {
+      ...taxDetails,
+      cgstAmount: taxDetails.cgstAmount ? roundCurrency(taxDetails.cgstAmount) : undefined,
+      sgstAmount: taxDetails.sgstAmount ? roundCurrency(taxDetails.sgstAmount) : undefined,
+      igstAmount: taxDetails.igstAmount ? roundCurrency(taxDetails.igstAmount) : undefined,
+      internationalTaxAmount: taxDetails.internationalTaxAmount ? roundCurrency(taxDetails.internationalTaxAmount) : undefined,
+      totalTaxAmount: roundCurrency(taxDetails.totalTaxAmount),
+    },
+    totalPayableAmount: roundCurrency(taxableAmount + totalTaxAmount),
+    currencySymbol: isIndia ? '₹' : (currency.toUpperCase() === 'USD' ? '$' : currency.toUpperCase()),
+    description
+  };
+}

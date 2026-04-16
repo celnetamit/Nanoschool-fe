@@ -64,6 +64,6 @@ function normalizeCertificate(e: any, type: string, explicitTitle?: string) {
     issueDate: e.created_at,
     credentialId,
     status: 'Verified (Admin)',
-    recipientName: meta['9792'] || meta['7yfjv'] || meta['7876'] || meta['u5108'] || 'Learner'
+    recipientName: meta['9792'] || meta['9771'] || meta['7876'] || meta['wly6y'] || 'Learner'
   };
 }

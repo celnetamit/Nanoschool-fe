@@ -38,6 +38,7 @@ interface Payment {
   zipCode?: string;
   pid?: string;
   category: string;
+  basePrice?: number | null;
 }
 
 export default function StudentPaymentsView() {
@@ -182,29 +183,54 @@ export default function StudentPaymentsView() {
                         </div>
 
                         {/* Price Section */}
-                        <div className="pt-8 border-t border-slate-50 flex items-end justify-between">
-                             <div>
-                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Value Asset</p>
-                                 <p className="text-3xl font-black text-slate-950 tabular-nums tracking-tighter">
-                                    {payment.formattedAmount || `₹${payment.amount.toLocaleString()}`}
-                                 </p>
+                        <div className="pt-8 border-t border-slate-50 flex flex-col gap-4">
+                             <div className="space-y-2">
+                                 {/* Helper to calculate breakdown for display */}
+                                 {(() => {
+                                     const total = payment.amount;
+                                     const base = payment.basePrice || (total / 1.18);
+                                     const tax = total - base;
+                                     const sym = payment.formattedAmount?.includes('$') ? '$' : '₹';
+                                     
+                                     return (
+                                         <div className="space-y-1.5 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
+                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                 <span>Base Fee</span>
+                                                 <span className="text-slate-600">{sym}{base.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                             </div>
+                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                 <span>GST (18%)</span>
+                                                 <span className="text-emerald-600">+{sym}{tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                             </div>
+                                             <div className="flex justify-between items-end pt-2 mt-1 border-t border-slate-200/50">
+                                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-950">Total Paid</span>
+                                                 <span className="text-2xl font-black text-slate-950 tracking-tighter tabular-nums leading-none">
+                                                     {payment.formattedAmount || `${sym}${total.toLocaleString()}`}
+                                                 </span>
+                                             </div>
+                                         </div>
+                                     );
+                                 })()}
                              </div>
                              
-                             {payment.status === 'Paid' ? (
-                                 <button 
-                                    onClick={() => setSelectedPayment(payment)}
-                                    className="p-5 rounded-3xl bg-slate-950 text-white hover:bg-blue-600 transition-all shadow-xl active:scale-90 group/btn"
-                                 >
-                                     <Download size={22} className="group-hover:translate-y-0.5 transition-transform" />
-                                 </button>
-                             ) : (
-                                 <button 
-                                    onClick={() => setResumePaymentModal(payment)}
-                                    className="px-6 py-4 rounded-2xl bg-amber-500 text-white hover:bg-amber-600 font-black text-[11px] uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 flex items-center gap-2"
-                                 >
-                                     <RefreshCw size={16} /> Resume Payment
-                                 </button>
-                             )}
+                             <div className="flex items-center justify-between">
+                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Verified Transaction</p>
+                                 {payment.status === 'Paid' ? (
+                                     <button 
+                                        onClick={() => setSelectedPayment(payment)}
+                                        className="px-6 py-3 rounded-xl bg-slate-950 text-white hover:bg-blue-600 transition-all shadow-xl active:scale-90 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                                     >
+                                         <Download size={16} /> Invoice
+                                     </button>
+                                 ) : (
+                                     <button 
+                                        onClick={() => setResumePaymentModal(payment)}
+                                        className="px-6 py-3 rounded-xl bg-amber-500 text-white hover:bg-amber-600 font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-amber-500/20 flex items-center gap-2"
+                                     >
+                                         <RefreshCw size={14} /> Resume
+                                     </button>
+                                 )}
+                             </div>
                         </div>
                     </div>
                 </div>

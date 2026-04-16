@@ -39,8 +39,8 @@ export async function GET() {
     const payments = myEntries.map((e: any) => {
       const meta = e.meta || e.item_meta || {};
       
-      // Robust Name detection
-      const name = meta['wly6y'] || meta['9792'] || meta['9771'] || meta['u5108'] || meta['7876'] || 'Student';
+      // Robust Name detection - Prioritize modern numeric IDs first
+      const name = meta['9792'] || meta['9771'] || meta['7876'] || meta['wly6y'] || 'Student';
       
       // Robust Course detection (Universal V3)
       const course = meta['mlsd4'] || meta['9789'] || meta['9770'] || meta['l9w7q'] || meta['7881'] || 'NanoSchool Program';
@@ -79,6 +79,7 @@ export async function GET() {
         status,
         amount,
         formattedAmount,
+        currency: formattedAmount.includes('₹') ? 'INR' : 'USD',
         transactionId,
         state: meta['9801'] || meta['9775'] || meta['q2ct5'] || '',
         country: meta['9802'] || meta['9776'] || meta['yiu1i'] || '',
@@ -89,6 +90,7 @@ export async function GET() {
         learningMode: meta['7bm3p'] || meta['9824'] || '',
         pid: meta['ysfj2'] || meta['9788'] || meta['9769'] || `NSTC-${e.id.slice(-4).toUpperCase()}`,
         zipCode: meta['dnoob'] || meta['9805'] || '',
+        basePrice: parseFloat(meta['9825'] || '0') || null,
         date: e.created_at
       };
     });

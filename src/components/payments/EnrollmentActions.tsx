@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { FileText, Award, Loader2, Download, Printer } from 'lucide-react';
 import { isProductMatched } from '@/lib/matchers';
-import { calculateGST, numberToWords, getStateCode } from '@/lib/tax';
 import { generateInvoiceHTML } from '@/lib/invoice-generator';
 
 interface EnrollmentActionsProps {

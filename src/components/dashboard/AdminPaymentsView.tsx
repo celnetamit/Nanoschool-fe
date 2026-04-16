@@ -35,6 +35,7 @@ interface Payment {
   address?: string;
   contactNumber?: string;
   institution?: string;
+  basePrice?: number | null;
 }
 
 export default function AdminPaymentsView() {
@@ -83,20 +84,28 @@ export default function AdminPaymentsView() {
     if (filteredPayments.length === 0) return;
 
     // Define CSV Headers
-    const headers = ['Name', 'Email', 'Path/Course', 'Transaction ID', 'Status', 'Amount', 'Date', 'State', 'Country'];
+    const headers = ['Name', 'Email', 'Path/Course', 'Transaction ID', 'Status', 'Base Price', 'Tax (GST 18%)', 'Total Amount', 'Date', 'State', 'Country'];
     
     // Convert payments to CSV rows
-    const csvRows = filteredPayments.map(p => [
-      `"${p.name}"`,
-      `"${p.email}"`,
-      `"${p.course}"`,
-      `"${p.transactionId}"`,
-      `"${p.status}"`,
-      `"${p.formattedAmount || p.amount}"`,
-      `"${new Date(p.date).toLocaleString()}"`,
-      `"${p.state || 'N/A'}"`,
-      `"${p.country || 'N/A'}"`
-    ]);
+    const csvRows = filteredPayments.map(p => {
+      const base = p.basePrice || (p.amount / 1.18);
+      const tax = p.amount - base;
+      const sym = p.formattedAmount?.includes('$') ? '$' : '₹';
+      
+      return [
+        `"${p.name}"`,
+        `"${p.email}"`,
+        `"${p.course}"`,
+        `"${p.transactionId}"`,
+        `"${p.status}"`,
+        `"${sym}${base.toFixed(2)}"`,
+        `"${sym}${tax.toFixed(2)}"`,
+        `"${p.formattedAmount || p.amount}"`,
+        `"${new Date(p.date).toLocaleString()}"`,
+        `"${p.state || 'N/A'}"`,
+        `"${p.country || 'N/A'}"`
+      ];
+    });
 
     // Combine headers and rows
     const csvContent = [
@@ -279,15 +288,32 @@ export default function AdminPaymentsView() {
                         </span>
                     </td>
                     <td className="px-10 py-7 text-right">
-                      <span className="font-black text-slate-950 text-xl tracking-tighter">
-                        {payment.formattedAmount && payment.formattedAmount !== '0' ? (
-                          payment.formattedAmount.includes('₹') || payment.formattedAmount.includes('$') || payment.formattedAmount.match(/[A-Z]{3}/) || payment.formattedAmount.match(/[^0-9., ]/)
-                            ? payment.formattedAmount 
-                            : `₹${payment.amount.toLocaleString()}`
-                        ) : (
-                          payment.amount > 0 ? `₹${payment.amount.toLocaleString()}` : '--'
+                      <div className="flex flex-col items-end">
+                        <span className="font-black text-slate-950 text-xl tracking-tighter">
+                          {payment.formattedAmount && payment.formattedAmount !== '0' ? (
+                            payment.formattedAmount.includes('₹') || payment.formattedAmount.includes('$') || payment.formattedAmount.match(/[A-Z]{3}/) || payment.formattedAmount.match(/[^0-9., ]/)
+                              ? payment.formattedAmount 
+                              : `₹${payment.amount.toLocaleString()}`
+                          ) : (
+                            payment.amount > 0 ? `₹${payment.amount.toLocaleString()}` : '--'
+                          )}
+                        </span>
+                        {payment.amount > 0 && (
+                          <div className="flex flex-col items-end text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider leading-tight">
+                            {(() => {
+                                const base = payment.basePrice || (payment.amount / 1.18);
+                                const tax = payment.amount - base;
+                                const sym = payment.formattedAmount?.includes('$') ? '$' : '₹';
+                                return (
+                                  <>
+                                    <span>Base: {sym}{base.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                    <span className="text-emerald-500">Tax: {sym}{tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                  </>
+                                );
+                            })()}
+                          </div>
                         )}
-                      </span>
+                      </div>
                     </td>
                     <td className="px-10 py-7">
                         <div className="flex justify-center">

@@ -26,8 +26,8 @@ export async function GET() {
     const payments = allEntries.map((e: any) => {
       const meta = e.meta || e.item_meta || {};
       
-      // Robust Name detection
-      const name = meta['9792'] || meta['9771'] || meta['wly6y'] || meta['u5108'] || meta['7876'] || 'Student';
+      // Robust Name detection - Prioritize modern numeric IDs first
+      const name = meta['9792'] || meta['9771'] || meta['7876'] || meta['wly6y'] || 'Student';
       
       // Robust Email detection
       const email = meta['9793'] || meta['9772'] || meta['7yfjv'] || meta['l0s01'] || 'N/A';
@@ -53,7 +53,12 @@ export async function GET() {
       const workshopKeywords = ['workshop', 'masterclass', 'bootcamp', 'training', 'session'];
       const hasWorkshopKeyword = workshopKeywords.some(kw => course.toLowerCase().includes(kw));
       
-      const category = (e.formId === 672 || explicitCategory === 'workshop' || isWorkshopSignature || hasWorkshopKeyword) ? 'Workshop' : 'Course';
+      const isInternship = course.toLowerCase().includes('internship') || explicitCategory === 'internship';
+      const isWorkshop = e.formId === 672 || explicitCategory === 'workshop' || isWorkshopSignature || hasWorkshopKeyword;
+      
+      let category = 'Course';
+      if (isInternship) category = 'Internship';
+      else if (isWorkshop) category = 'Workshop';
 
       return {
         id: e.id,
@@ -64,14 +69,16 @@ export async function GET() {
         status,
         amount,
         formattedAmount,
+        currency: formattedAmount.includes('₹') ? 'INR' : 'USD', 
         transactionId,
         state: meta['9801'] || meta['9775'] || meta['q2ct5'] || '',
-        country: meta['9802'] || meta['9776'] || meta['yiu1i'] || '',
+        country: meta['9802'] || meta['9776'] || meta['yiu1i'] || 'India',
         address: meta['9800'] || meta['9774'] || meta['kt4ba'] || '',
-        contactNumber: meta['9794'] || meta['9773'] || meta['jqnig'] || meta['ycnup'] || '',
+        contactNumber: meta['jqnig'] || meta['ycnup'] || meta['9794'] || meta['9773'] || '',
         institution: meta['9824'] || meta['9796'] || meta['9795'] || meta['2mjze'] || '',
         pid: meta['9788'] || meta['9769'] || `NSTC-${e.id.slice(-4).toUpperCase()}`,
         zipCode: meta['9805'] || meta['dnoob'] || '',
+        basePrice: parseFloat(meta['9825'] || '0') || null,
         date: e.created_at
       };
     });

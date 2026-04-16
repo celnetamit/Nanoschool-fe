@@ -1,12 +1,29 @@
-import { calculateGST, numberToWords, getStateCode } from './tax';
+import { calculateEnrollmentPricing, numberToWords, getStateCode } from './tax';
 
 /**
  * Generates the full HTML string for the Retail Tax Invoice.
  * This should be identical to the one rendered in the Dashboard's InvoiceModal.
  */
 export function generateInvoiceHTML(payment: any, sysConfig: any): string {
-  const taxBreakdown = calculateGST(payment.amount, payment.country, payment.state);
-  const { baseAmount, cgst, sgst, igst, totalTax } = taxBreakdown;
+  // Use the advanced pricing engine for the breakdown
+  // We clean the amount in case it has symbols
+  const amountVal = typeof payment.amount === 'number' ? payment.amount : parseFloat(String(payment.amount).replace(/[^0-9.]/g, '')) || 0;
+  
+  // NOTE: In our system, the "payment.amount" is the FINAL total paid.
+  // calculateEnrollmentPricing takes the BASE price.
+  // We need to either pass the base price if we have it, OR calculate it from the total.
+  // For most invoices, we will back-calculate if basePrice isn't explicitly provided.
+  
+  const pricingInput = {
+    country: payment.country || 'India',
+    state: payment.state || '',
+    // Use stored basePrice if available, otherwise heuristic for common sticker prices, else back-calculate
+    basePrice: payment.basePrice || (amountVal === 5499 ? 5499 : (amountVal / 1.18)), 
+    currency: payment.currency || (String(payment.amount).includes('₹') ? 'INR' : 'USD')
+  };
+
+  const pb = calculateEnrollmentPricing(pricingInput);
+  const { basePrice, extraChargeAmount, taxDetails, totalPayableAmount, currencySymbol } = pb;
   
   const invoiceDate = new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
   const invoiceNumber = `INV-${payment.id.slice(-6).toUpperCase()}`;
@@ -91,19 +108,22 @@ export function generateInvoiceHTML(payment: any, sysConfig: any): string {
               <th style="padding: 5px; border-right: 1px solid black; width: 40px;">S.No.</th>
               <th style="padding: 5px; border-right: 1px solid black;">Particular</th>
               <th style="padding: 5px; border-right: 1px solid black; width: 80px;">HSN Code</th>
-              <th style="padding: 5px; border-right: 1px solid black; width: 90px;">Taxable Value</th>
-              <th style="padding: 5px; border-right: 1px solid black; width: 70px;">GST</th>
-              <th style="padding: 5px; width: 110px;">Amount (INR)</th>
+              <th style="padding: 5px; border-right: 1px solid black; width: 90px;">Price</th>
+              <th style="padding: 5px; border-right: 1px solid black; width: 70px;">Tax</th>
+              <th style="padding: 5px; width: 110px;">Amount (${pb.currency})</th>
             </tr>
           </thead>
           <tbody>
             <tr style="border-bottom: 1px solid #e2e8f0; vertical-align: top;">
               <td style="padding: 10px; border-right: 1px solid black;">1</td>
-              <td style="padding: 10px; border-right: 1px solid black; text-align: left; font-weight: bold;">${payment.course}</td>
+              <td style="padding: 10px; border-right: 1px solid black; text-align: left;">
+                <div style="font-weight: bold;">${payment.course}</div>
+                ${extraChargeAmount > 0 ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">Includes ${pb.extraChargePercentage}% Currency Surcharge</div>` : ''}
+              </td>
               <td style="padding: 10px; border-right: 1px solid black;">998439</td>
-              <td style="padding: 10px; border-right: 1px solid black;">${baseAmount.toFixed(2)}</td>
-              <td style="padding: 10px; border-right: 1px solid black;">${totalTax.toFixed(2)}</td>
-              <td style="padding: 10px; font-weight: bold;">${payment.amount}</td>
+              <td style="padding: 10px; border-right: 1px solid black;">${basePrice.toFixed(2)}</td>
+              <td style="padding: 10px; border-right: 1px solid black;">${taxDetails.totalTaxAmount.toFixed(2)}</td>
+              <td style="padding: 10px; font-weight: bold;">${totalPayableAmount.toFixed(2)}</td>
             </tr>
             <tr style="height: 20px;">
               <td style="border-right: 1px solid black;"></td>
@@ -116,22 +136,27 @@ export function generateInvoiceHTML(payment: any, sysConfig: any): string {
           </tbody>
           <tfoot style="border-top: 1px solid black; font-weight: bold;">
             <tr>
-              <td colspan="3" rowspan="3" style="border-right: 1px solid black; padding: 10px; text-align: left; vertical-align: top;">
-                <p style="font-size: 10px; color: #64748b; margin: 0 0 5px 0;">AMOUNT IN WORDS (IN INR):</p>
-                <p style="margin: 0; font-style: italic;"><u>${numberToWords(payment.amount)}</u></p>
+              <td colspan="3" rowspan="${extraChargeAmount > 0 ? '4' : '3'}" style="border-right: 1px solid black; padding: 10px; text-align: left; vertical-align: top;">
+                <p style="font-size: 10px; color: #64748b; margin: 0 0 5px 0;">AMOUNT IN WORDS (${pb.currency}):</p>
+                <p style="margin: 0; font-style: italic;"><u>${numberToWords(totalPayableAmount)}</u></p>
               </td>
-              <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">Taxable Value</td>
-              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${baseAmount.toFixed(2)}</td>
+              <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">Base Price</td>
+              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${basePrice.toFixed(2)}</td>
             </tr>
+            ${extraChargeAmount > 0 ? `
+            <tr>
+              <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">Currency Surcharge (${pb.extraChargePercentage}%)</td>
+              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${extraChargeAmount.toFixed(2)}</td>
+            </tr>` : ''}
             <tr>
               <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">
-                ${igst > 0 ? 'Add: IGST (18%)' : 'Add: CGST/SGST (9%+9%)'}
+                ${taxDetails.taxType === 'IGST' ? 'Add: IGST (18%)' : (taxDetails.taxType === 'CGST_SGST' ? 'Add: CGST/SGST (9%+9%)' : 'Add: Export Tax (18%)')}
               </td>
-              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${totalTax.toFixed(2)}</td>
+              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${taxDetails.totalTaxAmount.toFixed(2)}</td>
             </tr>
             <tr style="background: #0f172a; color: white;">
               <td style="padding: 8px; border-right: 1px solid white; text-align: right;">TOTAL AMOUNT</td>
-              <td colspan="2" style="padding: 8px; text-align: right; font-size: 16px;">${payment.amount}</td>
+              <td colspan="2" style="padding: 8px; text-align: right; font-size: 16px;">${currencySymbol}${totalPayableAmount.toFixed(2)}</td>
             </tr>
           </tfoot>
         </table>

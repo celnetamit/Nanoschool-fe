@@ -167,7 +167,7 @@ function normalizeCertificate(e: any, type: string, explicitTitle?: string) {
   const credentialId = `${prefix}-${year}-${String(e.id).padStart(5, '0')}`;
 
   // Robust Name detection for the certificate
-  const recipientName = meta['9792'] || meta['9771'] || meta['wly6y'] || meta['7876'] || 'Learner';
+  const recipientName = meta['9792'] || meta['9771'] || meta['7876'] || meta['wly6y'] || 'Learner';
 
   return {
     id: e.id,

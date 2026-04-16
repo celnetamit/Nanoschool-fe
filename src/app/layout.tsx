@@ -66,6 +66,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport = {
+  themeColor: "#2563eb",
+};
+
 import Chatbot from "@/components/common/Chatbot";
 
 export default function RootLayout({

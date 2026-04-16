@@ -79,14 +79,14 @@ function normalizeEntry(e: any, defaultType: string) {
   const meta = e.meta || e.item_meta || {};
   
   // High-Resolution Mapping based on User-Provided JSON Snippet
-  // Name keys: u5108 (Snippet), wly6y, 7876, 9792
-  const name = meta['u5108'] || meta['wly6y'] || meta['7876'] || meta['9792'] || meta['9771'] || meta['fullName'] || 'Unknown';
+  // Name keys: 9792 (New), 9771, 7876 (Old), wly6y, u5108 (Snippet/Header - Low priority)
+  const name = meta['9792'] || meta['9771'] || meta['7876'] || meta['wly6y'] || meta['u5108'] || meta['fullName'] || 'Unknown';
   
-  // Email keys: l0s01 (Snippet), 7yfjv, 7877, 9793
-  const email = meta['l0s01'] || meta['7yfjv'] || meta['7877'] || meta['9793'] || meta['9772'] || meta['email'] || 'N/A';
+  // Email keys: 9793 (New), 9772, 7877 (Old), 7yfjv, l0s01 (Snippet - Low priority)
+  const email = meta['9793'] || meta['9772'] || meta['7877'] || meta['7yfjv'] || meta['l0s01'] || meta['email'] || 'N/A';
   
-  // Product keys: l9w7q (Snippet applied for), mlsd4, 7881, 9789
-  const product = meta['l9w7q'] || meta['mlsd4'] || meta['7881'] || meta['9789'] || meta['9770'] || meta['projectTitle'] || 'Generic Registration';
+  // Product keys: 9789 (Workshop), mlsd4 (Course), 7881 (Internship), l9w7q (Snippet applied for)
+  const product = meta['mlsd4'] || meta['9789'] || meta['9770'] || meta['7881'] || meta['l9w7q'] || meta['projectTitle'] || 'Generic Registration';
   
   // Metadata Refinement
   const phone = meta['jqnig'] || meta['ycnup'] || meta['7878'] || meta['phone'] || '';
@@ -95,6 +95,10 @@ function normalizeEntry(e: any, defaultType: string) {
   const major = meta['zsrzh'] || meta['major'] || '';
   const source = meta['4fkgw'] || meta['source'] || '';
   
+  // Location Details
+  const country = meta['9802'] || meta['9776'] || meta['yiu1i'] || 'India';
+  const state = meta['9801'] || meta['9775'] || meta['q2ct5'] || '';
+
   // Internship Logistics
   const mode = meta['7882'] || meta['mode'] || '';
   const duration = meta['7883'] || meta['duration'] || '';
@@ -107,8 +111,8 @@ function normalizeEntry(e: any, defaultType: string) {
   const amountRaw = formattedAmount.replace(/[^0-9.]/g, '');
   const amount = parseFloat(amountRaw) || 0;
   
-  // Extract currency if possible (fallback to INR if symbol is ₹ or if no symbol and not a lead)
-  const currency = formattedAmount.includes('$') ? 'USD' : (formattedAmount.includes('₹') ? 'INR' : (formattedAmount.match(/[A-Z]{3}/)?.[0] || 'INR'));
+  // Extract currency if possible 
+  const currency = formattedAmount.includes('$') ? 'USD' : (formattedAmount.includes('₹') ? 'INR' : 'USD');
   
   // If payment status is explicit success, or if it is a Form 554 application which is inherently active
   // but if the user specifically asked "if data has pricing data then show success or lead as per demand"
@@ -142,12 +146,15 @@ function normalizeEntry(e: any, defaultType: string) {
     major,
     mode,
     duration,
+    country,
+    state,
     source,
     product,
     status,
     amount,
     formattedAmount,
     currency,
+    basePrice: parseFloat(meta['9825'] || '0') || null,
     date: e.created_at,
     isLead
   };

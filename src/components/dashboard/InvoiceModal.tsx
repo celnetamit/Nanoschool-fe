@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Printer } from 'lucide-react';
-import { calculateGST, numberToWords, getStateCode } from '@/lib/tax';
+import { numberToWords, getStateCode } from '@/lib/tax';
 import { generateInvoiceHTML } from '@/lib/invoice-generator';
 import Image from 'next/image';
 import React from 'react';
@@ -102,9 +102,6 @@ export default function InvoiceModal({ payment, onClose }: InvoiceModalProps) {
     }, 500);
   };
 
-  const taxBreakdown = calculateGST(payment.amount, payment.country, payment.state);
-  const { baseAmount, cgst, sgst, igst, totalTax } = taxBreakdown;
-  
   const invoiceDate = new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
   const invoiceNumber = `INV-${payment.id.slice(-6).toUpperCase()}`;
 

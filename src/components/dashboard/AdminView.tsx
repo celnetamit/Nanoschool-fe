@@ -41,6 +41,43 @@ export default function AdminView() {
       .catch(() => setLoading(false));
   }, []);
 
+  const handleDownloadAudit = () => {
+    if (!stats || stats.recent.length === 0) return;
+
+    // Define CSV Headers
+    const headers = ['Entity Identity', 'Email', 'Module Core', 'Yield (Amount)', 'Registration Date'];
+    
+    // Convert recent registrations to CSV rows
+    const csvRows = stats.recent.map(entry => [
+      `"${entry.name}"`,
+      `"${entry.email}"`,
+      `"${entry.course}"`,
+      `"${entry.formattedAmount || entry.amount}"`,
+      `"${new Date(entry.date || Date.now()).toLocaleString()}"`
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create a Blob and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `nanoschool-throughput-audit-${timestamp}.csv`;
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) return (
     <div className="space-y-12">
         <div className="h-24 bg-white/50 backdrop-blur-md rounded-[2rem] border border-slate-200/40 animate-pulse"></div>
@@ -152,7 +189,10 @@ export default function AdminView() {
                 <h3 className="text-2xl font-black text-slate-950 tracking-tighter">Throughput Stream</h3>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Real-time Enrollment Logic</p>
             </div>
-            <button className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm active:scale-95 uppercase tracking-widest flex items-center gap-2">
+            <button 
+                onClick={handleDownloadAudit}
+                className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-[11px] font-black text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm active:scale-95 uppercase tracking-widest flex items-center gap-2"
+            >
                 Download Audit <ArrowUpRight size={14} className="stroke-[3]" />
             </button>
           </div>
@@ -206,9 +246,9 @@ export default function AdminView() {
             </table>
           </div>
           <div className="p-8 bg-slate-50/[0.2] border-t border-slate-100 flex justify-center">
-             <button className="text-[11px] font-black text-blue-600 hover:text-blue-800 transition-all uppercase tracking-[0.3em] flex items-center gap-3 group/btn">
+             <Link href="/dashboard/registrations" className="text-[11px] font-black text-blue-600 hover:text-blue-800 transition-all uppercase tracking-[0.3em] flex items-center gap-3 group/btn">
                 Access Audit Engine <ArrowUpRight size={16} className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
-             </button>
+             </Link>
           </div>
         </div>
 
@@ -256,23 +296,7 @@ export default function AdminView() {
               </div>
            </div>
 
-           {/* Conversion Insights - Modern Connectivity */}
-           <div className="bg-white rounded-[3rem] border border-slate-200/50 p-10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] group hover:border-blue-100 transition-all">
-                <div className="flex items-center justify-between mb-10">
-                    <h3 className="font-black text-slate-950 tracking-tighter text-xl">Connectivity</h3>
-                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-                        <CheckCircle2 size={18} />
-                    </div>
-                </div>
-                <div className="space-y-8">
-                    <InsightRow label="Inbound Referrals" value={`${stats.total > 0 ? Math.round((stats.paid/stats.total)*100 + 4) : 0}%`} color="bg-blue-500" />
-                    <InsightRow label="Direct Node Links" value={`${stats.total > 0 ? Math.round((stats.paid/stats.total)*100 - 2) : 0}%`} color="bg-indigo-500" />
-                    <InsightRow label="Automated Uplinks" value="Active" color="bg-emerald-500" />
-                </div>
-                <div className="mt-12 pt-8 border-t border-slate-50 flex justify-center">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Entropy Optimized</p>
-                </div>
-           </div>
+
         </div>
       </div>
     </div>
@@ -328,17 +352,4 @@ function StatCard({ icon, label, value, trend, positive, subValue, indicator, co
   );
 }
 
-function InsightRow({ label, value, color }: any) {
-  return (
-    <div className="flex items-center justify-between group cursor-default">
-        <div className="flex items-center gap-4">
-             <div className={`w-2.5 h-2.5 rounded-full ${color} shadow-[0_0_10px_rgba(0,0,0,0.1)] group-hover:scale-150 group-hover:shadow-current transition-all duration-500`}></div>
-             <span className="text-sm font-black text-slate-600 group-hover:text-slate-900 transition-colors uppercase tracking-tight">{label}</span>
-        </div>
-        <div className="flex items-center gap-3">
-             <div className="w-12 h-px bg-slate-100 group-hover:w-20 transition-all duration-700"></div>
-             <span className="text-base font-black text-slate-950 tracking-tighter">{value}</span>
-        </div>
-    </div>
-  );
-}
+

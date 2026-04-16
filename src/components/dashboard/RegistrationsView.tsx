@@ -78,6 +78,7 @@ export default function RegistrationsView() {
     page: 1
   });
   const [mounted, setMounted] = useState(false);
+  const [isAuditMode, setIsAuditMode] = useState(false);
   
   // Certificate Preview State
   const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
@@ -282,6 +283,19 @@ export default function RegistrationsView() {
                 <button type="submit" className="px-6 py-2.5 bg-slate-950 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg shadow-slate-950/20 whitespace-nowrap">
                     Apply
                 </button>
+
+                <button 
+                    type="button"
+                    onClick={() => setIsAuditMode(!isAuditMode)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-black text-[10px] uppercase tracking-widest transition-all ${
+                        isAuditMode 
+                        ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/20' 
+                        : 'bg-white text-slate-400 border-slate-200 hover:border-blue-200'
+                    }`}
+                >
+                    <ShieldCheck size={14} className={isAuditMode ? 'animate-pulse' : ''} />
+                    {isAuditMode ? 'Audit Engine Active' : 'Enable Audit Engine'}
+                </button>
             </form>
         </div>
 
@@ -297,7 +311,9 @@ export default function RegistrationsView() {
                 <table className="w-full text-left border-collapse table-fixed">
                     <thead>
                         <tr className="bg-slate-50/50">
-                            <th className="w-[35%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Profile</th>
+                            <th className="w-[35%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                Profile {isAuditMode && <span className="ml-2 text-blue-500 font-black tracking-tighter">[TECHNICAL SCAN ACTIVE]</span>}
+                            </th>
                             <th className="w-[30%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Program</th>
                             <th className="w-[15%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
                             <th className="w-[20%] px-6 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Actions / Yield</th>
@@ -336,6 +352,28 @@ export default function RegistrationsView() {
                                                 <div className="flex items-center gap-1 text-slate-500 mt-1 max-w-full">
                                                     <Building2 size={10} className="shrink-0 text-blue-500" />
                                                     <span className="text-[9px] font-bold uppercase truncate italic">{reg.institution}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Technical Audit Overlay */}
+                                            {isAuditMode && (
+                                                <div className="mt-3 p-3 bg-slate-900 rounded-xl border border-white/5 space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Entry UID</span>
+                                                        <span className="text-[9px] font-black text-blue-400 font-mono tracking-tighter bg-blue-500/10 px-1.5 py-0.5 rounded">ID_{reg.id}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Logic Source</span>
+                                                        <span className="text-[9px] font-black text-emerald-400 tracking-tighter bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                                                            {reg.type.toUpperCase()}_MAPPING
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Sync Hash</span>
+                                                        <span className="text-[8px] font-black text-slate-400 font-mono truncate max-w-[80px]">
+                                                            {reg.date.replace(/[^0-9]/g, '').substring(0, 12)}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCurrencySymbol } from '@/lib/currency';
+import { triggerBackgroundNotification } from '@/workers/notificationWorker';
 
 export async function POST(request: Request) {
   try {
@@ -193,11 +194,13 @@ export async function POST(request: Request) {
         brandId: "fbb632ae",
         ...body, // Capture all named frontend keys (name, email, profession, etc.)
         ...mergedItemMeta, // Capture all Formidable numeric IDs
+        pricingBreakdown: body.pricingBreakdown, // PASS FULL BREAKDOWN
         courseFee: verboseCourseFee,
         payableAmount: verbosePayableAmount,
         payableFeeAmount: verbosePayableAmount, 
         currency: currencyCode,
         currencySymbol: currencySymbol,
+        '9825': body.pricingBreakdown?.basePrice || 0, // STORE BASE PRICE (Exclusive)
         '9817': (paymentStatus || '').toLowerCase(),
         '9816': body.razorpay_order_id || '',
         '9819': body.razorpay_payment_id || '',
@@ -230,6 +233,24 @@ export async function POST(request: Request) {
       ...mergedItemMeta,
       ...body
     };
+
+    // TRIGGER POST-ENROLLMENT NOTIFICATIONS (ASYNC)
+    const notificationPhone = body.mobileNumber 
+      ? (`${body.countryCode || ''}${body.mobileNumber}`).replace(/\s/g, '') 
+      : '';
+
+    if (body.email) {
+      triggerBackgroundNotification({
+        email: body.email,
+        name: body.name || 'Student',
+        phone: notificationPhone,
+        courseName: body.workshopTitle || body.course || 'NanoSchool Program',
+        enrollmentId: newEntryId ? String(newEntryId) : undefined
+      }).catch(err => {
+        // We catch here so that a failure in the notification engine doesn't break the user's checkout experience
+        console.error('Failed to dispatch background notifications:', err);
+      });
+    }
 
     return NextResponse.json({ success: true, data: result, itemMeta: returnMeta }, { status: 200 });
   } catch (error: any) {
