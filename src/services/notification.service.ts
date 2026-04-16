@@ -23,7 +23,7 @@ if (isAwsConfigured) {
 
     transporter = nodemailer.createTransport({
       SES: { ses, aws },
-    });
+    } as any);
     console.log('[Notification] AWS SES Transporter initialized successfully');
   } catch (err) {
     console.error('[Notification] AWS SES Initialization failed:', err);
