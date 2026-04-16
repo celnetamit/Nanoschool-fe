@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import * as aws from "@aws-sdk/client-ses";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 
 /**
  * AWS SES Notification Service
@@ -13,7 +13,7 @@ const isAwsConfigured = !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SEC
 
 if (isAwsConfigured) {
   try {
-    const ses = new aws.SESClient({
+    const ses = new SESv2Client({
       region: process.env.AWS_REGION || 'ap-south-1',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
@@ -22,7 +22,7 @@ if (isAwsConfigured) {
     });
 
     transporter = nodemailer.createTransport({
-      SES: { ses, aws },
+      SES: { ses, aws: { SendEmailCommand } },
     } as any);
     console.log('[Notification] AWS SES Transporter initialized successfully');
   } catch (err) {
