@@ -95,7 +95,7 @@ export async function GET() {
     };
 
     // Calculate totals based on the original entries for admin, or filtered for user
-    entriesToSummarize.forEach((e: any) => {
+    filteredEntries.forEach((e: any) => {
       const meta = e.meta || e.item_meta || {};
       const formattedAmount = String(meta['p30ad'] || meta['9810'] || meta['ijpy8'] || meta['9777'] || '0');
       const amount = parseLocalizedNumber(formattedAmount);
