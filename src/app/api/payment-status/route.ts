@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { parseLocalizedNumber } from '@/lib/tax';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -92,7 +93,7 @@ async function saveToWordPress(data: any) {
         // Sanitization for numeric fields
         if (key === 'courseFee' || key === 'payableAmount' || key === 'amount') {
           if (value && typeof value === 'string') {
-            value = value.replace(/[^0-9.]/g, '');
+            value = parseLocalizedNumber(value).toString();
           }
         }
 

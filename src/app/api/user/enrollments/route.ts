@@ -62,7 +62,8 @@ export async function GET() {
                 ...e,
                 slug: matchedProduct?.slug,
                 originalPost: matchedProduct,
-                course: matchedProduct?.title.rendered || entryTitle
+                course: matchedProduct?.title.rendered || entryTitle,
+                pricingBreakdown: meta['9832'] ? JSON.parse(meta['9832']) : null
             });
         } else {
             matchedProduct = allCourseCandidates.find(c => isProductMatched(entryTitle, c.title.rendered));
@@ -71,7 +72,8 @@ export async function GET() {
                 ...e,
                 slug: matchedProduct?.slug,
                 originalPost: matchedProduct,
-                course: matchedProduct?.title.rendered || entryTitle
+                course: matchedProduct?.title.rendered || entryTitle,
+                pricingBreakdown: meta['9832'] ? JSON.parse(meta['9832']) : null
             });
         }
     });

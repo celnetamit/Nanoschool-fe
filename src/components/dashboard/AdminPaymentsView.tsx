@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import InvoiceModal from './InvoiceModal';
+import { calculateFinalPricing, PricingBreakdown, parseLocalizedNumber } from '@/lib/pricing';
 
 interface Payment {
   id: string;
@@ -36,6 +37,8 @@ interface Payment {
   contactNumber?: string;
   institution?: string;
   basePrice?: number | null;
+  currency?: string;
+  pricingBreakdown?: PricingBreakdown;
 }
 
 export default function AdminPaymentsView() {
@@ -88,9 +91,15 @@ export default function AdminPaymentsView() {
     
     // Convert payments to CSV rows
     const csvRows = filteredPayments.map(p => {
-      const base = p.basePrice || (p.amount / 1.18);
-      const tax = p.amount - base;
-      const sym = p.formattedAmount?.includes('$') ? '$' : '₹';
+      // Prioritize stored breakdown, fallback to new deterministic engine
+      const pb = p.pricingBreakdown || calculateFinalPricing({
+        basePrice: p.amount,
+        country: p.country || 'India',
+        state: p.state || '',
+        currency: p.currency || (p.formattedAmount?.includes('$') ? 'USD' : 'INR'),
+        isInclusive: true
+      });
+      const sym = pb.currencySymbol;
       
       return [
         `"${p.name}"`,
@@ -98,9 +107,9 @@ export default function AdminPaymentsView() {
         `"${p.course}"`,
         `"${p.transactionId}"`,
         `"${p.status}"`,
-        `"${sym}${base.toFixed(2)}"`,
-        `"${sym}${tax.toFixed(2)}"`,
-        `"${p.formattedAmount || p.amount}"`,
+        `"${sym}${pb.basePrice.toFixed(2)}"`,
+        `"${sym}${pb.taxAmount.toFixed(2)}"`,
+        `"${sym}${pb.finalTotal.toFixed(2)}"`,
         `"${new Date(p.date).toLocaleString()}"`,
         `"${p.state || 'N/A'}"`,
         `"${p.country || 'N/A'}"`
@@ -301,13 +310,21 @@ export default function AdminPaymentsView() {
                         {payment.amount > 0 && (
                           <div className="flex flex-col items-end text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider leading-tight">
                             {(() => {
-                                const base = payment.basePrice || (payment.amount / 1.18);
-                                const tax = payment.amount - base;
-                                const sym = payment.formattedAmount?.includes('$') ? '$' : '₹';
+                                // Prioritize stored breakdown, fallback to new deterministic engine
+                                const pb = payment.pricingBreakdown || calculateFinalPricing({
+                                  basePrice: payment.amount,
+                                  country: payment.country || 'India',
+                                  state: payment.state || '',
+                                  currency: payment.currency || (payment.formattedAmount?.includes('$') ? 'USD' : 'INR'),
+                                  isInclusive: true
+                                });
                                 return (
                                   <>
-                                    <span>Base: {sym}{base.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                    <span className="text-emerald-500">Tax: {sym}{tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Base Price: {pb.currencySymbol}{pb.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                    {pb.surchargeAmount > 0 && <span className="text-amber-600 font-black">Extra Charge (3%): {pb.currencySymbol}{pb.surchargeAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>}
+                                    <span className="text-emerald-500 font-black">Tax (18%): {pb.currencySymbol}{pb.taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                    <div className="h-[1px] w-full bg-slate-100 my-1"></div>
+                                    <span className="text-slate-900 font-black text-[10px]">TOTAL: {pb.currencySymbol}{pb.finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                   </>
                                 );
                             })()}

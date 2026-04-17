@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrencySymbol } from '@/lib/currency';
 import { triggerBackgroundNotification } from '@/workers/notificationWorker';
+import { parseLocalizedNumber, calculateFinalPricing } from '@/lib/pricing';
 
 export async function POST(request: Request) {
   try {
@@ -143,26 +144,40 @@ export async function POST(request: Request) {
     const currencySymbol = body.currencySymbol || (cleanPayableAmount.includes('₹') ? '₹' : '$');
 
     // Determine initial status based on payment requirement
-    const amountVal = parseFloat(cleanPayableAmount.replace(/[^0-9.]/g, '') || cleanCourseFee.replace(/[^0-9.]/g, '') || '0');
+    const calculatedPayable = parseLocalizedNumber(cleanPayableAmount);
+    const calculatedCourse = parseLocalizedNumber(cleanCourseFee);
+    const amountVal = calculatedPayable > 0 ? calculatedPayable : calculatedCourse;
     const isFree = isNaN(amountVal) || amountVal <= 0;
     const paymentStatus = isFree ? 'SUCCESS' : (body.payment_status || 'PENDING');
 
-    // Verbose amount format for WordPress (e.g., "$59")
-    const finalSymbol = getCurrencySymbol(currencyCode);
-    const verboseCourseFee = `${finalSymbol}${cleanCourseFee.replace(/[^0-9.]/g, '')}`;
-    const verbosePayableAmount = `${finalSymbol}${cleanPayableAmount.replace(/[^0-9.]/g, '')}`;
+    // DEFINE THE PRICING BREAKDOWN (Single Source of Truth)
+    const pricingBreakdown = calculateFinalPricing({
+        country: body.country || 'India',
+        state: body.state,
+        basePrice: amountVal,
+        currency: currencyCode,
+        isInclusive: false // Business Rule: Sticker Price is BASE
+    });
 
     const restrictedMeta = {
       '9817': paymentStatus,
       '9816': body.razorpay_order_id || '',
       '9819': body.razorpay_payment_id || '',
       '9821': body.razorpay_signature || '',
-      '9809': verboseCourseFee,
-      '9810': verbosePayableAmount,
+      '9809': `${pricingBreakdown.currencySymbol}${pricingBreakdown.basePrice}`,
+      '9810': `${pricingBreakdown.currencySymbol}${pricingBreakdown.finalTotal}`,
       '9800': body.address || '',
       '9801': body.state || '',
       '9802': body.country || '',
-      '9805': body.pinCode || ''
+      '9805': body.pinCode || '',
+      '9812': body.otherCurrency === 'yes' ? 'Yes' : 'No', // Currency override
+      '9825': pricingBreakdown.basePrice,
+      '9826': pricingBreakdown.taxAmount,
+      '9827': pricingBreakdown.surchargeAmount,
+      '9828': pricingBreakdown.cgstAmount || 0,
+      '9829': pricingBreakdown.sgstAmount || 0,
+      '9830': pricingBreakdown.igstAmount || 0,
+      '9832': JSON.stringify(pricingBreakdown) // Full Breakdown JSON for deterministic UI
     };
 
     // STEP 2: Wait 1s and PATCH the restricted Read-Only payment fields manually
@@ -194,13 +209,16 @@ export async function POST(request: Request) {
         brandId: "fbb632ae",
         ...body, // Capture all named frontend keys (name, email, profession, etc.)
         ...mergedItemMeta, // Capture all Formidable numeric IDs
-        pricingBreakdown: body.pricingBreakdown, // PASS FULL BREAKDOWN
-        courseFee: verboseCourseFee,
-        payableAmount: verbosePayableAmount,
-        payableFeeAmount: verbosePayableAmount, 
-        currency: currencyCode,
-        currencySymbol: currencySymbol,
-        '9825': body.pricingBreakdown?.basePrice || 0, // STORE BASE PRICE (Exclusive)
+        pricingBreakdown: pricingBreakdown, // PASS FULL BREAKDOWN
+        courseFee: `${pricingBreakdown.currencySymbol}${pricingBreakdown.basePrice}`,
+        payableAmount: `${pricingBreakdown.currencySymbol}${pricingBreakdown.finalTotal}`,
+        payableFeeAmount: `${pricingBreakdown.currencySymbol}${pricingBreakdown.finalTotal}`, 
+        currency: pricingBreakdown.currency,
+        currencySymbol: pricingBreakdown.currencySymbol,
+        taxAmount: pricingBreakdown.taxAmount,
+        extraChargeAmount: pricingBreakdown.surchargeAmount,
+        basePrice: pricingBreakdown.basePrice,
+        '9825': pricingBreakdown.basePrice,
         '9817': (paymentStatus || '').toLowerCase(),
         '9816': body.razorpay_order_id || '',
         '9819': body.razorpay_payment_id || '',

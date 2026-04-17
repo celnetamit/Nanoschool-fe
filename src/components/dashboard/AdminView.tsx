@@ -12,6 +12,7 @@ import {
   Calendar,
   LayoutDashboard
 } from 'lucide-react';
+import { calculateFinalPricing, parseLocalizedNumber } from '@/lib/pricing';
 
 interface Stats {
   total: number;
@@ -230,15 +231,40 @@ export default function AdminView() {
                       </div>
                     </td>
                     <td className="px-10 py-7 text-right">
-                      <span className="font-black text-slate-950 text-sm tracking-tight">
-                        {entry.formattedAmount && entry.formattedAmount !== '0' ? (
-                          entry.formattedAmount.includes('₹') || entry.formattedAmount.includes('$') || entry.formattedAmount.match(/[A-Z]{3}/) || entry.formattedAmount.match(/[^0-9., ]/)
-                            ? entry.formattedAmount 
-                            : `₹${entry.amount.toLocaleString()}`
-                        ) : (
-                          entry.amount > 0 ? `₹${entry.amount.toLocaleString()}` : '--'
+                      <div className="flex flex-col items-end">
+                        <span className="font-black text-slate-950 text-sm tracking-tight leading-tight">
+                          {entry.formattedAmount && entry.formattedAmount !== '0' ? (
+                            entry.formattedAmount.includes('₹') || entry.formattedAmount.includes('$') || entry.formattedAmount.match(/[A-Z]{3}/) || entry.formattedAmount.match(/[^0-9., ]/)
+                              ? entry.formattedAmount 
+                              : `₹${entry.amount.toLocaleString()}`
+                          ) : (
+                            entry.amount > 0 ? `₹${entry.amount.toLocaleString()}` : '--'
+                          )}
+                        </span>
+                        {entry.amount > 0 && (
+                          <div className="flex flex-col items-end text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-[0.1em] leading-[1.2]">
+                             {(() => {
+                               // Prioritize stored breakdown, fallback to new deterministic engine
+                               const pb = entry.pricingBreakdown || calculateFinalPricing({
+                                 basePrice: entry.rawAmount || entry.amount,
+                                 country: entry.country || 'India', 
+                                 state: entry.state || '',
+                                 currency: entry.formattedAmount?.includes('$') ? 'USD' : 'INR',
+                                 isInclusive: true
+                               });
+                               return (
+                                 <>
+                                   <span className="opacity-70">Base: {pb.currencySymbol}{pb.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                   {pb.surchargeAmount > 0 && <span className="text-amber-600/80">Surcharge (3%): {pb.currencySymbol}{pb.surchargeAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>}
+                                   <span className="text-emerald-500/80">Tax (18%): {pb.currencySymbol}{pb.taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                   <div className="h-[1px] w-full bg-slate-100 my-0.5 opacity-50"></div>
+                                   <span className="text-slate-900 font-black">Total: {pb.currencySymbol}{pb.finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                 </>
+                               );
+                             })()}
+                          </div>
                         )}
-                      </span>
+                      </div>
                     </td>
                   </tr>
                 ))}

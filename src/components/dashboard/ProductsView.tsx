@@ -20,6 +20,7 @@ import {
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProductsSkeleton from './ProductsSkeleton';
+import { calculateFinalPricing } from '@/lib/pricing';
 
 interface ProductsViewProps {
   initialCourses?: any[];
@@ -202,10 +203,30 @@ export default function ProductsView({
                           </h3>
                           <div className="space-y-3">
                               {isProduct ? (
-                                <div className="flex items-center gap-4 text-sm font-black text-blue-600">
-                                    <span className="px-3 py-1 bg-blue-50 rounded-lg">₹{priceInr}</span>
-                                    {priceUsd && <span className="text-slate-400 font-bold">${priceUsd}</span>}
-                                </div>
+                                 <div className="flex flex-col gap-1 text-sm font-black text-blue-600">
+                                     <div className="flex items-center gap-4">
+                                         <span className="px-3 py-1 bg-blue-50 rounded-lg">₹{priceInr}</span>
+                                         {priceUsd && <span className="text-slate-400 font-bold">${priceUsd}</span>}
+                                     </div>
+                                     <div className="flex flex-col text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight mt-1">
+                                         {(() => {
+                                             // Prioritize stored breakdown, fallback to new deterministic engine
+                                             const pb = item.pricingBreakdown || calculateFinalPricing({
+                                                 basePrice: parseFloat(priceInr.toString().replace(/[^0-9.]/g, '')),
+                                                 country: 'India',
+                                                 state: '',
+                                                 currency: 'INR',
+                                                 isInclusive: false // Catalog prices are usually EXCLUSIVE
+                                             });
+                                             return (
+                                                 <>
+                                                     <span className="opacity-60 italic">{item.pricingBreakdown ? 'Confirmed Pricing' : 'Excl. GST (Listing)'}</span>
+                                                     <span className="text-emerald-500/80">Incl. GST (18%): ₹{pb.finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                 </>
+                                             );
+                                         })()}
+                                     </div>
+                                 </div>
                               ) : (
                                 <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
                                     <Calendar size={16} className="text-slate-400" />

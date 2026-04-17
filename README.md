@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NanoSchool - Fintech & Enrollment Engine
 
-## Getting Started
+This repository contains the NanoSchool student academy and enrollment platform. It features a deterministic, Fintech-grade pricing and invoicing engine designed for Indian GST compliance and international currency handling.
 
-First, run the development server:
+## Core Business Rules (Pricing Engine)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+The platform enforces a **Single Source of Truth (S.O.T.)** via `@/lib/pricing.ts`. All views (Dashboards, Invoices, Enrollment Forms) consume this centralized logic.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1.  **Exclusive Pricing**: The listed "Sticker Price" in the catalog is treated as the **Base Price**.
+2.  **Taxation**: 
+    - **Domestic (India)**: 18% GST (Calculated as 18% IGST or 9% CGST + 9% SGST if in Uttar Pradesh).
+    - **International**: 18% Export Tax.
+3.  **Extra Charge (Surcharge)**: A flat **3% Extra Charge** is automatically applied to all non-INR transactions (e.g., USD, EUR) to cover international payment gateway fees and currency exchange volatility.
+4.  **Mathematical Parity**: `Total Payable = (Base Price) + (18% Tax) + (3% Extra Charge)`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Data Persistence (WP Meta 9832)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To ensure historical auditability and prevent "pricing drift" if logic changes in the future, every successful enrollment stores the full `PricingBreakdown` JSON object in the WordPress metadata field **`9832`**.
 
-## Learn More
+- **Prioritization**: Frontend components (Invoices) prioritize the JSON in field `9832`.
+- **Fallback**: If `9832` is missing (legacy records), the system performs a deterministic recalculation using the current engine rules.
 
-To learn more about Next.js, take a look at the following resources:
+## Production Requirements
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Node.js**: Requires **`>=20.9.0`**. (Builds will fail on Node 18 due to Next.js requirements).
+- **Environment**: Ensure `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are correctly configured for secure payments.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Enrollment Workflow
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1.  **Lead Creation**: User submits form -> Lead saved to WordPress (IMS).
+2.  **Order Generation**: A Razorpay order is created using the authoritative `finalTotal`.
+3.  **Payment Capture**: On success, the payment record is updated and the `PricingBreakdown` is persisted to meta field `9832`.
+4.  **Invoice Generation**: PDF invoices are generated from the persisted metadata.

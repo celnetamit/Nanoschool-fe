@@ -3,6 +3,7 @@ import { getFormEntries } from '@/lib/wordpress';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getSystemConfig } from '@/lib/settings';
+import { parseLocalizedNumber } from '@/lib/tax';
 
 async function getExchangeRates() {
   try {
@@ -65,34 +66,42 @@ export async function GET() {
       revenueTarget: config.fiscal.revenueTarget,
       recent: filteredEntries.slice(0, 10).map((e: any) => {
         const meta = e.meta || e.item_meta || {};
-        const formattedAmount = String(meta['ijpy8'] || meta['9810'] || '0');
-        const amountStr = formattedAmount.replace(/[^0-9.]/g, '');
-        const amount = parseFloat(amountStr) || 0;
+        
+        // Unified Mapping
+        const name = meta['9792'] || meta['9771'] || meta['7876'] || meta['wly6y'] || 'Student';
+        const email = meta['9793'] || meta['9772'] || meta['7yfjv'] || meta['l0s01'] || 'N/A';
+        const course = meta['mlsd4'] || meta['9789'] || meta['9770'] || meta['l9w7q'] || meta['7881'] || 'NanoSchool Program';
+        
+        const formattedAmount = String(meta['p30ad'] || meta['9810'] || meta['ijpy8'] || meta['9777'] || '0');
+        const amount = parseLocalizedNumber(formattedAmount);
         const normalizedAmount = normalizeToINR(formattedAmount, amount, rates);
-        const status = (meta['2dnu4'] === 'payment_success' || meta['9817'] === 'payment_success') ? 'Paid' : 'Unpaid';
+        
+        const rawStatus = (meta['2dnu4'] || meta['9817'] || meta['9777'] || '').toLowerCase();
+        const status = (rawStatus === 'paid' || rawStatus === 'payment_success' || rawStatus === 'success') ? 'Paid' : 'Unpaid';
 
         return {
           id: e.id,
-          name: meta['wly6y'] || meta['9792'] || 'Unknown',
-          email: meta['7yfjv'] || meta['9793'] || 'N/A',
-          course: meta['mlsd4'] || meta['9789'] || 'Generic Enrollment',
+          name,
+          email,
+          course,
           status,
-          amount: normalizedAmount, // Return normalized amount for UI consistency
+          amount: normalizedAmount,
           rawAmount: amount,
           formattedAmount,
+          pricingBreakdown: meta['9832'] ? JSON.parse(meta['9832']) : null,
           date: e.created_at
         };
       })
     };
 
     // Calculate totals based on the original entries for admin, or filtered for user
-    const entriesToSummarize = role === 'admin' ? entries : filteredEntries;
     entriesToSummarize.forEach((e: any) => {
       const meta = e.meta || e.item_meta || {};
-      const formattedAmount = String(meta['ijpy8'] || meta['9810'] || '0');
-      const amountStr = formattedAmount.replace(/[^0-9.]/g, '');
-      const amount = parseFloat(amountStr) || 0;
-      const isPaid = meta['2dnu4'] === 'payment_success' || meta['9817'] === 'payment_success';
+      const formattedAmount = String(meta['p30ad'] || meta['9810'] || meta['ijpy8'] || meta['9777'] || '0');
+      const amount = parseLocalizedNumber(formattedAmount);
+      
+      const rawStatus = (meta['2dnu4'] || meta['9817'] || meta['9777'] || '').toLowerCase();
+      const isPaid = rawStatus === 'paid' || rawStatus === 'payment_success' || rawStatus === 'success';
 
       if (isPaid) {
         stats.paid++;

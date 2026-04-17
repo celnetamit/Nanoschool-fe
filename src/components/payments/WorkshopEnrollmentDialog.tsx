@@ -10,7 +10,7 @@ import { useAuthAction } from '@/hooks/useAuthAction';
 import { useSession } from 'next-auth/react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
-import { calculateEnrollmentPricing, InvoiceBreakdown } from '@/lib/tax';
+import { parseLocalizedNumber, PricingBreakdown } from '@/lib/pricing';
 import { getCurrencyForCountry, formatPrice, getCurrencyName, getUniqueCurrencies, getCurrencyFlag, getCurrencySymbol } from '@/lib/currency';
 
 declare global {
@@ -73,20 +73,18 @@ export default function WorkshopEnrollmentDialog({
   const [payableAmount, setPayableAmount] = useState(courseFee);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [pricingBreakdown, setPricingBreakdown] = useState<InvoiceBreakdown>({
+  const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown>({
     currency: initialCurrency,
     basePrice: 0,
-    extraChargePercentage: 0,
-    extraChargeAmount: 0,
-    taxableAmount: 0,
-    taxDetails: {
-      taxType: 'INTERNATIONAL_TAX',
-      totalTaxPercentage: 18,
-      totalTaxAmount: 0
-    },
-    totalPayableAmount: 0,
+    taxAmount: 0,
+    taxType: 'INTERNATIONAL',
+    cgstAmount: null,
+    sgstAmount: null,
+    igstAmount: null,
+    surchargeAmount: 0,
+    finalTotal: 0,
     currencySymbol: initialCurrency === 'INR' ? '₹' : '$',
-    description: 'Initial Load'
+    breakdownLabel: 'Initial Load'
   });
 
   const [formData, setFormData] = useState({
@@ -126,10 +124,8 @@ export default function WorkshopEnrollmentDialog({
   }, [itemType]);
 
   // Helper to parse price string to number
-  const parsePrice = (str: string) => {
-    if (!str) return 0;
-    const clean = str.replace(/[^0-9.]/g, '');
-    return parseFloat(clean) || 0;
+  const parsePrice = (str: string | undefined | null) => {
+    return parseLocalizedNumber(str);
   };
 
   useEffect(() => {
@@ -140,17 +136,37 @@ export default function WorkshopEnrollmentDialog({
   useEffect(() => {
     const amount = parsePrice(payableAmount);
     if (amount > 0) {
-      // We reverse engineer the base price for calculateEnrollmentPricing if it's currently inclusive of tax
-      // OR better, we use it as the source for the utility.
-      // But actually, calculateEnrollmentPricing expects the BASE price as input.
-      // Our payableAmount from selection is currently treated as the Base Price when switching to International.
-      const breakdown = calculateEnrollmentPricing({
-        country: formData.country || 'India',
-        state: formData.state,
-        basePrice: amount,
-        currency: currency
-      });
-      setPricingBreakdown(breakdown);
+      const controller = new AbortController();
+      const fetchPricing = async () => {
+        try {
+          const res = await fetch('/api/pricing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              country: formData.country || 'India',
+              state: formData.state,
+              basePrice: amount,
+              currency: currency,
+              isInclusive: false // Business Rule: Sticker price is BASE
+            }),
+            signal: controller.signal
+          });
+          const data = await res.json();
+          if (data.success) {
+            setPricingBreakdown(data.breakdown);
+          }
+        } catch (err: any) {
+          if (err.name !== 'AbortError') {
+             console.error("Pricing fetch error:", err);
+          }
+        }
+      };
+
+      const debounce = setTimeout(fetchPricing, 300);
+      return () => {
+        clearTimeout(debounce);
+        controller.abort();
+      };
     }
   }, [payableAmount, formData.country, formData.state, currency]);
 
@@ -544,18 +560,18 @@ export default function WorkshopEnrollmentDialog({
           entryId,
           pid: uniquePid,
           workshopTitle,
-          courseFee: payableAmount,   // Use the calculated fee for selected mode/profession
-          payableAmount: pricingBreakdown.totalPayableAmount.toString(), // Final dynamically calculated discount/fee
+          courseFee: payableAmount,
+          payableAmount: `${currencySymbol}${pricingBreakdown.finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
           itemType: internalItemType,
           category: internalItemType === 'courses' ? 'Course' : (internalItemType === 'internships' ? 'Internship' : 'Workshop'),
-          currency,               // Added the selected currency
-          currencySymbol,         // Added the selected currency symbol
-          pricingBreakdown,       // FULL BREAKDOWN for Invoice Engine
-          payableFeeAmount: pricingBreakdown.totalPayableAmount.toString(), // Explicit field for IMS
-          taxStatus: pricingBreakdown.taxDetails.taxType === 'INTERNATIONAL_TAX' && pricingBreakdown.extraChargeAmount === 0 ? 'Exempt' : 'Inclusive', 
-          taxAmount: pricingBreakdown.taxDetails.totalTaxAmount.toFixed(2), // Added tax amount
-          taxDescription: pricingBreakdown.description, // Added tax description
-          otherCurrency: formData.otherCurrency === 'yes' ? 'yes' : 'no' 
+          currency,
+          currencySymbol,
+          pricingBreakdown,
+          payableFeeAmount: pricingBreakdown.finalTotal.toString(),
+          taxStatus: pricingBreakdown.taxAmount > 0 ? 'Taxable' : 'Exempt',
+          taxAmount: pricingBreakdown.taxAmount.toFixed(2),
+          taxDescription: pricingBreakdown.breakdownLabel,
+          otherCurrency: formData.otherCurrency === 'yes' ? 'yes' : 'no'
         }),
       });
 
@@ -570,7 +586,7 @@ export default function WorkshopEnrollmentDialog({
       
       // Step 2: Create Razorpay Order
       // Only proceed to payment if amount is > 0
-      const amountValue = pricingBreakdown.totalPayableAmount;
+      const amountValue = pricingBreakdown.finalTotal;
       
       if (amountValue <= 0) {
         toast.success('Enrollment submitted successfully!');
@@ -1131,62 +1147,64 @@ export default function WorkshopEnrollmentDialog({
                            </option>
                          ))}
                        </select>
-                    </div>
-                  )}
-                </div>
-              </div>
+                     </div>
+                   )}
+                 </div>
+               </div>
 
-              <div className="space-y-6">
-                {pricingBreakdown.taxDetails.totalTaxAmount > 0 && (
-                  /* Detailed Pricing Breakdown (Modern Premium Layout) */
-                  <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100/50 shadow-inner space-y-4 animate-in fade-in slide-in-from-right-4">
+               <div className="space-y-6 min-h-[280px]">
+                  {(pricingBreakdown.taxAmount > 0 || pricingBreakdown.surchargeAmount > 0) && (
+                    /* Detailed Pricing Breakdown (Modern Premium Layout) */
+                    <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100/50 shadow-inner space-y-4 animate-in fade-in zoom-in-95 slide-in-from-right-4 transition-all duration-300">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-500 font-medium">Base Fee:</span>
+                      <span className="text-slate-500 font-medium">Base Price:</span>
                       <span className="text-slate-900 font-bold">{currencySymbol}{pricingBreakdown.basePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
-
-                    {pricingBreakdown.extraChargePercentage > 0 && (
+ 
+                    {pricingBreakdown.surchargeAmount > 0 && (
                       <div className="flex justify-between items-center text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100">
                         <div className="flex items-center gap-2">
                           <Globe size={14} className="animate-pulse" />
-                          <span className="font-bold">Currency Surcharge ({pricingBreakdown.extraChargePercentage}%):</span>
+                          <span className="font-bold">Extra Charge (3%):</span>
                         </div>
-                        <span className="font-black">{currencySymbol}{pricingBreakdown.extraChargeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="font-black">{currencySymbol}{pricingBreakdown.surchargeAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     )}
-
-                    <div className="pt-2 border-t border-slate-200">
-                      {pricingBreakdown.taxDetails.taxType === 'CGST_SGST' ? (
-                        <>
-                          <div className="flex justify-between items-center text-sm mb-2">
-                            <span className="text-slate-500 font-medium">CGST (9%):</span>
-                            <span className="text-slate-900 font-bold">₹{(pricingBreakdown.taxDetails.cgstAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                          </div>
+ 
+                    {pricingBreakdown.taxAmount > 0 && (
+                      <div className="pt-2 border-t border-slate-200">
+                        {pricingBreakdown.taxType === 'CGST_SGST' ? (
+                          <>
+                            <div className="flex justify-between items-center text-sm mb-2">
+                              <span className="text-slate-500 font-medium">CGST (9%):</span>
+                              <span className="text-slate-900 font-bold">₹{(pricingBreakdown.cgstAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-slate-500 font-medium">SGST (9%):</span>
+                              <span className="text-slate-900 font-bold">₹{(pricingBreakdown.sgstAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          </>
+                        ) : (
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-slate-500 font-medium">SGST (9%):</span>
-                            <span className="text-slate-900 font-bold">₹{(pricingBreakdown.taxDetails.sgstAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-slate-500 font-medium">
+                              {pricingBreakdown.taxType === 'IGST' ? 'GST (18%):' : 'Export Tax (18%):'}
+                            </span>
+                            <span className="text-slate-900 font-bold">
+                              {currencySymbol}{pricingBreakdown.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                           </div>
-                        </>
-                      ) : (
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-slate-500 font-medium">
-                            {pricingBreakdown.taxDetails.taxType === 'IGST' ? 'IGST (18%):' : 'Export Tax (18%):'}
-                          </span>
-                          <span className="text-slate-900 font-bold">
-                            {currencySymbol}{(pricingBreakdown.taxDetails.igstAmount || pricingBreakdown.taxDetails.internationalTaxAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
+                        )}
+                      </div>
+                    )}
+ 
                     <div className="pt-2 border-t border-blue-100 flex justify-between items-center text-xs font-black text-blue-600 uppercase tracking-widest">
-                      <span>Total {pricingBreakdown.extraChargePercentage > 0 ? 'Cost Incl. Surcharge' : 'Projected Tax'}:</span>
-                      <span>{currencySymbol}{pricingBreakdown.taxDetails.totalTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span>Breakdown Summary:</span>
+                      <span>{pricingBreakdown.breakdownLabel}</span>
                     </div>
                   </div>
                 )}
-
-                {pricingBreakdown.taxDetails.taxType === 'INTERNATIONAL_TAX' && pricingBreakdown.extraChargeAmount === 0 && (
+ 
+                {pricingBreakdown.taxType === 'INTERNATIONAL' && pricingBreakdown.surchargeAmount === 0 && (
                   <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100/50 shadow-sm flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
                       <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
                           <CheckCircle2 size={20} />
@@ -1197,19 +1215,19 @@ export default function WorkshopEnrollmentDialog({
                       </div>
                   </div>
                 )}
-
+ 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    Total Payable Amount {pricingBreakdown.taxDetails.internationalTaxAmount === 0 && pricingBreakdown.taxDetails.cgstAmount === undefined ? '(Exempted)' : '(Inclusive of taxes)'}
+                    Total Payable Amount {pricingBreakdown.taxAmount === 0 ? '(Exempted)' : '(Inclusive of taxes)'}
                   </label>
                   <div className="relative group">
                     <input 
                       type="text" 
-                      value={`${currencySymbol}${pricingBreakdown.totalPayableAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
+                      value={`${currencySymbol}${pricingBreakdown.finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
                       readOnly 
-                      className={`w-full px-4 py-3 bg-slate-900 border border-slate-900 rounded-xl text-white font-bold text-lg focus:outline-none shadow-inner ${pricingBreakdown.taxDetails.internationalTaxAmount === 0 && pricingBreakdown.taxDetails.cgstAmount === undefined ? 'ring-2 ring-emerald-500/20' : ''}`}
+                      className={`w-full px-4 py-3 bg-slate-900 border border-slate-900 rounded-xl text-white font-bold text-lg focus:outline-none shadow-inner ${pricingBreakdown.taxAmount === 0 ? 'ring-2 ring-emerald-500/20' : ''}`}
                     />
-                    {pricingBreakdown.taxDetails.internationalTaxAmount === 0 && pricingBreakdown.taxDetails.cgstAmount === undefined && (
+                    {pricingBreakdown.taxAmount === 0 && (
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest">
                          Tax Free
                       </div>
@@ -1267,7 +1285,6 @@ export default function WorkshopEnrollmentDialog({
                 </select>
               </div>
             )}
-          </div>
 
           {/* Terms */}
           <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
@@ -1283,6 +1300,7 @@ export default function WorkshopEnrollmentDialog({
             <label htmlFor="terms" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
               I agree to the <a href="#" className="font-semibold text-blue-600 hover:underline">Terms & Conditions</a>. I ensure that all the information provided above is correct.
             </label>
+          </div>
           </div>
 
           {/* Actions */}

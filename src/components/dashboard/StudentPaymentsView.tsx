@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Loader2
 } from 'lucide-react';
+import { calculateFinalPricing, PricingBreakdown } from '@/lib/pricing';
 import InvoiceModal from './InvoiceModal';
 import WorkshopEnrollmentDialog from '@/components/payments/WorkshopEnrollmentDialog';
 
@@ -39,6 +40,8 @@ interface Payment {
   pid?: string;
   category: string;
   basePrice?: number | null;
+  currency?: string;
+  pricingBreakdown?: PricingBreakdown;
 }
 
 export default function StudentPaymentsView() {
@@ -187,25 +190,49 @@ export default function StudentPaymentsView() {
                              <div className="space-y-2">
                                  {/* Helper to calculate breakdown for display */}
                                  {(() => {
-                                     const total = payment.amount;
-                                     const base = payment.basePrice || (total / 1.18);
-                                     const tax = total - base;
-                                     const sym = payment.formattedAmount?.includes('$') ? '$' : '₹';
+                                     // Prioritize stored breakdown, fallback to new deterministic engine
+                                     const pb = payment.pricingBreakdown || calculateFinalPricing({
+                                       basePrice: payment.amount,
+                                       country: payment.country || 'India',
+                                       state: payment.state || '',
+                                       currency: payment.currency || (payment.formattedAmount?.includes('$') ? 'USD' : 'INR'),
+                                       isInclusive: false
+                                     });
+                                     const sym = pb.currencySymbol;
                                      
                                      return (
                                          <div className="space-y-1.5 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
                                              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                 <span>Base Fee</span>
-                                                 <span className="text-slate-600">{sym}{base.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                 <span>Base Price</span>
+                                                 <span className="text-slate-600">{sym}{pb.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                              </div>
-                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                 <span>GST (18%)</span>
-                                                 <span className="text-emerald-600">+{sym}{tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                             </div>
+                                             {pb.surchargeAmount > 0 && (
+                                                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                    <span>Extra Charge (3%)</span>
+                                                    <span className="text-slate-600">{sym}{pb.surchargeAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                </div>
+                                             )}
+                                             {pb.taxType === 'CGST_SGST' ? (
+                                               <>
+                                                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                     <span>CGST (9%)</span>
+                                                     <span className="text-emerald-600">+{sym}{(pb.cgstAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                     <span>SGST (9%)</span>
+                                                     <span className="text-emerald-600">+{sym}{(pb.sgstAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                 </div>
+                                               </>
+                                             ) : (
+                                               <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                   <span>{pb.taxType === 'INTERNATIONAL' ? 'Export Tax (18%)' : 'GST (18%)'}</span>
+                                                   <span className="text-emerald-600">+{sym}{pb.taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                               </div>
+                                             )}
                                              <div className="flex justify-between items-end pt-2 mt-1 border-t border-slate-200/50">
-                                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-950">Total Paid</span>
+                                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-950">Grand Total</span>
                                                  <span className="text-2xl font-black text-slate-950 tracking-tighter tabular-nums leading-none">
-                                                     {payment.formattedAmount || `${sym}${total.toLocaleString()}`}
+                                                     {sym}{pb.finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                                  </span>
                                              </div>
                                          </div>
@@ -273,7 +300,7 @@ export default function StudentPaymentsView() {
             resumePaymentModal.category.toLowerCase() === 'course' ? 'courses' : 
             'internships'
           }
-          initialCurrency={resumePaymentModal.formattedAmount?.includes('$') || resumePaymentModal.formattedAmount?.includes('USD') ? 'USD' : 'INR'}
+          initialCurrency={resumePaymentModal.currency || (resumePaymentModal.formattedAmount?.includes('$') || resumePaymentModal.formattedAmount?.includes('USD') ? 'USD' : 'INR')}
         />
       )}
     </div>

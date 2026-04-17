@@ -26,6 +26,7 @@ interface InvoiceModalProps {
     pid?: string;
     zipCode?: string;
     category?: string;
+    currency?: string;
   } | null;
   onClose: () => void;
 }

@@ -1,34 +1,64 @@
-import { calculateEnrollmentPricing, numberToWords, getStateCode } from './tax';
+import { numberToWords, getStateCode } from './tax';
+import { calculateFinalPricing, PricingBreakdown, parseLocalizedNumber } from './pricing';
+
+export interface InvoicePaymentData {
+  id: string;
+  date: string | Date;
+  amount: string | number;
+  name: string;
+  email: string;
+  course: string;
+  country: string;
+  state: string;
+  address?: string;
+  zipCode?: string;
+  contactNumber?: string;
+  transactionId?: string;
+  pid?: string;
+  category?: string;
+  learningMode?: string;
+  profession?: string;
+  pricingBreakdown?: PricingBreakdown;
+  formattedAmount?: string;
+  currency?: string;
+}
+
+export interface CompanyConfig {
+  companyName: string;
+  addressLine1: string;
+  addressLine2: string;
+  addressLine3: string;
+  gstin: string;
+  cinNo: string;
+  stateCode: string;
+}
 
 /**
  * Generates the full HTML string for the Retail Tax Invoice.
  * This should be identical to the one rendered in the Dashboard's InvoiceModal.
  */
-export function generateInvoiceHTML(payment: any, sysConfig: any): string {
-  // Use the advanced pricing engine for the breakdown
-  // We clean the amount in case it has symbols
-  const amountVal = typeof payment.amount === 'number' ? payment.amount : parseFloat(String(payment.amount).replace(/[^0-9.]/g, '')) || 0;
-  
-  // NOTE: In our system, the "payment.amount" is the FINAL total paid.
-  // calculateEnrollmentPricing takes the BASE price.
-  // We need to either pass the base price if we have it, OR calculate it from the total.
-  // For most invoices, we will back-calculate if basePrice isn't explicitly provided.
-  
-  const pricingInput = {
-    country: payment.country || 'India',
-    state: payment.state || '',
-    // Use stored basePrice if available, otherwise heuristic for common sticker prices, else back-calculate
-    basePrice: payment.basePrice || (amountVal === 5499 ? 5499 : (amountVal / 1.18)), 
-    currency: payment.currency || (String(payment.amount).includes('₹') ? 'INR' : 'USD')
-  };
+export function generateInvoiceHTML(payment: InvoicePaymentData, sysConfig?: { invoice: CompanyConfig }): string {
+  // S.O.T. - Prioritize stored breakdown if available
+  let pb: PricingBreakdown = payment.pricingBreakdown!;
 
-  const pb = calculateEnrollmentPricing(pricingInput);
-  const { basePrice, extraChargeAmount, taxDetails, totalPayableAmount, currencySymbol } = pb;
+  if (!pb) {
+    // Legacy/Fallback Calculation (using the NEW deterministic engine)
+    const amountVal = parseLocalizedNumber(payment.amount);
+    pb = calculateFinalPricing({
+      country: payment.country || 'India',
+      state: payment.state || '',
+      basePrice: amountVal,
+      currency: payment.currency || (String(payment.formattedAmount || '').includes('$') ? 'USD' : 'INR'),
+      isInclusive: false // Business Rule: Sticker price is BASE. Tax is ADDED.
+    });
+  }
+
+  const { basePrice, surchargeAmount: extraChargeAmount, taxAmount, finalTotal: totalPayableAmount, currencySymbol } = pb;
   
   const invoiceDate = new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
   const invoiceNumber = `INV-${payment.id.slice(-6).toUpperCase()}`;
 
-  const conf = sysConfig?.invoice || {
+  const conf: CompanyConfig = sysConfig?.invoice || {
     companyName: "IT Break Com Private Limited",
     addressLine1: "A-118, Level 1B, Sector 63",
     addressLine2: "Noida, Gautambuddha Nagar",
@@ -40,7 +70,7 @@ export function generateInvoiceHTML(payment: any, sysConfig: any): string {
 
   const clientInfo = [
     { label: 'Participant ID:', value: payment.pid || `NSTC-${payment.id.slice(-4).toUpperCase()}` },
-    { label: 'Name:', value: payment.name },
+    { label: 'Name:', value: payment.name || 'Valued Participant' },
     { label: 'Address:', value: [payment.address, payment.state, payment.country, payment.zipCode].filter(v => v && v !== '').join(', ') },
     { label: 'Contact Number:', value: payment.contactNumber && payment.contactNumber !== 'N/A' ? payment.contactNumber : '' },
     { label: 'Email:', value: payment.email },
@@ -53,24 +83,25 @@ export function generateInvoiceHTML(payment: any, sysConfig: any): string {
   return `
     <div style="width: 800px; margin: 0 auto; border: 1.5px solid black; font-family: 'Times New Roman', serif; font-size: 13px; color: black; line-height: 1.2; background: white;">
       <!-- 1. Header with Logos -->
-      <div style="display: grid; grid-template-columns: 220px 1fr 180px; align-items: center; border-bottom: 1.5px solid black; padding: 15px; text-align: center;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center; border-bottom: 1.5px solid black; padding: 20px;">
+        <!-- Left Side: Branding -->
         <div style="text-align: left;">
-          <img src="/images/logos/nanoschool-logo.svg" style="width: 180px; height: auto;" alt="Logo" />
-          <p style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #2563eb; margin: 5px 0 0 5px;">The Learning Revolution</p>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="https://storage.googleapis.com/nanoschool-in-website-wp-media-to-gcp-offload/2026/03/70e6b471-converted_image_1773927504290.webp" style="width: 100px; height: auto;" alt="Logo" />
+            <div style="border-left: 2px solid #011d3d; padding-left: 15px;">
+              <h1 style="margin: 0; font-size: 26px; font-weight: 950; color: #011d3d; letter-spacing: -1px; line-height: 1;">NANOSCHOOL</h1>
+              <p style="margin: 0; font-size: 10px; font-weight: 900; color: #2563eb; letter-spacing: 2px; text-transform: uppercase;">The Learning Revolution</p>
+            </div>
+          </div>
         </div>
-        <div>
-          <h2 style="margin: 0; font-size: 16px; font-weight: 900; text-transform: uppercase;">${conf.companyName}</h2>
-          <div style="height: 2px; width: 40px; background: black; margin: 2px auto;"></div>
-          <p style="font-size: 10px; font-weight: bold; margin: 5px 0 0 0;">
+
+        <!-- Right Side: Legal & Address -->
+        <div style="text-align: right;">
+          <h2 style="margin: 0 0 5px 0; font-size: 13px; font-weight: 900; text-transform: uppercase; color: black;">${conf.companyName}</h2>
+          <p style="font-size: 10px; font-weight: bold; margin: 0; color: #334155; line-height: 1.4;">
             ${conf.addressLine1}, ${conf.addressLine2},<br />
             ${conf.addressLine3}
           </p>
-        </div>
-        <div style="display: flex; justify-content: flex-end;">
-          <div style="width: 60px; height: 60px; border: 1px solid black; padding: 5px; display: flex; align-items: center; justify-content: center; position: relative;">
-            <img src="/images/logos/nstc-logo.svg" style="width: 50px; height: 50px;" alt="NSTC" />
-            <span style="position: absolute; bottom: -5px; right: 0; background: white; font-size: 8px; font-weight: bold; padding: 0 2px;">NSTC</span>
-          </div>
         </div>
       </div>
 
@@ -118,14 +149,29 @@ export function generateInvoiceHTML(payment: any, sysConfig: any): string {
               <td style="padding: 10px; border-right: 1px solid black;">1</td>
               <td style="padding: 10px; border-right: 1px solid black; text-align: left;">
                 <div style="font-weight: bold;">${payment.course}</div>
-                ${extraChargeAmount > 0 ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">Includes ${pb.extraChargePercentage}% Currency Surcharge</div>` : ''}
+                <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Enrollment Category: ${payment.category || 'Course'}</div>
               </td>
               <td style="padding: 10px; border-right: 1px solid black;">998439</td>
               <td style="padding: 10px; border-right: 1px solid black;">${basePrice.toFixed(2)}</td>
-              <td style="padding: 10px; border-right: 1px solid black;">${taxDetails.totalTaxAmount.toFixed(2)}</td>
-              <td style="padding: 10px; font-weight: bold;">${totalPayableAmount.toFixed(2)}</td>
+              <td style="padding: 10px; border-right: 1px solid black;">${taxAmount.toFixed(2)}</td>
+              <td style="padding: 10px; font-weight: bold;">${(basePrice + taxAmount).toFixed(2)}</td>
             </tr>
-            <tr style="height: 20px;">
+            
+            ${extraChargeAmount > 0 ? `
+            <tr style="border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+              <td style="padding: 10px; border-right: 1px solid black;">2</td>
+              <td style="padding: 10px; border-right: 1px solid black; text-align: left;">
+                <div style="font-weight: bold;">Extra Charge (3%)</div>
+                <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Currency Handling & Processing Fee</div>
+              </td>
+              <td style="padding: 10px; border-right: 1px solid black;">998311</td>
+              <td style="padding: 10px; border-right: 1px solid black;">${extraChargeAmount.toFixed(2)}</td>
+              <td style="padding: 10px; border-right: 1px solid black;">0.00</td>
+              <td style="padding: 10px; font-weight: bold;">${extraChargeAmount.toFixed(2)}</td>
+            </tr>
+            ` : ''}
+            
+            <tr style="height: 40px;">
               <td style="border-right: 1px solid black;"></td>
               <td style="border-right: 1px solid black;"></td>
               <td style="border-right: 1px solid black;"></td>
@@ -136,7 +182,7 @@ export function generateInvoiceHTML(payment: any, sysConfig: any): string {
           </tbody>
           <tfoot style="border-top: 1px solid black; font-weight: bold;">
             <tr>
-              <td colspan="3" rowspan="${extraChargeAmount > 0 ? '4' : '3'}" style="border-right: 1px solid black; padding: 10px; text-align: left; vertical-align: top;">
+              <td colspan="3" rowspan="${2 + (extraChargeAmount > 0 ? 1 : 0) + (pb.taxType === 'CGST_SGST' ? 2 : 1)}" style="border-right: 1px solid black; padding: 10px; text-align: left; vertical-align: top;">
                 <p style="font-size: 10px; color: #64748b; margin: 0 0 5px 0;">AMOUNT IN WORDS (${pb.currency}):</p>
                 <p style="margin: 0; font-style: italic;"><u>${numberToWords(totalPayableAmount)}</u></p>
               </td>
@@ -145,15 +191,28 @@ export function generateInvoiceHTML(payment: any, sysConfig: any): string {
             </tr>
             ${extraChargeAmount > 0 ? `
             <tr>
-              <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">Currency Surcharge (${pb.extraChargePercentage}%)</td>
+              <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">Extra Charge (3%)</td>
               <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${extraChargeAmount.toFixed(2)}</td>
             </tr>` : ''}
+            
+            ${pb.taxType === 'CGST_SGST' ? `
+            <tr>
+              <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">Add: CGST (9%)</td>
+              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${(pb.cgstAmount || 0).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">Add: SGST (9%)</td>
+              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${(pb.sgstAmount || 0).toFixed(2)}</td>
+            </tr>
+            ` : `
             <tr>
               <td style="padding: 8px; border-right: 1px solid black; border-bottom: 1px solid black; text-align: right;">
-                ${taxDetails.taxType === 'IGST' ? 'Add: IGST (18%)' : (taxDetails.taxType === 'CGST_SGST' ? 'Add: CGST/SGST (9%+9%)' : 'Add: Export Tax (18%)')}
+                Add: ${pb.taxType === 'IGST' ? 'GST (18% / IGST)' : 'Export Tax (18%)'}
               </td>
-              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${taxDetails.totalTaxAmount.toFixed(2)}</td>
+              <td colspan="2" style="padding: 8px; border-bottom: 1px solid black; text-align: right;">${taxAmount.toFixed(2)}</td>
             </tr>
+            `}
+            
             <tr style="background: #0f172a; color: white;">
               <td style="padding: 8px; border-right: 1px solid white; text-align: right;">TOTAL AMOUNT</td>
               <td colspan="2" style="padding: 8px; text-align: right; font-size: 16px;">${currencySymbol}${totalPayableAmount.toFixed(2)}</td>

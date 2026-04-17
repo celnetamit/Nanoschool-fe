@@ -108,8 +108,19 @@ export class ScoringEngine {
    * Experience Score (Normalized 0-1 scale)
    */
   public calculateExperienceScore(experience: string): number {
-    // Extract number from string like "10+ Yrs"
-    const years = parseInt(experience.replace(/[^0-9]/g, '')) || 5;
+    if (!experience) return 0.5; // Neutral fallback for missing data
+    
+    const expStr = experience.toLowerCase();
+    
+    // Explicit handle for zero/minimal experience
+    if (expStr.includes('0') && !expStr.includes('10')) return 0.0;
+    if (expStr.includes('less than 1') || expStr.includes('0-1')) return 0.1;
+
+    // Extract first number found (e.g. "10+ years" -> 10, "5-7 years" -> 5)
+    const match = experience.match(/\d+/);
+    const years = match ? parseInt(match[0]) : 1; 
+    
+    // Normalize to 0-1 scale, where 10+ years is 1.0
     return Math.min(years / 10, 1.0);
   }
 
@@ -172,12 +183,20 @@ export class ScoringEngine {
    * Main Scoring Function for a Mentor
    */
   public getScore(mentor: MentorData, prefs: UserPreferences): ScoreBreakdown {
-    const dScore = this.calculateDomainScore(mentor.domains[0] || '', prefs.desired_domain);
-    const sScore = this.calculateSkillScore(mentor.skills, prefs.required_skills);
+    // Safety normalize preferences to prevent undefined iteration/matching errors
+    const safePrefs: UserPreferences = {
+      desired_domain: prefs.desired_domain || undefined,
+      required_skills: Array.isArray(prefs.required_skills) ? prefs.required_skills : [],
+      preferred_location: prefs.preferred_location || undefined,
+      weights: prefs.weights || {}
+    };
+
+    const dScore = this.calculateDomainScore(mentor.domains[0] || '', safePrefs.desired_domain);
+    const sScore = this.calculateSkillScore(mentor.skills, safePrefs.required_skills);
     const eScore = this.calculateExperienceScore(mentor.experience);
     const oScore = this.calculateOrgScore(mentor.organization);
     const qScore = this.calculateCombinedQuality(); // Using defaults for now
-    const lScore = this.calculateLocationScore(mentor.country, prefs.preferred_location);
+    const lScore = this.calculateLocationScore(mentor.country, safePrefs.preferred_location);
 
     const total = 
       (dScore * this.weights.domain) +

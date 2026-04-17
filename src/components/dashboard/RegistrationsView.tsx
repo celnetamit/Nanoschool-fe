@@ -28,6 +28,7 @@ import {
   Loader2
 } from 'lucide-react';
 import Image from 'next/image';
+import { calculateFinalPricing, PricingBreakdown } from '@/lib/pricing';
 
 interface Registration {
   id: string;
@@ -40,12 +41,16 @@ interface Registration {
   major: string;
   mode: string;
   duration: string;
+  country: string;
+  state: string;
   source: string;
   product: string;
   status: string;
   amount: number;
   formattedAmount?: string;
   currency?: string;
+  pricingBreakdown?: PricingBreakdown;
+  basePrice?: number | null;
   date: string;
   isLead: boolean;
 }
@@ -418,7 +423,7 @@ export default function RegistrationsView() {
                                         <div className="flex flex-col items-end gap-0.5">
                                             <span className="text-lg font-black text-slate-950 tracking-tighter">
                                                 {reg.formattedAmount && reg.formattedAmount !== '0' ? (
-                                                  reg.formattedAmount.includes('₹') || reg.formattedAmount.includes('$') || reg.formattedAmount.match(/[A-Z]{3}/) || reg.formattedAmount.match(/[^0-9.,]/)
+                                                  reg.currency || reg.formattedAmount.includes('₹') || reg.formattedAmount.includes('$') || reg.formattedAmount.match(/[A-Z]{3}/) || reg.formattedAmount.match(/[^0-9.,]/)
                                                     ? reg.formattedAmount 
                                                     : `₹${reg.amount.toLocaleString()}`
                                                 ) : (
@@ -429,6 +434,35 @@ export default function RegistrationsView() {
                                                 <Calendar size={10} />
                                                 <span className="text-[9px] font-black uppercase tracking-tight">{mounted ? new Date(reg.date).toLocaleDateString() : '...'}</span>
                                             </div>
+                                            {reg.amount > 0 && (
+                                              <div className="flex flex-col items-end text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-[0.1em] leading-[1.2]">
+                                                 {(() => {
+                                                   const pb = reg.pricingBreakdown || calculateFinalPricing({
+                                                     basePrice: reg.amount,
+                                                     country: reg.country || "India",
+                                                     state: reg.state || "",
+                                                     currency: reg.currency || (reg.formattedAmount?.includes("$") ? "USD" : "INR"),
+                                                     isInclusive: false
+                                                   });
+                                                   return (
+                                                     <>
+                                                       <span className="opacity-70">Base Price: {pb.currencySymbol}{pb.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                       {pb.surchargeAmount > 0 && <span className="text-amber-600/80">Extra Charge (3%): {pb.currencySymbol}{pb.surchargeAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>}
+                                                       {pb.taxType === 'CGST_SGST' ? (
+                                                         <>
+                                                           <span className="text-emerald-500/80">CGST (9%): {pb.currencySymbol}{(pb.cgstAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                           <span className="text-emerald-500/80">SGST (9%): {pb.currencySymbol}{(pb.sgstAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                         </>
+                                                       ) : (
+                                                         <span className="text-emerald-500/80">{pb.taxType === 'INTERNATIONAL' ? 'Export Tax (18%)' : 'GST (18%)'}: {pb.currencySymbol}{pb.taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                       )}
+                                                       <div className="h-[1px] w-full bg-slate-100 my-0.5 opacity-50"></div>
+                                                       <span className="text-slate-900 font-black">Total: {pb.currencySymbol}{pb.finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                     </>
+                                                   );
+                                                  })()}
+                                              </div>
+                                            )}
                                         </div>
                                         
                                         {!reg.isLead && (

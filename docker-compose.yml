@@ -25,6 +25,10 @@ services:
         - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-jpub@123}@db:5432/${POSTGRES_DB:-nanoschooldb}
         - ADMIN_PASSWORD=${ADMIN_PASSWORD}
         - GEMINI_API_KEY=${GEMINI_API_KEY}
+        - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+        - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+        - AWS_REGION=${AWS_REGION}
+        - AWS_SES_FROM_ADDRESS=${AWS_SES_FROM_ADDRESS}
     expose:
       - "3000"
     environment:
@@ -36,6 +40,10 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_SES_FROM_ADDRESS=${AWS_SES_FROM_ADDRESS}
     depends_on:
       db:
         condition: service_healthy

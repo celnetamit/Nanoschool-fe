@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getFormEntries } from '@/lib/wordpress';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { parseLocalizedNumber } from '@/lib/tax';
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -78,16 +79,18 @@ export async function GET(request: Request) {
 function normalizeEntry(e: any, defaultType: string) {
   const meta = e.meta || e.item_meta || {};
   
-  // High-Resolution Mapping based on User-Provided JSON Snippet
-  // Name keys: 9792 (New), 9771, 7876 (Old), wly6y, u5108 (Snippet/Header - Low priority)
+  // Unified Priority Mapping
   const name = meta['9792'] || meta['9771'] || meta['7876'] || meta['wly6y'] || meta['u5108'] || meta['fullName'] || 'Unknown';
-  
-  // Email keys: 9793 (New), 9772, 7877 (Old), 7yfjv, l0s01 (Snippet - Low priority)
   const email = meta['9793'] || meta['9772'] || meta['7877'] || meta['7yfjv'] || meta['l0s01'] || meta['email'] || 'N/A';
-  
-  // Product keys: 9789 (Workshop), mlsd4 (Course), 7881 (Internship), l9w7q (Snippet applied for)
   const product = meta['mlsd4'] || meta['9789'] || meta['9770'] || meta['7881'] || meta['l9w7q'] || meta['projectTitle'] || 'Generic Registration';
   
+  const formattedAmount = String(meta['p30ad'] || meta['9810'] || meta['ijpy8'] || meta['9777'] || '0');
+  const amount = parseLocalizedNumber(formattedAmount);
+  
+  const currency = meta['currency'] || (formattedAmount.includes('₹') ? 'INR' : 'USD');
+  const country = meta['9802'] || meta['9776'] || meta['yiu1i'] || 'India';
+  const state = meta['9801'] || meta['9775'] || meta['q2ct5'] || '';
+
   // Metadata Refinement
   const phone = meta['jqnig'] || meta['ycnup'] || meta['7878'] || meta['phone'] || '';
   const institution = meta['2mjze'] || meta['238v0'] || meta['institute'] || meta['university'] || '';
@@ -95,33 +98,12 @@ function normalizeEntry(e: any, defaultType: string) {
   const major = meta['zsrzh'] || meta['major'] || '';
   const source = meta['4fkgw'] || meta['source'] || '';
   
-  // Location Details
-  const country = meta['9802'] || meta['9776'] || meta['yiu1i'] || 'India';
-  const state = meta['9801'] || meta['9775'] || meta['q2ct5'] || '';
-
-  // Internship Logistics
-  const mode = meta['7882'] || meta['mode'] || '';
-  const duration = meta['7883'] || meta['duration'] || '';
-
-  // Status & Logic Evaluation
+  // Status Logic
   const rawStatus = meta['2dnu4'] || meta['9127'] || meta['9817'] || meta['9777'] || '';
-  
-  // High-Resolution Pricing Logic
-  const formattedAmount = String(meta['9810'] || meta['ijpy8'] || meta['p30ad'] || '0');
-  const amountRaw = formattedAmount.replace(/[^0-9.]/g, '');
-  const amount = parseFloat(amountRaw) || 0;
-  
-  // Extract currency if possible 
-  const currency = formattedAmount.includes('$') ? 'USD' : (formattedAmount.includes('₹') ? 'INR' : 'USD');
-  
-  // If payment status is explicit success, or if it is a Form 554 application which is inherently active
-  // but if the user specifically asked "if data has pricing data then show success or lead as per demand"
-  // we follow the payment status if amount > 0.
   let isLead = true;
-  if (rawStatus === 'payment_success' || rawStatus === 'Paid') {
+  if (rawStatus === 'payment_success' || rawStatus === 'Paid' || rawStatus === 'success') {
     isLead = false;
   } else if (amount === 0 && defaultType === 'Internship') {
-    // If it is a free internship application, consider it Successful (not a lead)
     isLead = false;
   }
   
@@ -144,8 +126,8 @@ function normalizeEntry(e: any, defaultType: string) {
     institution,
     level,
     major,
-    mode,
-    duration,
+    mode: meta['7882'] || meta['mode'] || '',
+    duration: meta['7883'] || meta['duration'] || '',
     country,
     state,
     source,
@@ -155,6 +137,7 @@ function normalizeEntry(e: any, defaultType: string) {
     formattedAmount,
     currency,
     basePrice: parseFloat(meta['9825'] || '0') || null,
+    pricingBreakdown: meta['9832'] ? JSON.parse(meta['9832']) : null,
     date: e.created_at,
     isLead
   };

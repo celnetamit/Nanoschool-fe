@@ -1,43 +1,64 @@
 import nodemailer from 'nodemailer';
-import * as aws from "@aws-sdk/client-sesv2";
+import * as sesV2 from "@aws-sdk/client-sesv2";
 
 /**
  * AWS SES Notification Service
  * This service handles email delivery exclusively via AWS SES.
- * SMTP and WhatsApp are disabled per current business rules.
  */
 
-// --- AWS SES CONFIGURATION ---
-let transporter: nodemailer.Transporter | null = null;
-const isAwsConfigured = !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
+// --- GLOBAL STATE ---
+let _transporter: nodemailer.Transporter | null = null;
 
-if (isAwsConfigured) {
+/**
+ * Lazy-initializes the SES Transporter.
+ * This ensures environment variables are loaded before initialization.
+ */
+function getTransporter(): nodemailer.Transporter | null {
+  if (_transporter) return _transporter;
+
+  const isAwsConfigured = !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
+  if (!isAwsConfigured) {
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd) {
+      console.error('[CRITICAL] AWS SES credentials MISSING in Production. Notifications will fall back to simulation.');
+    } else {
+      console.warn('[Notification] AWS SES credentials not found. System running in Simulated/Dev Mode.');
+    }
+    return null;
+  }
+
   try {
-    const ses = new aws.SESv2Client({
-      region: process.env.AWS_REGION || 'ap-south-1',
+    const client = new sesV2.SESv2Client({
+      region: process.env.AWS_REGION || 'us-west-2',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
       },
     });
 
-    transporter = nodemailer.createTransport({
-      SES: { ses, aws },
-    } as any);
-    console.log('[Notification] AWS SES Transporter initialized successfully');
+    /**
+     * Nodemailer v7 SES Transport Configuration (Standard SDK v3)
+     * To avoid 'LegacyConfig' error in nodemailer.js, we avoid 'ses' and 'aws' keys.
+     * SESTransport internally expects 'sesClient' and 'SendEmailCommand' on the SES object.
+     */
+    _transporter = nodemailer.createTransport({
+      SES: { 
+        sesClient: client, 
+        SendEmailCommand: sesV2.SendEmailCommand 
+      },
+    });
+    
+    console.log('[Notification] AWS SES Transporter initialized successfully (SESv2 Factory Mode)');
+    return _transporter;
   } catch (err) {
     console.error('[Notification] AWS SES Initialization failed:', err);
+    return null;
   }
-} else {
-    const isProd = process.env.NODE_ENV === 'production';
-    if (isProd) {
-      console.error('[CRITICAL] AWS SES credentials MISSING in Production. Notifications will fail back to simulation.');
-    } else {
-      console.warn('[Notification] AWS SES credentials not found. System running in Simulated/Dev Mode.');
-    }
 }
 
 export async function sendEnrollmentEmail(email: string, name: string, courseName: string) {
+  const transporter = getTransporter();
+  
   if (!transporter) {
     const isProd = process.env.NODE_ENV === 'production';
     console.log(`${isProd ? '[PROD SIMULATION]' : '[DEV MODE]'} Simulated Email sent to ${email} for course ${courseName}`);
